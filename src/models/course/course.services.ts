@@ -1,5 +1,11 @@
 import { EntityManager } from '@mikro-orm/core';
 import { Course } from './course.entity.js';
+import {
+  CreateCourseType,
+  UpdateCourseType,
+} from './course.schemas.js';
+import { Professor } from '../professor/professor.entity.js';
+import { CourseType } from '../courseType/courseType.entity.js';
 
 export class CourseService {
   private em: EntityManager;
@@ -8,8 +14,18 @@ export class CourseService {
     this.em = em;
   }
 
-  public async create(courseData: any): Promise<Course> {
-    const course = this.em.create(Course, courseData);
+  public async create(
+    courseData: CreateCourseType,
+    professorId: string
+  ): Promise<Course> {
+    const { courseTypeId, ...restOfCourseData } = courseData;
+
+    const course = this.em.create(Course, {
+      ...restOfCourseData,
+      courseType: this.em.getReference(CourseType, courseTypeId),
+      professor: this.em.getReference(Professor, professorId),
+    });
+
     await this.em.flush();
     return course;
   }
@@ -36,7 +52,7 @@ export class CourseService {
 
   public async update(
     id: string,
-    courseData: Partial<Course>
+    courseData: UpdateCourseType
   ): Promise<Course> {
     const course = await this.em.findOneOrFail(Course, { id });
     this.em.assign(course, courseData);
@@ -44,10 +60,8 @@ export class CourseService {
     return course;
   }
 
-  public async remove(id: string): Promise<Course> {
-    const course = this.em.getReference(Course, id);
-    await this.em.removeAndFlush(course);
-
-    return course;
+  public async remove(id: string): Promise<void> {
+    const courseRef = this.em.getReference(Course, id);
+    await this.em.removeAndFlush(courseRef);
   }
 }

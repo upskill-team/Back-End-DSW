@@ -1,14 +1,15 @@
-// src/course/course.routes.ts
-
 import { Router } from 'express';
 import { findAll, findOne, add, update, remove } from './course.controller.js';
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js';
 import {
   CreateCourseSchema,
   UpdateCourseSchema,
-} from './schemas/course.schemas.js';
+} from './course.schemas.js';
+import { authMiddleware } from '../../auth/auth.middleware.js';
 
 export const courseRouter = Router();
+
+courseRouter.use(authMiddleware);
 
 courseRouter.get('/', findAll);
 courseRouter.get('/:id', findOne);
