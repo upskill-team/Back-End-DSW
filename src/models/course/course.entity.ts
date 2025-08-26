@@ -5,41 +5,82 @@ import {
   Rel,
   ManyToMany,
   Collection,
+  Embedded,
 } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { CourseType } from '../courseType/courseType.entity.js';
 import { Professor } from '../professor/professor.entity.js';
+import { Unit } from './embeddables/unit.entity.js';
 import { Student } from '../student/student.entity.js';
 
 /**
- * Represents a course entity.
+ * Represents a course entity, the central element of the platform.
+ * It contains all metadata and the structured content of the course itself.
  *
- * Properties
  * @class Course
  * @property {string} name - The name of the course.
- * @property {string} description - A brief description of the course.
- * @property {string} [password] - An optional password for the course.
- * @property {CourseType} courseType - The type of the course
- * @property {string} id - A unique identifier for the course, generated using crypto.
+ * @property {string} description - A brief description of the course content.
+ * @property {boolean} isFree - Indicates if the course is free or paid.
+ * @property {number} [price] - The price of the course if it's not free.
+ * @property {Unit[]} units - An array of course units, containing the actual learning content.
+ * @property {CourseType} courseType - The category or type of the course.
+ * @property {Professor} professor - The professor who owns and teaches the course.
  */
-
 @Entity()
 export class Course extends BaseEntity {
-  @Property({ nullable: false })
+  /**
+   * The public name of the course.
+   * @type {string}
+   */
+  @Property()
   name!: string;
 
-  @Property({ nullable: false })
+  /**
+   * A summary of what the course is about.
+   * @type {string}
+   */
+  @Property({ type: 'text' })
   description!: string;
 
-  @Property({ nullable: true })
-  password?: string;
+  /**
+   * Determines if the course requires payment. Defaults to true.
+   * @type {boolean}
+   */
+  @Property({ default: true })
+  isFree: boolean = true;
 
-  @ManyToOne(() => CourseType, { nullable: false })
+  /**
+   * The cost of the course if `isFree` is false.
+   * @type {number}
+   */
+  @Property({ type: 'number', nullable: true })
+  price?: number;
+
+  /**
+   * The structured content of the course, divided into units.
+   * @type {Unit[]}
+   */
+  @Embedded(() => Unit, { array: true, default: [] })
+  units: Unit[] = [];
+
+  /**
+   * The type or category this course belongs to.
+   * @type {Rel<CourseType>}
+   */
+  @ManyToOne(() => CourseType)
   courseType!: Rel<CourseType>;
 
-  @ManyToOne(() => Professor, { nullable: false })
+  /**
+   * The professor responsible for the course.
+   * @type {Rel<Professor>}
+   */
+  @ManyToOne(() => Professor)
   professor!: Rel<Professor>;
 
+  /**
+   * The students enrolled in the course.
+   * @type {Collection<Student>}
+   */
   @ManyToMany(() => Student, (student) => student.courses)
   students = new Collection<Student>(this);
 }
