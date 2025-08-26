@@ -1,7 +1,7 @@
 import { EntityManager } from "@mikro-orm/core";
 import { Professor } from "./professor.entity.js";
 
-export class ProfessorSevice {
+export class ProfessorService {
   private em: EntityManager;
 
   constructor(em: EntityManager) {
