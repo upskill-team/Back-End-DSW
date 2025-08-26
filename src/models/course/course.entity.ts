@@ -18,13 +18,6 @@ import { Student } from '../student/student.entity.js';
  * It contains all metadata and the structured content of the course itself.
  *
  * @class Course
- * @property {string} name - The name of the course.
- * @property {string} description - A brief description of the course content.
- * @property {boolean} isFree - Indicates if the course is free or paid.
- * @property {number} [price] - The price of the course if it's not free.
- * @property {Unit[]} units - An array of course units, containing the actual learning content.
- * @property {CourseType} courseType - The category or type of the course.
- * @property {Professor} professor - The professor who owns and teaches the course.
  */
 @Entity()
 export class Course extends BaseEntity {
