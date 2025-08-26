@@ -1,104 +1,82 @@
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { orm } from '../../shared/db/orm.js';
 import { CourseService } from './course.services.js';
-
-// em : EntityManager
-const courseService = new CourseService(orm.em);
-
-const sanitizedCourseInput = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  req.body.sanitizedInput = {
-    name: req.body.name,
-    description: req.body.description,
-    password: req.body.password,
-    courseType: req.body.courseType,
-    professor: req.body.professor,
-    students: req.body.students,
-  };
-
-  Object.keys(req.body.sanitizedInput).forEach((key) => {
-    if (req.body.sanitizedInput[key] === undefined) {
-      delete req.body.sanitizedInput[key];
-    }
-  });
-  next();
-};
+import { HttpResponse } from '../../shared/response/http.response.js';
+import { User } from '../user/user.entity.js';
 
 async function findAll(req: Request, res: Response) {
   try {
+    const courseService = new CourseService(orm.em.fork());
     const courses = await courseService.findAll();
-
-    res.status(200).json({
-      message: 'Courses found',
-      data: courses,
-    });
+    return HttpResponse.Ok(res, courses);
   } catch (error: any) {
-    res.status(500).json({
-      message: error.message,
-    });
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function findOne(req: Request, res: Response) {
   try {
+    const courseService = new CourseService(orm.em.fork());
     const id = req.params.id;
     const course = await courseService.findOne(id);
-    res.status(200).json({
-      message: 'Course found',
-      data: course,
-    });
+    return HttpResponse.Ok(res, course);
   } catch (error: any) {
-    res.status(500).json({
-      message: error.message,
-    });
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found.');
+    }
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function add(req: Request, res: Response) {
   try {
-    const course = await courseService.create(req.body.sanitizedInput);
-    res.status(201).json({
-      message: 'Course created',
-      data: course,
-    });
+    const courseService = new CourseService(orm.em.fork());
+    const em = orm.em.fork();
+
+    const user = await em.findOne(
+      User,
+      { id: req.user?.id },
+      { populate: ['professorProfile'] }
+    );
+    const professorId = user?.professorProfile?.id;
+
+    if (!professorId) {
+      return HttpResponse.Unauthorized(
+        res,
+        'The authenticated user is not a professor.'
+      );
+    }
+
+    const newCourse = await courseService.create(req.body, professorId);
+    return HttpResponse.Created(res, newCourse);
   } catch (error: any) {
-    res.status(500).json({
-      message: error.message,
-    });
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function update(req: Request, res: Response) {
   try {
+    const courseService = new CourseService(orm.em.fork());
     const id = req.params.id;
-    const courseToUpdate = await courseService.update(
-      id,
-      req.body.sanitizedInput
-    );
-    res.status(200).json({
-      message: 'Course updated',
-      data: courseToUpdate,
-    });
+    const updatedCourse = await courseService.update(id, req.body);
+    return HttpResponse.Ok(res, updatedCourse);
   } catch (error: any) {
-    res.status(500).json({
-      message: error.message,
-    });
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found.');
+    }
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function remove(req: Request, res: Response) {
   try {
+    const courseService = new CourseService(orm.em.fork());
     const id = req.params.id;
     await courseService.remove(id);
-    res.status(200).json({
-      message: 'Course deleted',
-    });
+    return HttpResponse.Ok(res, { message: 'Course deleted successfully' });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
-export { sanitizedCourseInput, findAll, findOne, add, update, remove };
+export { findAll, findOne, add, update, remove };
