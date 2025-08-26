@@ -14,6 +14,8 @@ Thumbs.db
 # ignore built ts files
 dist/**/*
 
+*.tsbuildinfo
+
 node_modules
 
 # environment files
