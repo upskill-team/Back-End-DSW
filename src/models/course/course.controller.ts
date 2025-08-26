@@ -33,6 +33,8 @@ async function add(req: Request, res: Response) {
     const courseService = new CourseService(orm.em.fork());
     const em = orm.em.fork();
 
+    // The creation of a course must be linked to a professor.
+    // We retrieve the professor's ID from the authenticated user's profile.
     const user = await em.findOne(
       User,
       { id: req.user?.id },
