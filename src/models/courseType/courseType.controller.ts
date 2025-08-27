@@ -1,76 +1,65 @@
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { orm } from '../../shared/db/orm.js';
 import { CourseTypeService } from './courseType.services.js';
+import { HttpResponse } from '../../shared/response/http.response.js';
 
-const courseTypeService = new CourseTypeService(orm.em);
-
-const sanitizedCourseTypeInput = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  req.body.sanitizedInput = {
-    name: req.body.name,
-    description: req.body.description,
-  };
-
-  Object.keys(req.body.sanitizedInput).forEach((key) => {
-    if (req.body.sanitizedInput[key] === undefined) {
-      delete req.body.sanitizedInput[key];
-    }
-  });
-  next();
-};
-
-async function findAll(req: Request, res: Response) {
+async function add(req: Request, res: Response) {
   try {
-    const courseType = await courseTypeService.findAll();
-    res
-      .status(200)
-      .json({ message: 'found all course types', data: courseType });
+    const service = new CourseTypeService(orm.em.fork());
+    const newCourseType = await service.create(req.body);
+    return HttpResponse.Created(res, newCourseType);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    if (error.code === 11000) {
+      return HttpResponse.BadRequest(res, 'There is already a type of course with that name.');
+    }
+    return HttpResponse.InternalServerError(res, error.message);
+  }
+}
+
+async function findAll(_: Request, res: Response) {
+  try {
+    const service = new CourseTypeService(orm.em.fork());
+    const courseTypes = await service.findAll();
+    return HttpResponse.Ok(res, courseTypes);
+  } catch (error: any) {
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function findOne(req: Request, res: Response) {
   try {
+    const service = new CourseTypeService(orm.em.fork());
     const id = req.params.id;
-    const courseType = await courseTypeService.findOne(id);
-    res.status(200).json({ message: 'found course type', data: courseType });
+    const courseType = await service.findOne(id);
+    if (!courseType) {
+      return HttpResponse.NotFound(res, 'Course type not found.');
+    }
+    return HttpResponse.Ok(res, courseType);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-}
-
-async function add(req: Request, res: Response) {
-  try {
-    const courseType = courseTypeService.create(req.body.sanitizedInput);
-    res.status(201).json({ message: 'course type created', data: courseType });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function update(req: Request, res: Response) {
   try {
+    const service = new CourseTypeService(orm.em.fork());
     const id = req.params.id;
-    const courseType = await courseTypeService.update(id, req.body.sanitizedInput);
-    res.status(200).json({ message: 'course type updated', data: courseType });
+    const updatedCourseType = await service.update(id, req.body);
+    return HttpResponse.Ok(res, updatedCourseType);
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
 async function remove(req: Request, res: Response) {
   try {
+    const service = new CourseTypeService(orm.em.fork());
     const id = req.params.id;
-    await courseTypeService.remove(id);
-   
-    res.status(200).send({ message: 'course type deleted' });
+    await service.remove(id);
+    return HttpResponse.Ok(res, { message: 'Course type successfully deleted.' });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message);
   }
 }
 
-export { sanitizedCourseTypeInput, findAll, findOne, add, update, remove };
+export { findAll, findOne, add, update, remove };
