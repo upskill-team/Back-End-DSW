@@ -36,6 +36,12 @@ export class User extends BaseEntity {
   @Property({ nullable: false, hidden: true }) //hidden true to not expose password in responses
   password!: string;
 
+  @Property({ nullable: true, hidden: true })
+  resetPasswordToken?: string;
+
+  @Property({ nullable: true, hidden: true })
+  resetPasswordExpires?: Date;
+
   @Enum( () => UserRole)
   role: UserRole = UserRole.STUDENT;
 

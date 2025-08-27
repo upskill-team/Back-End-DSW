@@ -1,9 +1,11 @@
 import { EntityManager } from '@mikro-orm/core';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto'
 import { User, UserRole } from '../models/user/user.entity.js';
 import { Student } from '../models/student/student.entity.js';
 import { ObjectId } from '@mikro-orm/mongodb';
+import { sendEmail } from '../shared/services/email.service.js';
 
 // Service for authentication logic
 export class AuthService {
@@ -90,4 +92,62 @@ export class AuthService {
     delete (user as Partial<User>).password;
     return user;
   }
+
+  public async forgotPassword(mail: string): Promise<void> {
+    const user = await this.em.findOne(User, { mail });
+
+    // For security, don't reveal if the user exists.
+    // If a user is found, proceed with token generation and email sending.
+    if (user) {
+      // Generate a random token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+
+      await this.em.persistAndFlush(user);
+
+      // Create the reset URL for the email
+      const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+
+      // Email content
+      const message = `
+        <h1>Has solicitado restablecer tu contraseña</h1>
+        <p>Haz clic en el siguiente enlace para restablecer tu contraseña. El enlace es válido por 1 hora.</p>
+        <a href="${resetUrl}" style="background-color: #3b82f6; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">Restablecer Contraseña</a>
+        <p>Si no solicitaste esto, por favor ignora este correo.</p>
+      `;
+
+      // Send the email
+      await sendEmail({
+        to: user.mail,
+        subject: 'Restablecimiento de Contraseña - UpSkill',
+        html: message,
+      });
+    }
+    // If user is not found, the function completes without error, hiding that fact from potential attackers.
+  }
+
+  public async resetPassword(token: string, password_plaintext: string): Promise<void> {
+    // Find the user by the token and check if it hasn't expired
+    const user = await this.em.findOne(User, {
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      throw new Error('El token es inválido o ha expirado.');
+    }
+
+    // Hash the new password
+    const SALT_ROUNDS = 10;
+    user.password = await bcrypt.hash(password_plaintext, SALT_ROUNDS);
+
+    // Clear the reset token fields
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await this.em.persistAndFlush(user);
+  }
+
 }
