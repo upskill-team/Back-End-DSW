@@ -19,6 +19,8 @@
     "@mikro-orm/core": "6.4.16",
     "@mikro-orm/mongo-highlighter": "1.0.0",
     "@mikro-orm/mongodb": "6.4.16",
+    "@react-email/components": "0.5.1",
+    "@react-email/render": "1.2.1",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
@@ -28,6 +30,7 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.5",
+    "react": "19.1.1",
     "reflect-metadata": "0.2.2",
     "valibot": "^1.1.0"
   },
