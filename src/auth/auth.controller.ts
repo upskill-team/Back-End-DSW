@@ -53,4 +53,33 @@ async function getProfile(req: Request, res: Response) {
   }
 }
 
-export { register, login, getProfile };
+async function forgotPassword(req: Request, res: Response) {
+  try {
+    const { mail } = req.body;
+    if (!mail) {
+      return HttpResponse.BadRequest(res, 'El correo electrónico es requerido.');
+    }
+    const authService = new AuthService(orm.em.fork());
+    await authService.forgotPassword(mail);
+    return HttpResponse.Ok(res, { message: 'Si el correo está registrado, se ha enviado un enlace de recuperación.' });
+  } catch (error: any) {
+    return HttpResponse.InternalServerError(res, error.message);
+  }
+}
+
+async function resetPassword(req: Request, res: Response) {
+  try {
+    const { token, password_plaintext } = req.body;
+    if (!token || !password_plaintext) {
+      return HttpResponse.BadRequest(res, 'El token y la nueva contraseña son requeridos.');
+    }
+    const authService = new AuthService(orm.em.fork());
+    await authService.resetPassword(token, password_plaintext);
+    return HttpResponse.Ok(res, { message: 'Contraseña actualizada correctamente.' });
+  } catch (error: any) {
+    // We send BadRequest because the error might be "invalid token"
+    return HttpResponse.BadRequest(res, error.message);
+  }
+}
+
+export { register, login, getProfile, forgotPassword, resetPassword };
