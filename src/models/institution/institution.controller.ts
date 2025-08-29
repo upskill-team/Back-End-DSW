@@ -1,77 +1,68 @@
-import { orm } from '../../shared/db/orm.js';
-import { Request, Response, NextFunction } from 'express';
-import { InstitutionService } from './institution.services.js';
-
-const institutionService = new InstitutionService(orm.em);
-
-function sanitizeInstitutionInput(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  req.body.sanitizedInput = {
-    name: req.body.name,
-    description: req.body.description,
-  };
-
-  Object.keys(req.body.sanitizedInput).forEach((key) => {
-    if (req.body.sanitizedInput[key] === undefined) {
-      delete req.body.sanitizedInput[key];
-    }
-  });
-  next();
-}
+/**
+ * @module InstitutionController
+ * @description Handles the HTTP request/response logic for the institution module.
+ * It uses the InstitutionService to perform business logic and responds with standardized HTTP responses.
+ * @see {@link ./institution.services.ts}
+ */
+import { Request, Response } from 'express'
+import { orm } from '../../shared/db/orm.js'
+import { InstitutionService } from './institution.services.js'
+import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function findAll(req: Request, res: Response) {
   try {
-    const institutions = await institutionService.findAll();
-    res
-      .status(200)
-      .json({ message: 'Found all institutions', data: institutions });
+    const service = new InstitutionService(orm.em.fork())
+    const institutions = await service.findAll()
+    return HttpResponse.Ok(res, institutions)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function findOne(req: Request, res: Response) {
   try {
-    const id = req.params.id;
-    const institutions = await institutionService.findOne(id);
-    res.status(200).json({ message: 'Found institution', data: institutions });
+    const service = new InstitutionService(orm.em.fork())
+    const { id } = req.params
+    const institution = await service.findOne(id)
+    return HttpResponse.Ok(res, institution)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function add(req: Request, res: Response) {
   try {
-    const institutions = institutionService.create(req.body.sanitizedInput);
-    res
-      .status(201)
-      .json({ message: 'Institution created', data: institutions });
+    const service = new InstitutionService(orm.em.fork())
+    // The request body is already validated by the validationMiddleware.
+    const newInstitution = await service.create(req.body)
+    return HttpResponse.Created(res, newInstitution)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function update(req: Request, res: Response) {
   try {
-    const id = req.params.id;
-    const institution = institutionService.update(id, req.body.sanitizedInput);
-    res.status(200).json({ message: 'Institution updated', data: institution });
+    const service = new InstitutionService(orm.em.fork())
+    const { id } = req.params
+    const updatedInstitution = await service.update(id, req.body)
+    return HttpResponse.Ok(res, updatedInstitution)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function remove(req: Request, res: Response) {
   try {
-    const id = req.params.id;
-    await institutionService.remove(id);
-    res.status(200).send({ message: 'Institution deleted' });
+    const service = new InstitutionService(orm.em.fork())
+    const { id } = req.params
+    await service.remove(id)
+    return HttpResponse.Ok(res, {
+      message: 'Institution deleted successfully',
+    })
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
-export { sanitizeInstitutionInput, findAll, findOne, add, remove, update };
+export { findAll, findOne, add, remove, update }
