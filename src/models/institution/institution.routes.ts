@@ -7,40 +7,40 @@
  * @see {@link ./institution.schemas.ts}
  * @see {@link ../../auth/auth.middleware.ts}
  */
-import { Router } from 'express';
+import { Router } from 'express'
 import {
   add,
   findAll,
   findOne,
   remove,
-  update,
-} from './institution.controller.js';
-import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js';
+  update
+} from './institution.controller.js'
+import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'
 import {
   CreateInstitutionSchema,
-  UpdateInstitutionSchema,
-} from './institution.schemas.js';
-import { authMiddleware } from '../../auth/auth.middleware.js';
+  UpdateInstitutionSchema
+} from './institution.schemas.js'
+import { authMiddleware } from '../../auth/auth.middleware.js'
 
-export const institutionRouter = Router();
+export const institutionRouter = Router()
 
 // Apply the authentication middleware to all routes within this module.
 // This ensures that only authenticated users can access these endpoints.
-institutionRouter.use(authMiddleware);
+institutionRouter.use(authMiddleware)
 
-institutionRouter.get('/', findAll);
-institutionRouter.get('/:id', findOne);
+institutionRouter.get('/', findAll)
+institutionRouter.get('/:id', findOne)
 
-institutionRouter.post('/', validationMiddleware(CreateInstitutionSchema), add);
+institutionRouter.post('/', validationMiddleware(CreateInstitutionSchema), add)
 institutionRouter.put(
   '/:id',
   validationMiddleware(UpdateInstitutionSchema),
   update
-);
+)
 institutionRouter.patch(
   '/:id',
   validationMiddleware(UpdateInstitutionSchema),
   update
-);
+)
 
-institutionRouter.delete('/:id', remove);
+institutionRouter.delete('/:id', remove)
