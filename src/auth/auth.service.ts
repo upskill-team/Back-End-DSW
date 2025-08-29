@@ -31,9 +31,12 @@ export class AuthService {
     if (existingUser) {
       throw new Error('Email already used');
     }
-    
+
     const SALT_ROUNDS = 10;
-    const hashedPassword = await bcrypt.hash(userData.password_plaintext, SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(
+      userData.password_plaintext,
+      SALT_ROUNDS
+    );
 
     const newUser = this.em.create(User, {
       name: userData.name,
@@ -67,7 +70,10 @@ export class AuthService {
       throw new Error('Credenciales inválidas.');
     }
 
-    const isPasswordValid = await bcrypt.compare(credentials.password_plaintext, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      credentials.password_plaintext,
+      user.password
+    );
 
     if (!isPasswordValid) {
       throw new Error('Credenciales inválidas.');
@@ -87,7 +93,11 @@ export class AuthService {
    */
   public async getProfile(userId: string): Promise<User | null> {
     const userObjectId = new ObjectId(userId);
-    const user = await this.em.findOne(User, { _id: userObjectId }, { populate: ['studentProfile', 'professorProfile'] });
+    const user = await this.em.findOne(
+      User,
+      { _id: userObjectId },
+      { populate: ['studentProfile', 'professorProfile'] }
+    );
 
     if (!user) return null;
 
@@ -106,7 +116,10 @@ export class AuthService {
     // For security, don't reveal if the user exists.
     if (user) {
       const resetToken = crypto.randomBytes(32).toString('hex');
-      const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+      const passwordResetToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
 
       user.resetPasswordToken = passwordResetToken;
       user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
@@ -114,7 +127,9 @@ export class AuthService {
       await this.em.persistAndFlush(user);
 
       const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
-      const emailHtml = await render(ResetPasswordEmail({ name: user.name, resetUrl }));
+      const emailHtml = await render(
+        ResetPasswordEmail({ name: user.name, resetUrl })
+      );
 
       try {
         await sendEmail({
@@ -122,8 +137,7 @@ export class AuthService {
           subject: 'Restablecimiento de Contraseña - UpSkill',
           html: emailHtml,
         });
-      } catch (error) {
-        // If email sending fails, clear the tokens to allow the user to try again.
+      } catch {
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         await this.em.persistAndFlush(user);
@@ -137,7 +151,10 @@ export class AuthService {
    * @param token The plain reset token from the URL.
    * @param password_plaintext The new password to set.
    */
-  public async resetPassword(token: string, password_plaintext: string): Promise<void> {
+  public async resetPassword(
+    token: string,
+    password_plaintext: string
+  ): Promise<void> {
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const user = await this.em.findOne(User, {
