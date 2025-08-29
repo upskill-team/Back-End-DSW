@@ -13,12 +13,12 @@ import {
   findAll,
   findOne,
   remove,
-  update
+  update,
 } from './institution.controller.js'
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'
 import {
   CreateInstitutionSchema,
-  UpdateInstitutionSchema
+  UpdateInstitutionSchema,
 } from './institution.schemas.js'
 import { authMiddleware } from '../../auth/auth.middleware.js'
 

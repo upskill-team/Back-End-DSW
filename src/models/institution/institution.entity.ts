@@ -8,9 +8,9 @@ import {
   Property,
   Cascade,
   Collection,
-} from '@mikro-orm/core';
-import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
-import { Professor } from '../professor/professor.entity.js';
+} from '@mikro-orm/core'
+import { BaseEntity } from '../../shared/db/baseEntity.entity.js'
+import { Professor } from '../professor/professor.entity.js'
 
 /**
  * Represents an educational or corporate institution within the platform.
@@ -24,14 +24,14 @@ export class Institution extends BaseEntity {
    * @type {string}
    */
   @Property({ nullable: false })
-  name!: string;
+  name!: string
 
   /**
    * A brief description of the institution's purpose or background.
    * @type {string}
    */
   @Property({ nullable: false })
-  description!: string;
+  description!: string
 
   /**
    * A collection of all professors associated with this institution.
@@ -42,5 +42,5 @@ export class Institution extends BaseEntity {
   @OneToMany(() => Professor, (professor) => professor.institution, {
     cascade: [Cascade.ALL],
   })
-  professors = new Collection<Professor>(this);
+  professors = new Collection<Professor>(this)
 }

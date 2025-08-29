@@ -4,20 +4,20 @@
  * This service is responsible for all database interactions related to institutions.
  * @see {@link ./institution.controller.ts}
  */
-import { EntityManager } from '@mikro-orm/core';
-import { Institution } from './institution.entity.js';
+import { EntityManager } from '@mikro-orm/core'
+import { Institution } from './institution.entity.js'
 // Import the new, precise type for creation data.
-import { CreateInstitutionType } from './institution.schemas.js';
+import { CreateInstitutionType } from './institution.schemas.js'
 
 /**
  * Provides methods for performing CRUD (Create, Read, Update, Delete) operations on Institution entities.
  * @class InstitutionService
  */
 export class InstitutionService {
-  private em: EntityManager;
+  private em: EntityManager
 
   constructor(em: EntityManager) {
-    this.em = em;
+    this.em = em
   }
 
   /**
@@ -30,9 +30,9 @@ export class InstitutionService {
   ): Promise<Institution> {
     // Now, TypeScript knows that institutionData contains `name` and `description` as strings,
     // matching what `em.create` expects.
-    const institution = this.em.create(Institution, institutionData);
-    await this.em.flush();
-    return institution;
+    const institution = this.em.create(Institution, institutionData)
+    await this.em.flush()
+    return institution
   }
 
   /**
@@ -40,7 +40,7 @@ export class InstitutionService {
    * @returns {Promise<Institution[]>} A promise that resolves to an array of all Institution entities.
    */
   public async findAll(): Promise<Institution[]> {
-    return this.em.find(Institution, {}, { populate: ['professors'] });
+    return this.em.find(Institution, {}, { populate: ['professors'] })
   }
 
   /**
@@ -54,7 +54,7 @@ export class InstitutionService {
       Institution,
       { id },
       { populate: ['professors'] }
-    );
+    )
   }
 
   /**
@@ -68,10 +68,10 @@ export class InstitutionService {
     id: string,
     institutionData: Partial<Institution>
   ): Promise<Institution> {
-    const institution = await this.em.findOneOrFail(Institution, { id });
-    this.em.assign(institution, institutionData);
-    await this.em.flush();
-    return institution;
+    const institution = await this.em.findOneOrFail(Institution, { id })
+    this.em.assign(institution, institutionData)
+    await this.em.flush()
+    return institution
   }
 
   /**
@@ -80,7 +80,7 @@ export class InstitutionService {
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
   public async remove(id: string): Promise<void> {
-    const institution = this.em.getReference(Institution, id);
-    await this.em.removeAndFlush(institution);
+    const institution = this.em.getReference(Institution, id)
+    await this.em.removeAndFlush(institution)
   }
 }

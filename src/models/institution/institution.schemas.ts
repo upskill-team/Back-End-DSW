@@ -4,7 +4,7 @@
  * These schemas are used by the validationMiddleware to ensure data integrity for incoming requests.
  * @see {@link ./institution.routes.ts}
  */
-import * as v from 'valibot';
+import * as v from 'valibot'
 
 // Schema for creating a new institution.
 export const CreateInstitutionSchema = v.object({
@@ -13,11 +13,11 @@ export const CreateInstitutionSchema = v.object({
     v.string(),
     v.minLength(1, 'La descripción es requerida.')
   ),
-});
+})
 
 // Schema for updating an institution, making all fields optional.
-export const UpdateInstitutionSchema = v.partial(CreateInstitutionSchema);
+export const UpdateInstitutionSchema = v.partial(CreateInstitutionSchema)
 
 export type CreateInstitutionType = v.InferOutput<
   typeof CreateInstitutionSchema
->;
+>
