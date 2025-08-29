@@ -8,7 +8,7 @@ import {
 } from './professor.controller.js';
 import { authMiddleware } from '../../auth/auth.middleware.js';
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js';
-import { CreateProfessorSchema, UpdateProfessorSchema } from './professo.schema.js';
+import { CreateProfessorSchema, UpdateProfessorSchema } from './professor.schema.js';
 
 export const professorRouter = Router();
 
