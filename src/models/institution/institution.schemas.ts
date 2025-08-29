@@ -15,4 +15,9 @@ export const CreateInstitutionSchema = v.object({
   ),
 });
 
+// Schema for updating an institution, making all fields optional.
 export const UpdateInstitutionSchema = v.partial(CreateInstitutionSchema);
+
+export type CreateInstitutionType = v.InferOutput<
+  typeof CreateInstitutionSchema
+>;
