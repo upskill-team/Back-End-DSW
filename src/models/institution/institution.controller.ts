@@ -1,8 +1,8 @@
 /**
- * @module InstitutionController
- * @description Handles the HTTP request/response logic for the institution module.
+ * @module models/institution
+ * Handles the HTTP request/response logic for the institution module.
  * It uses the InstitutionService to perform business logic and responds with standardized HTTP responses.
- * @see {@link ./institution.services.ts}
+ * @see {@link InstitutionService}
  */
 import { Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'

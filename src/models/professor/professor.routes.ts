@@ -1,8 +1,8 @@
 /**
- * @module ProfessorRoutes
- * @description Defines the API routes for the professor module.
+ * @module models/professor
+ * Defines the API routes for the professor module.
  * All routes are protected by authentication.
- * @see {@link ./professor.controller.ts}
+ * @see {@link ProfessorController}
  */
 import { Router } from 'express'
 import { findAll, findOne, update, remove } from './professor.controller.js'

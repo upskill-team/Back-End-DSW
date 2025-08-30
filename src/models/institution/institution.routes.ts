@@ -1,11 +1,11 @@
 /**
- * @module InstitutionRoutes
- * @description Defines the API routes for the institution module.
+ * @module models/institution
+ * Defines the API routes for the institution module.
  * It maps HTTP endpoints to controller functions, applies authentication middleware to all routes,
  * and uses validation middleware for create/update operations.
- * @see {@link ./institution.controller.ts}
- * @see {@link ./institution.schemas.ts}
- * @see {@link ../../auth/auth.middleware.ts}
+ * @see {@link InstitutionController}
+ * @see {@link InstitutionSchemas}
+ * @see {@link authMiddleware}
  */
 import { Router } from 'express'
 import {

@@ -1,8 +1,7 @@
 /**
- * @module ProfessorController
- * @description Handles HTTP requests for the professor module.
- * Connects routes to the ProfessorService and formats responses.
- * @see {@link ./professor.services.ts}
+ * @module models/professor
+ * Handles HTTP requests for the professor module.
+ * @see {@link ProfessorService}
  */
 import { Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'

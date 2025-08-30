@@ -1,6 +1,7 @@
 /**
- * @module ProfessorService
- * @description Encapsulates the business logic for managing professor profiles.
+ * @module models/professor
+ * Encapsulates the business logic for managing professor profiles.
+ * @see {@link Professor}
  */
 import { EntityManager } from '@mikro-orm/core';
 import { Professor } from './professor.entity.js';
@@ -8,7 +9,6 @@ import { UpdateProfessorType } from './professor.schema.js';
 
 /**
  * Provides methods for CRUD operations on Professor entities.
- * @class ProfessorService
  */
 export class ProfessorService {
   private em: EntityManager;
@@ -24,7 +24,7 @@ export class ProfessorService {
   /**
    * Retrieves all professor profiles from the database.
    * Populates related courses and institution data.
-   * @returns {Promise<Professor[]>} A promise resolving to an array of professors.
+   * @returns A promise resolving to an array of professors.
    */
   public async findAll(): Promise<Professor[]> {
     return this.em.find(
@@ -36,9 +36,9 @@ export class ProfessorService {
 
   /**
    * Retrieves a single professor profile by its ID.
-   * @param {string} id - The ID of the professor to find.
-   * @returns {Promise<Professor>} A promise resolving to the found professor.
-   * @throws {NotFoundError} If no professor with the given ID is found.
+   * @param id - The ID of the professor to find.
+   * @returns A promise resolving to the found professor.
+   * @throws NotFoundError If no professor with the given ID is found.
    */
   public async findOne(id: string): Promise<Professor> {
     return this.em.findOneOrFail(
@@ -50,10 +50,10 @@ export class ProfessorService {
 
   /**
    * Updates an existing professor's profile.
-   * @param {string} id - The ID of the professor to update.
-   * @param {UpdateProfessorType} professorData - The data to update.
-   * @returns {Promise<Professor>} A promise resolving to the updated professor profile.
-   * @throws {NotFoundError} If no professor with the given ID is found.
+   * @param id - The ID of the professor to update.
+   * @param professorData - The data to update.
+   * @returns A promise resolving to the updated professor profile.
+   * @throws NotFoundError If no professor with the given ID is found.
    */
   public async update(
     id: string,
@@ -67,8 +67,8 @@ export class ProfessorService {
 
   /**
    * Deletes a professor's profile by its ID.
-   * @param {string} id - The ID of the professor to remove.
-   * @returns {Promise<void>} A promise that resolves when the profile is deleted.
+   * @param id - The ID of the professor to remove.
+   * @returns A promise that resolves when the profile is deleted.
    */
   public async remove(id: string): Promise<void> {
     const professor = this.em.getReference(Professor, id);

@@ -1,0 +1,32 @@
+{
+  "entryPoints": [
+    "src/app.ts",
+    "src/models",
+    "src/auth",
+    "src/shared"
+  ],
+   "jsDocCompatibility": {
+        "exampleTag": true,
+        "defaultTag": true,
+        "inheritDocTag": true,
+        "ignoreUnescapedBraces": true
+    },
+  "visibilityFilters": { // Configuración para incluir miembros heredados
+        "protected": false,
+        "private": false,
+        "inherited": false,
+        "external": false,
+        "@alpha": false,
+        "@beta": false
+    },
+  "out": "docs",
+  "tsconfig": "tsconfig.json",
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/node_modules/**",
+    "**/dist/**"
+  ],
+  "includeVersion": true,
+  "theme": "default"
+}

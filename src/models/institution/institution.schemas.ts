@@ -1,8 +1,8 @@
 /**
- * @module InstitutionSchemas
- * @description Defines the validation schemas for the institution module using Valibot.
+ * @module models/institution
+ * Defines the validation schemas for the institution module using Valibot.
  * These schemas are used by the validationMiddleware to ensure data integrity for incoming requests.
- * @see {@link ./institution.routes.ts}
+ * @see {@link InstitutionRoutes}
  */
 import * as v from 'valibot'
 
