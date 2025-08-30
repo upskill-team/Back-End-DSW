@@ -5,29 +5,40 @@ name: Generar y Desplegar TypeDoc
 on:
   push:
     branches:
-      - develop # O la rama que prefieras para producción
+      - main # O la rama que prefieras para producción (ej. develop)
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '22' # Usa la versión de Node que necesites
+          node-version: '22' # Usa la misma versión que en tu otro action
 
-      - name: Instalar dependencias
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install Dependencies
         run: pnpm install
 
-      - name: Generar documentación con TypeDoc
-        run: pnpm tdocs # O el comando directo: typedoc --entryPointStrategy expand ./src
+      - name: Generate TypeDoc documentation
+        run: pnpm run tdocs # Usamos pnpm para correr el script
 
-      - name: Desplegar a GitHub Pages
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs # O el directorio de salida de TypeDoc
+          publish_dir: ./docs # Asegúrate que este sea el directorio de salida de TypeDoc
