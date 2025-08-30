@@ -1,57 +1,56 @@
-import { Request, Response } from 'express';
-import { orm } from '../../shared/db/orm.js';
-import { ProfessorService } from './professor.services.js';
-
-const professorService = new ProfessorService(orm.em);
-
+/**
+ * @module ProfessorController
+ * @description Handles HTTP requests for the professor module.
+ * Connects routes to the ProfessorService and formats responses.
+ * @see {@link ./professor.services.ts}
+ */
+import { Request, Response } from 'express'
+import { orm } from '../../shared/db/orm.js'
+import { ProfessorService } from './professor.services.js'
+import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function findAll(req: Request, res: Response) {
   try {
-    const professor = await professorService.findAll();
-    res.status(200).json({ message: 'Found all professors', data: professor });
+    const service = new ProfessorService(orm.em.fork())
+    const professors = await service.findAll()
+    return HttpResponse.Ok(res, professors)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function findOne(req: Request, res: Response) {
   try {
-    const id = req.params.id;
-    const professor = await professorService.findOne(id);
-    res.status(200).json({ message: 'Found professor', data: professor });
+    const service = new ProfessorService(orm.em.fork())
+    const { id } = req.params
+    const professor = await service.findOne(id)
+    return HttpResponse.Ok(res, professor)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
-  }
-}
-
-async function add(req: Request, res: Response) {
-  try {
-    const professor = professorService.create(req.body);
-    res.status(201).json({ message: 'Professor created', data: professor });
-  } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function update(req: Request, res: Response) {
   try {
-    const id = req.params.id;
-    const professor = professorService.update(id, req.body);
-
-    res.status(200).json({ message: 'Professor updated', data: professor });
+    const service = new ProfessorService(orm.em.fork())
+    const { id } = req.params
+    const updatedProfessor = await service.update(id, req.body)
+    return HttpResponse.Ok(res, updatedProfessor)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
 async function remove(req: Request, res: Response) {
   try {
-    const id = req.params.id;
-    await professorService.remove(id);
-    res.status(200).send({ message: 'Professor deleted' });
+    const service = new ProfessorService(orm.em.fork())
+    const { id } = req.params
+    await service.remove(id)
+    return HttpResponse.Ok(res, { message: 'Professor deleted successfully' })
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    return HttpResponse.InternalServerError(res, error.message)
   }
 }
 
-export {findAll, findOne, add, remove, update };
+// The 'add' controller has been removed to enforce correct business logic.
+export { findAll, findOne, update, remove }
