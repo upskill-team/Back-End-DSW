@@ -1,0 +1,33 @@
+# .github/workflows/typedoc.yml
+
+name: Generar y Desplegar TypeDoc
+
+on:
+  push:
+    branches:
+      - develop # O la rama que prefieras para producción
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22' # Usa la versión de Node que necesites
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Generar documentación con TypeDoc
+        run: pnpm tdocs # O el comando directo: typedoc --entryPointStrategy expand ./src
+
+      - name: Desplegar a GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs # O el directorio de salida de TypeDoc
