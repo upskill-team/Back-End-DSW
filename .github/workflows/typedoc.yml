@@ -5,11 +5,16 @@ name: Generar y Desplegar TypeDoc
 on:
   push:
     branches:
-      - develop # O la rama que prefieras para producción (ej. develop)
-
+      - develop
+  pull_request:
+    branches:
+      - develop
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write # Otorga permisos para escribir en el repositorio (necesario para hacer push a gh-pages)
 
     steps:
       - name: Checkout Code
