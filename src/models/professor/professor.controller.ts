@@ -1,7 +1,6 @@
 /**
  * @module ProfessorController
  * @description Handles HTTP requests for the professor module.
- * Connects routes to the ProfessorService and formats responses.
  * @see {@link ./professor.services.ts}
  */
 import { Request, Response } from 'express'
@@ -10,47 +9,30 @@ import { ProfessorService } from './professor.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function findAll(req: Request, res: Response) {
-  try {
-    const service = new ProfessorService(orm.em.fork())
-    const professors = await service.findAll()
-    return HttpResponse.Ok(res, professors)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new ProfessorService(orm.em.fork())
+  const professors = await service.findAll()
+  return HttpResponse.Ok(res, professors)
 }
 
 async function findOne(req: Request, res: Response) {
-  try {
-    const service = new ProfessorService(orm.em.fork())
-    const { id } = req.params
-    const professor = await service.findOne(id)
-    return HttpResponse.Ok(res, professor)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new ProfessorService(orm.em.fork())
+  const { id } = req.params
+  const professor = await service.findOne(id)
+  return HttpResponse.Ok(res, professor)
 }
 
 async function update(req: Request, res: Response) {
-  try {
-    const service = new ProfessorService(orm.em.fork())
-    const { id } = req.params
-    const updatedProfessor = await service.update(id, req.body)
-    return HttpResponse.Ok(res, updatedProfessor)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new ProfessorService(orm.em.fork())
+  const { id } = req.params
+  const updatedProfessor = await service.update(id, req.body)
+  return HttpResponse.Ok(res, updatedProfessor)
 }
 
 async function remove(req: Request, res: Response) {
-  try {
-    const service = new ProfessorService(orm.em.fork())
-    const { id } = req.params
-    await service.remove(id)
-    return HttpResponse.Ok(res, { message: 'Professor deleted successfully' })
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new ProfessorService(orm.em.fork())
+  const { id } = req.params
+  await service.remove(id)
+  return HttpResponse.Ok(res, { message: 'Professor deleted successfully' })
 }
 
-// The 'add' controller has been removed to enforce correct business logic.
 export { findAll, findOne, update, remove }
