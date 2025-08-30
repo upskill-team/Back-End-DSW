@@ -21,7 +21,7 @@ jobs:
           node-version: '22' # Usa la versión de Node que necesites
 
       - name: Instalar dependencias
-        run: npm install
+        run: pnpm install
 
       - name: Generar documentación con TypeDoc
         run: pnpm tdocs # O el comando directo: typedoc --entryPointStrategy expand ./src
