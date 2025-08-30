@@ -5,7 +5,7 @@ name: Generar y Desplegar TypeDoc
 on:
   push:
     branches:
-      - main # O la rama que prefieras para producción (ej. develop)
+      - develop # O la rama que prefieras para producción (ej. develop)
 
 jobs:
   build-and-deploy:
