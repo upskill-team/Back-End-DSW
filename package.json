@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "audit": "pnpm audit",
-    "test": "pnpm run lint && pnpm run type-check && pnpm run audit"
+    "test": "pnpm run lint && pnpm run type-check && pnpm run audit",
+    "tdocs": "typedoc --entryPointStrategy expand ./src"
   },
   "keywords": [],
   "author": "",
@@ -48,6 +49,7 @@
     "eslint": "^9.33.0",
     "globals": "^16.3.0",
     "tsc-watch": "7.1.1",
+    "typedoc": "^0.28.11",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.39.1"
   }

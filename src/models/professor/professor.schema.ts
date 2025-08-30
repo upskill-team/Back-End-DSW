@@ -1,7 +1,6 @@
 /**
- * @module ProfessorSchemas
- * @description Defines the validation schemas for updating a professor's profile.
- * @see {@link ./professor.routes.ts}
+ * @module models/professor
+ * Defines the validation schemas for updating a professor's profile.
  */
 import * as v from 'valibot';
 
