@@ -25,7 +25,8 @@ export const authMiddleware = (
 
   // Extract the token from the header
   const token = authHeader.split(' ')[1];
-  const JWT_SECRET = process.env.JWT_SECRET || 'DEFAULT_SECRET';
+  
+  const JWT_SECRET = process.env.JWT_SECRET!;
 
   try {
     // Verify the token and get user data
