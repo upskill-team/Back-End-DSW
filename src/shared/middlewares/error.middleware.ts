@@ -2,8 +2,8 @@
  * @module ErrorMiddleware
  * @description Provides a global error handling middleware for the Express application.
  */
-import { Request, Response, NextFunction } from 'express';
-import { HttpResponse } from '../response/http.response.js';
+import { Request, Response, NextFunction } from 'express'
+import { HttpResponse } from '../response/http.response.js'
 
 /**
  * Global error handler for the application.
@@ -20,8 +20,6 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
-  console.error(`Error: ${err.message}\nStack: ${err.stack}`);
-  // In a real production app, you might have more sophisticated logic here
-  // to handle different types of errors (e.g., validation errors, not found errors).
-  return HttpResponse.InternalServerError(res, err.message);
-};
+  console.error(`Error: ${err.message}\nStack: ${err.stack}`)
+  return HttpResponse.InternalServerError(res, err.message) // Maybe we could change it to BadRequest
+}
