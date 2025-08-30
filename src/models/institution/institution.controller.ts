@@ -10,59 +10,36 @@ import { InstitutionService } from './institution.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function findAll(req: Request, res: Response) {
-  try {
-    const service = new InstitutionService(orm.em.fork())
-    const institutions = await service.findAll()
-    return HttpResponse.Ok(res, institutions)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new InstitutionService(orm.em.fork())
+  const institutions = await service.findAll()
+  return HttpResponse.Ok(res, institutions)
 }
 
 async function findOne(req: Request, res: Response) {
-  try {
-    const service = new InstitutionService(orm.em.fork())
-    const { id } = req.params
-    const institution = await service.findOne(id)
-    return HttpResponse.Ok(res, institution)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new InstitutionService(orm.em.fork())
+  const { id } = req.params
+  const institution = await service.findOne(id)
+  return HttpResponse.Ok(res, institution)
 }
 
 async function add(req: Request, res: Response) {
-  try {
-    const service = new InstitutionService(orm.em.fork())
-    // The request body is already validated by the validationMiddleware.
-    const newInstitution = await service.create(req.body)
-    return HttpResponse.Created(res, newInstitution)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new InstitutionService(orm.em.fork())
+  const newInstitution = await service.create(req.body)
+  return HttpResponse.Created(res, newInstitution)
 }
 
 async function update(req: Request, res: Response) {
-  try {
-    const service = new InstitutionService(orm.em.fork())
-    const { id } = req.params
-    const updatedInstitution = await service.update(id, req.body)
-    return HttpResponse.Ok(res, updatedInstitution)
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new InstitutionService(orm.em.fork())
+  const { id } = req.params
+  const updatedInstitution = await service.update(id, req.body)
+  return HttpResponse.Ok(res, updatedInstitution)
 }
 
 async function remove(req: Request, res: Response) {
-  try {
-    const service = new InstitutionService(orm.em.fork())
-    const { id } = req.params
-    await service.remove(id)
-    return HttpResponse.Ok(res, {
-      message: 'Institution deleted successfully',
-    })
-  } catch (error: any) {
-    return HttpResponse.InternalServerError(res, error.message)
-  }
+  const service = new InstitutionService(orm.em.fork())
+  const { id } = req.params
+  await service.remove(id)
+  return HttpResponse.Ok(res, { message: 'Institution deleted successfully' })
 }
 
 export { findAll, findOne, add, remove, update }
