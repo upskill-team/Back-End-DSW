@@ -1,3 +1,5 @@
+import './shared/config/env.validator.js'
+
 import express from 'express'
 import { courseTypeRouter } from './models/courseType/courseType.routes.js'
 import { institutionRouter } from './models/institution/institution.routes.js'

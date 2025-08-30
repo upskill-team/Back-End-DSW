@@ -1,42 +1,52 @@
-import { EntityManager } from '@mikro-orm/core';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { User, UserRole } from '../models/user/user.entity.js';
-import { Student } from '../models/student/student.entity.js';
-import { ObjectId } from '@mikro-orm/mongodb';
-import { sendEmail } from '../shared/services/email.service.js';
-import { render } from '@react-email/render';
-import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js';
+/**
+ * @module AuthService
+ * @description Manages the business logic for user authentication.
+ * Responsibilities: registering new users, validating credentials for login,
+ * and handling the password recovery flow.
+ * @see {@link ./auth.controller.ts}
+ */
+import { EntityManager } from '@mikro-orm/core'
+import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import crypto from 'crypto'
+import { User, UserRole } from '../models/user/user.entity.js'
+import { Student } from '../models/student/student.entity.js'
+import { ObjectId } from '@mikro-orm/mongodb'
+import { sendEmail } from '../shared/services/email.service.js'
+import { render } from '@react-email/render'
+import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
 
 /**
- * Service for authentication logic, including registration, login, and password recovery.
+ * Provides methods for handling the user authentication lifecycle.
+ * @class AuthService
  */
 export class AuthService {
-  private em: EntityManager;
+  private em: EntityManager
 
   constructor(em: EntityManager) {
-    this.em = em;
+    this.em = em
   }
 
   /**
-   * Registers a new user and creates their student profile.
-   * @param userData The user's registration data.
-   * @returns The newly created User entity, without the password.
+   * Registers a new user in the system and creates their associated student profile.
+   * Hashes the password before persisting to ensure security.
+   * @param userData - User data for registration, including the plaintext password.
+   * @returns {Promise<User>} A promise that resolves to the newly created user entity (without the password).
+   * @throws {Error} If the provided email is already in use.
    */
   public async register(
     userData: Omit<User, 'password'> & { password_plaintext: string }
   ): Promise<User> {
-    const existingUser = await this.em.findOne(User, { mail: userData.mail });
+    const existingUser = await this.em.findOne(User, { mail: userData.mail })
     if (existingUser) {
-      throw new Error('Email already used');
+      throw new Error('Email already used')
     }
 
-    const SALT_ROUNDS = 10;
+    const SALT_ROUNDS = 10
     const hashedPassword = await bcrypt.hash(
       userData.password_plaintext,
       SALT_ROUNDS
-    );
+    )
 
     const newUser = this.em.create(User, {
       name: userData.name,
@@ -44,133 +54,140 @@ export class AuthService {
       mail: userData.mail,
       password: hashedPassword,
       role: UserRole.STUDENT,
-    });
+    })
 
-    const newStudentProfile = this.em.create(Student, { user: newUser });
-    newUser.studentProfile = newStudentProfile;
+    const newStudentProfile = this.em.create(Student, { user: newUser })
+    newUser.studentProfile = newStudentProfile
 
-    await this.em.persistAndFlush([newUser, newStudentProfile]);
+    await this.em.persistAndFlush([newUser, newStudentProfile])
 
-    delete (newUser as Partial<User>).password;
-    return newUser;
+    delete (newUser as Partial<User>).password
+    return newUser
   }
 
   /**
-   * Logs in a user and returns a JWT token.
-   * @param credentials The user's login credentials.
-   * @returns An object containing the JWT token.
+   * Validates a user's credentials and generates a JWT if they are correct.
+   * @param credentials - Object containing the user's email and plaintext password.
+   * @returns {Promise<{ token: string }>} A promise that resolves to an object containing the JWT.
+   * @throws {Error} If the credentials are invalid or the user does not exist.
    */
   public async login(credentials: {
-    mail: string;
-    password_plaintext: string;
+    mail: string
+    password_plaintext: string
   }): Promise<{ token: string }> {
-    const user = await this.em.findOne(User, { mail: credentials.mail });
+    const user = await this.em.findOne(User, { mail: credentials.mail })
 
     if (!user) {
-      throw new Error('Credenciales inválidas.');
+      throw new Error('Credenciales inválidas.')
     }
 
     const isPasswordValid = await bcrypt.compare(
       credentials.password_plaintext,
       user.password
-    );
+    )
 
     if (!isPasswordValid) {
-      throw new Error('Credenciales inválidas.');
+      throw new Error('Credenciales inválidas.')
     }
 
-    const payload = { id: user.id, role: user.role };
-    const JWT_SECRET = process.env.JWT_SECRET || 'DEFAULT_SECRET';
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+    const payload = { id: user.id, role: user.role }
+    // FIX: The '||' fallback is now removed.
+    const JWT_SECRET = process.env.JWT_SECRET!
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' })
 
-    return { token };
+    return { token }
   }
 
   /**
-   * Gets a user's profile by their ID.
-   * @param userId The ID of the user to retrieve.
-   * @returns The User entity or null if not found.
+   * Retrieves a user's profile by their ID.
+   * @param {string} userId - The ID of the user to retrieve.
+   * @returns {Promise<User | null>} The User entity or null if not found.
    */
   public async getProfile(userId: string): Promise<User | null> {
-    const userObjectId = new ObjectId(userId);
+    const userObjectId = new ObjectId(userId)
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
       { populate: ['studentProfile', 'professorProfile'] }
-    );
+    )
 
-    if (!user) return null;
+    if (!user) return null
 
-    delete (user as Partial<User>).password;
-    return user;
+    delete (user as Partial<User>).password
+    return user
   }
 
   /**
-   * Handles the forgot password request. Generates a secure token,
-   * stores its hash, and sends a reset email to the user.
-   * @param mail The email of the user requesting a password reset.
+   * Initiates the password recovery process. Generates a secure token,
+   * stores it in the database, and sends a reset link email to the user.
+   * @param {string} mail - The email of the user who forgot their password.
+   * @returns {Promise<void>} A promise that resolves when the process is complete.
+   * @throws {Error} If the email sending fails.
    */
   public async forgotPassword(mail: string): Promise<void> {
-    const user = await this.em.findOne(User, { mail });
+    const user = await this.em.findOne(User, { mail })
 
     // For security, don't reveal if the user exists.
     if (user) {
-      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetToken = crypto.randomBytes(32).toString('hex')
       const passwordResetToken = crypto
         .createHash('sha256')
         .update(resetToken)
-        .digest('hex');
+        .digest('hex')
 
-      user.resetPasswordToken = passwordResetToken;
-      user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+      user.resetPasswordToken = passwordResetToken
+      user.resetPasswordExpires = new Date(Date.now() + 3600000) // 1 hour
 
-      await this.em.persistAndFlush(user);
+      await this.em.persistAndFlush(user)
 
-      const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`;
+      const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`
       const emailHtml = await render(
         ResetPasswordEmail({ name: user.name, resetUrl })
-      );
+      )
 
       try {
         await sendEmail({
           to: user.mail,
           subject: 'Restablecimiento de Contraseña - UpSkill',
           html: emailHtml,
-        });
+        })
       } catch {
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await this.em.persistAndFlush(user);
-        throw new Error('Could not send password reset email.');
+        // If email sending fails, clear the tokens to allow the user to try again.
+        user.resetPasswordToken = undefined
+        user.resetPasswordExpires = undefined
+        await this.em.persistAndFlush(user)
+        throw new Error('Could not send password reset email.')
       }
     }
   }
 
   /**
    * Resets a user's password using a valid, non-expired token.
-   * @param token The plain reset token from the URL.
-   * @param password_plaintext The new password to set.
+   * @param {string} token - The plain reset token from the URL.
+   * @param {string} password_plaintext - The new password to set.
+   * @returns {Promise<void>}
+   * @throws {Error} If the token is invalid or has expired.
    */
   public async resetPassword(
     token: string,
     password_plaintext: string
   ): Promise<void> {
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
 
     const user = await this.em.findOne(User, {
       resetPasswordToken: hashedToken,
       resetPasswordExpires: { $gt: new Date() },
-    });
+    })
 
     if (!user) {
-      throw new Error('El token es inválido o ha expirado.');
+      throw new Error('El token es inválido o ha expirado.')
     }
 
-    const SALT_ROUNDS = 10;
-    user.password = await bcrypt.hash(password_plaintext, SALT_ROUNDS);
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    const SALT_ROUNDS = 10
+    user.password = await bcrypt.hash(password_plaintext, SALT_ROUNDS)
+    user.resetPasswordToken = undefined
+    user.resetPasswordExpires = undefined
 
-    await this.em.persistAndFlush(user);
+    await this.em.persistAndFlush(user)
   }
 }
