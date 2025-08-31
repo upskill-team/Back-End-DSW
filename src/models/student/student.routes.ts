@@ -6,19 +6,22 @@ import {
   remove,
 } from './student.controller.js';
 
-import { authMiddleware } from '../../auth/auth.middleware.js';
+import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js';
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js';
-import { UpdateStudentSchema } from './student.schemas.js';
 
+import { UpdateStudentSchema } from './student.schemas.js';
+import { UserRole } from '../user/user.entity.js';
 
 export const studentRouter = Router();
 
 studentRouter.use(authMiddleware);
 
+const adminOnly = roleAuthMiddleware([UserRole.ADMIN]);
+
 studentRouter.get('/', findAll);
 studentRouter.get('/:id', findOne);
 
-studentRouter.put('/:id', validationMiddleware(UpdateStudentSchema), update);
-studentRouter.patch('/:id', validationMiddleware(UpdateStudentSchema), update);
+studentRouter.put('/:id', adminOnly, validationMiddleware(UpdateStudentSchema), update);
+studentRouter.patch('/:id', adminOnly, validationMiddleware(UpdateStudentSchema), update);
 
-studentRouter.delete('/:id', remove);
+studentRouter.delete('/:id', adminOnly, remove);

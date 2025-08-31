@@ -1,19 +1,25 @@
-import { Router } from 'express';
-import { findAll, findOne, add, update, remove } from './course.controller.js';
-import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js';
+import { Router } from 'express'
+import { findAll, findOne, add, update, remove } from './course.controller.js'
+import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'
 import {
   CreateCourseSchema,
   UpdateCourseSchema,
-} from './course.schemas.js';
-import { authMiddleware } from '../../auth/auth.middleware.js';
+} from './course.schemas.js'
+import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js'
+import { UserRole } from '../user/user.entity.js'
 
-export const courseRouter = Router();
+export const courseRouter = Router()
 
-courseRouter.use(authMiddleware);
+courseRouter.use(authMiddleware)
 
-courseRouter.get('/', findAll);
-courseRouter.get('/:id', findOne);
-courseRouter.delete('/:id', remove);
-courseRouter.post('/', validationMiddleware(CreateCourseSchema), add);
-courseRouter.put('/:id', validationMiddleware(UpdateCourseSchema), update);
-courseRouter.patch('/:id', validationMiddleware(UpdateCourseSchema), update);
+const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR])
+const professorOrAdmin = roleAuthMiddleware([UserRole.PROFESSOR, UserRole.ADMIN])
+
+courseRouter.get('/', findAll)
+courseRouter.get('/:id', findOne)
+
+courseRouter.post('/', professorOnly, validationMiddleware(CreateCourseSchema), add)
+courseRouter.put('/:id', professorOnly, validationMiddleware(UpdateCourseSchema), update)
+courseRouter.patch('/:id', professorOnly,validationMiddleware(UpdateCourseSchema), update)
+
+courseRouter.delete('/:id', professorOrAdmin, remove)
