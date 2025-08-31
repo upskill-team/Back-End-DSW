@@ -15,8 +15,8 @@ import { ObjectId } from '@mikro-orm/mongodb'
 import { sendEmail } from '../shared/services/email.service.js'
 import { render } from '@react-email/render'
 import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
-import { HttpError } from '../shared/errors/http.error.js';
-import { HttpStatus } from '../shared/response/http.response.js';
+import { HttpError } from '../shared/errors/http.error.js'
+import { HttpStatus } from '../shared/response/http.response.js'
 
 /**
  * Provides methods for handling the user authentication lifecycle.
