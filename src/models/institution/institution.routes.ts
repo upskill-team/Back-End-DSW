@@ -20,7 +20,8 @@ import {
   CreateInstitutionSchema,
   UpdateInstitutionSchema,
 } from './institution.schemas.js'
-import { authMiddleware } from '../../auth/auth.middleware.js'
+import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js'
+import { UserRole } from '../user/user.entity.js'
 
 export const institutionRouter = Router()
 
@@ -28,19 +29,23 @@ export const institutionRouter = Router()
 // This ensures that only authenticated users can access these endpoints.
 institutionRouter.use(authMiddleware)
 
+const adminOnly = roleAuthMiddleware([UserRole.ADMIN])
+
 institutionRouter.get('/', findAll)
 institutionRouter.get('/:id', findOne)
 
-institutionRouter.post('/', validationMiddleware(CreateInstitutionSchema), add)
+institutionRouter.post('/', adminOnly, validationMiddleware(CreateInstitutionSchema), add)
 institutionRouter.put(
   '/:id',
+  adminOnly,
   validationMiddleware(UpdateInstitutionSchema),
   update
 )
 institutionRouter.patch(
   '/:id',
+  adminOnly,
   validationMiddleware(UpdateInstitutionSchema),
   update
 )
 
-institutionRouter.delete('/:id', remove)
+institutionRouter.delete('/:id', adminOnly, remove)
