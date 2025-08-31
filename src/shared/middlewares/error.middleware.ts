@@ -4,6 +4,7 @@
  */
 import { Request, Response, NextFunction } from 'express'
 import { HttpResponse } from '../response/http.response.js'
+import { HttpError } from '../errors/http.error.js'
 
 /**
  * Global error handler for the application.
@@ -21,5 +22,21 @@ export const errorHandler = (
   _next: NextFunction
 ) => {
   console.error(`Error: ${err.message}\nStack: ${err.stack}`)
-  return HttpResponse.InternalServerError(res, err.message) // Maybe we could change it to BadRequest
+  
+  // Handle custom HttpError
+  if (err instanceof HttpError) {
+    return res.status(err.statusCode).json({
+      status: err.statusCode,
+      message: err.message,
+      errors: err.message,
+    })
+  }
+
+   // Handle MikroORM's NotFoundError
+  if (err.name === 'NotFoundError') {
+    return HttpResponse.NotFound(res, 'Resource not found.')
+  }
+
+  // Fallback for generic errors
+  return HttpResponse.InternalServerError(res, err.message)
 }
