@@ -8,19 +8,9 @@ import { CourseTypeService } from './courseType.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function add(req: Request, res: Response) {
-  try {
-    const service = new CourseTypeService(orm.em.fork())
-    const newCourseType = await service.create(req.body)
-    return HttpResponse.Created(res, newCourseType)
-  } catch (error: any) {
-    if (error.code === 11000) {
-      return HttpResponse.BadRequest(
-        res,
-        'There is already a type of course with that name.'
-      )
-    }
-    throw error
-  }
+  const service = new CourseTypeService(orm.em.fork())
+  const newCourseType = await service.create(req.body)
+  return HttpResponse.Created(res, newCourseType)
 }
 
 async function findAll(_: Request, res: Response) {

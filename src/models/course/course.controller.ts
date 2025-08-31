@@ -12,21 +12,14 @@ async function findAll(req: Request, res: Response) {
   const courses = await courseService.findAll()
   return HttpResponse.Ok(res, courses)
 }
+
 async function findOne(req: Request, res: Response) {
-  // This try...catch remains because it handles a specific error case (NotFoundError)
-  // to return a 404, which is more specific than a generic 500. Check it
-  try {
-    const courseService = new CourseService(orm.em.fork())
-    const { id } = req.params
-    const course = await courseService.findOne(id)
-    return HttpResponse.Ok(res, course)
-  } catch (error: any) {
-    if (error.name === 'NotFoundError') {
-      return HttpResponse.NotFound(res, 'Course not found.')
-    }
-    throw error // Let other errors bubble up to the global handler
-  }
+  const courseService = new CourseService(orm.em.fork())
+  const { id } = req.params
+  const course = await courseService.findOne(id)
+  return HttpResponse.Ok(res, course)
 }
+
 async function add(req: Request, res: Response) {
   const courseService = new CourseService(orm.em.fork())
   const em = orm.em.fork()
@@ -45,24 +38,19 @@ async function add(req: Request, res: Response) {
   const newCourse = await courseService.create(req.body, professorId)
   return HttpResponse.Created(res, newCourse)
 }
+
 async function update(req: Request, res: Response) {
-  // This try...catch also remains for specific NotFoundError handling.
-  try {
-    const courseService = new CourseService(orm.em.fork())
-    const { id } = req.params
-    const updatedCourse = await courseService.update(id, req.body)
-    return HttpResponse.Ok(res, updatedCourse)
-  } catch (error: any) {
-    if (error.name === 'NotFoundError') {
-      return HttpResponse.NotFound(res, 'Course not found.')
-    }
-    throw error
-  }
+  const courseService = new CourseService(orm.em.fork())
+  const { id } = req.params
+  const updatedCourse = await courseService.update(id, req.body)
+  return HttpResponse.Ok(res, updatedCourse)
 }
+
 async function remove(req: Request, res: Response) {
   const courseService = new CourseService(orm.em.fork())
   const { id } = req.params
   await courseService.remove(id)
   return HttpResponse.Ok(res, { message: 'Course deleted successfully' })
 }
+
 export { findAll, findOne, add, update, remove }
