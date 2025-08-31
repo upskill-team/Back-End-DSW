@@ -2,16 +2,15 @@ import { Router } from 'express';
 import {
   findAll,
   findOne,
-  add,
   update,
   remove,
 } from './student.controller.js';
 
 import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js';
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js';
-import { CreateStudentSchema, UpdateStudentSchema } from './student.schemas.js';
-import { UserRole } from '../user/user.entity.js';
 
+import { UpdateStudentSchema } from './student.schemas.js';
+import { UserRole } from '../user/user.entity.js';
 
 export const studentRouter = Router();
 
@@ -21,8 +20,6 @@ const adminOnly = roleAuthMiddleware([UserRole.ADMIN]);
 
 studentRouter.get('/', findAll);
 studentRouter.get('/:id', findOne);
-
-studentRouter.post('/', validationMiddleware(CreateStudentSchema), add); //Candidate for removal
 
 studentRouter.put('/:id', adminOnly, validationMiddleware(UpdateStudentSchema), update);
 studentRouter.patch('/:id', adminOnly, validationMiddleware(UpdateStudentSchema), update);
