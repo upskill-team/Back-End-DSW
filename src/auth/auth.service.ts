@@ -15,6 +15,8 @@ import { ObjectId } from '@mikro-orm/mongodb'
 import { sendEmail } from '../shared/services/email.service.js'
 import { render } from '@react-email/render'
 import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
+import { HttpError } from '../shared/errors/http.error.js';
+import { HttpStatus } from '../shared/response/http.response.js';
 
 /**
  * Provides methods for handling the user authentication lifecycle.
@@ -39,7 +41,7 @@ export class AuthService {
   ): Promise<User> {
     const existingUser = await this.em.findOne(User, { mail: userData.mail })
     if (existingUser) {
-      throw new Error('Email already used')
+      throw new HttpError('Email already used', HttpStatus.BAD_REQUEST)
     }
 
     const SALT_ROUNDS = 10
@@ -78,7 +80,7 @@ export class AuthService {
     const user = await this.em.findOne(User, { mail: credentials.mail })
 
     if (!user) {
-      throw new Error('Credenciales inválidas.')
+      throw new HttpError('Credenciales inválidas.', HttpStatus.UNAUTHORIZED)
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -87,7 +89,7 @@ export class AuthService {
     )
 
     if (!isPasswordValid) {
-      throw new Error('Credenciales inválidas.')
+      throw new HttpError('Credenciales inválidas.', HttpStatus.UNAUTHORIZED)
     }
 
     const payload = { id: user.id, role: user.role }
@@ -180,7 +182,7 @@ export class AuthService {
     })
 
     if (!user) {
-      throw new Error('El token es inválido o ha expirado.')
+      throw new HttpError('El token es inválido o ha expirado.', HttpStatus.BAD_REQUEST)
     }
 
     const SALT_ROUNDS = 10
