@@ -4,11 +4,12 @@ const options = {
     definition: {
         openapi: '3.0.0',
         info: {
-            title: 'Jedi API',
+            title: 'Skill UP API',
             version: '1.0.0',
-            description: 'API for managing Jedi',
+            description: 'API for managing Skill UP platform',
             contact: {
-                name: 'Pedro Plasencia'
+                name: 'gugliermino carlos',
+                email: 'ricardogugliermino@gmail.com'
             },
             servers: [
                 {

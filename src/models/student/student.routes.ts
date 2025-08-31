@@ -16,21 +16,6 @@ export const studentRouter = Router();
 
 studentRouter.use(authMiddleware);
 
-/**
- * @openapi
- * /api/students:
- *   get:
- *     description: Retrieve a list of all students.
- *     tags:
- *       - Students
- *     responses:
- *       200:
- *        description: A list of students.
- *       content:
- *        application/json:
- *        schema:
- *         type: array
- */
 studentRouter.get('/', findAll);
 studentRouter.get('/:id', findOne);
 
