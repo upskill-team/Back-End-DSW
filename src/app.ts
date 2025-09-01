@@ -14,8 +14,45 @@ import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
 import { logger } from './shared/utils/logger.js'
 import pinoHttp from 'pino-http'
+import { randomUUID } from 'crypto'
 
 const app = express()
+
+/**
+ * @description HTTP request logger middleware.
+ * Uses the shared pino logger instance to log incoming requests and their responses.
+ * It adds a unique request ID to each log entry for easy tracing and redacts
+ * sensitive information like passwords and authorization headers.
+ */
+app.use(
+  pinoHttp({
+    logger,
+    // Define a custom request ID function
+    genReqId: function (req, res) {
+      const existingId = req.id ?? req.headers['x-request-id'];
+      if (existingId) return existingId;
+      const id = randomUUID();
+      res.setHeader('X-Request-Id', id);
+      return id;
+    },
+    // Define serializers to redact sensitive information
+    serializers: {
+      req(req) {
+        // Redact authorization header and password fields from logs
+        if (req.headers.authorization) {
+          req.headers.authorization = 'Bearer [REDACTED]';
+        }
+        if (req.body?.password_plaintext) {
+          req.body.password_plaintext = '[REDACTED]';
+        }
+        if (req.body?.password) {
+          req.body.password = '[REDACTED]';
+        }
+        return req;
+      },
+    },
+  })
+)
 
 /**
  * @description HTTP request logger middleware.
