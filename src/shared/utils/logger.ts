@@ -15,6 +15,8 @@ import pino from 'pino';
  * logger.error({ err }, 'An error occurred.');
  */
 export const logger = pino({
+  // Use pino-pretty for nicely formatted logs in development.
+  // In production, it will output structured JSON.
   transport:
     process.env.NODE_ENV !== 'production'
       ? {

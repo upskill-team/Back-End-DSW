@@ -12,8 +12,16 @@ import { RequestContext } from '@mikro-orm/core'
 import { authRouter } from './auth/auth.routes.js'
 import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
+import { logger } from './shared/utils/logger.js'
+import pinoHttp from 'pino-http'
 
 const app = express()
+
+/**
+ * @description HTTP request logger middleware.
+ * Uses the shared pino logger instance to log incoming requests and their responses.
+ */
+app.use(pinoHttp({ logger }))
 
 app.use(cors({ origin: 'http://localhost:5173' }))
 
