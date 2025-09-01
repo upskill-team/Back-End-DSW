@@ -1,11 +1,14 @@
+@token = 
 
 ### Obtener todos los cursos
 GET http://localhost:3000/api/courses
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 ### crear un nuevo curso
 POST http://localhost:3000/api/courses
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Curso de Node.js",

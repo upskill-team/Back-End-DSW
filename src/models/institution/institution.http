@@ -1,14 +1,19 @@
+@token = 
+
 ###Obtener todas las instituciones
 GET http://localhost:3000/api/institutions
+Authorization: Bearer {{token}}
 
 ###Obtener una institucion (id: a02b91bc-3769-4221-beb1-d7a3aeba7dad)
 GET http://localhost:3000/api/institutions/686c17180c57edcce15ee025
+Authorization: Bearer {{token}}
 
 ###Crear una institucion
 # @prompt name
 # @prompt description
 POST http://localhost:3000/api/institutions
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "{{name}}",
@@ -18,6 +23,7 @@ Content-Type: application/json
 ###Crear una institucion - rápido
 POST http://localhost:3000/api/institutions
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "Institucion de Prueba",
@@ -27,6 +33,7 @@ Content-Type: application/json
 ###Modificar una institucion existente (PUT)
 PUT http://localhost:3000/api/institutions/a02b91bc-3769-4221-beb1-d7a3aeba7dad
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "UGR",
@@ -36,6 +43,7 @@ Content-Type: application/json
 ###Modificar una institucion existente (PATCH)
 PATCH http://localhost:3000/api/institutions/a02b91bc-3769-4221-beb1-d7a3aeba7dad
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "description": "Descripcion modificada"

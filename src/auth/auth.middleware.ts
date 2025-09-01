@@ -25,6 +25,10 @@ export const authMiddleware = (
 
   // Extract the token from the header
   const token = authHeader.split(' ')[1];
+
+  if (!token || token === 'undefined' || token.length < 10) {
+      return HttpResponse.Unauthorized(res, 'Token inválido.');
+  }
   
   const JWT_SECRET = process.env.JWT_SECRET!;
 

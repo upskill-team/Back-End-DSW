@@ -27,38 +27,25 @@ const app = express()
 app.use(
   pinoHttp({
     logger,
-    // Define a custom request ID function
     genReqId: function (req, res) {
-      const existingId = req.id ?? req.headers['x-request-id'];
-      if (existingId) return existingId;
       const id = randomUUID();
       res.setHeader('X-Request-Id', id);
       return id;
     },
-    // Define serializers to redact sensitive information
-    serializers: {
-      req(req) {
-        // Redact authorization header and password fields from logs
-        if (req.headers.authorization) {
-          req.headers.authorization = 'Bearer [REDACTED]';
-        }
-        if (req.body?.password_plaintext) {
-          req.body.password_plaintext = '[REDACTED]';
-        }
-        if (req.body?.password) {
-          req.body.password = '[REDACTED]';
-        }
-        return req;
-      },
+    
+    customProps: function (req, _res) {
+      return {
+        context: {
+          authorization: req.headers.authorization ? 'Bearer [REDACTED]' : undefined,
+          body:
+            req.body && (req.body.password || req.body.password_plaintext)
+              ? { ...req.body, password: '[REDACTED]', password_plaintext: '[REDACTED]' }
+              : req.body,
+        },
+      };
     },
   })
-)
-
-/**
- * @description HTTP request logger middleware.
- * Uses the shared pino logger instance to log incoming requests and their responses.
- */
-app.use(pinoHttp({ logger }))
+);
 
 app.use(cors({ origin: 'http://localhost:5173' }))
 

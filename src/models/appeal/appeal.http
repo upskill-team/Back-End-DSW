@@ -1,5 +1,4 @@
-//Este token es el de Pepe Argento y se uso para validar que las rutas fueron debidamente protegidas
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4OWQzNzcwMDMwNWRkOGI1NDA4OWM4ZCIsInJvbGUiOiJzdHVkZW50IiwiaWF0IjoxNzU1MTk1MTMwLCJleHAiOjE3NTUyODE1MzB9.atLftVzM-mMLvj-6TroyrOH4FkNXOCT0neMeYu35yrc
+@token = 
 
 ###Obtener todas las aplicaciones
 GET http://localhost:3000/api/appeals
