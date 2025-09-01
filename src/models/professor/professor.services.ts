@@ -3,23 +3,42 @@
  * Encapsulates the business logic for managing professor profiles.
  * @see {@link Professor}
  */
-import { EntityManager } from '@mikro-orm/core';
-import { Professor } from './professor.entity.js';
-import { UpdateProfessorType } from './professor.schema.js';
+import { EntityManager } from '@mikro-orm/core'
+import { Professor } from './professor.entity.js'
+import { UpdateProfessorType } from './professor.schema.js'
+import { User, UserRole } from '../user/user.entity.js'
 
 /**
  * Provides methods for CRUD operations on Professor entities.
  */
 export class ProfessorService {
-  private em: EntityManager;
+  private em: EntityManager
 
   constructor(em: EntityManager) {
-    this.em = em;
+    this.em = em
   }
 
-  // The `create` method is intentionally omitted. Professor profiles should be created
-  // as part of a larger business process, such as a user's application being accepted.
-  // See AppealService for an example.
+    /**
+    * Creates a new Professor profile from an existing User entity and promotes their role.
+    * This method handles the business logic of turning a user into a professor.
+    * Note: This method persists the new entity but does NOT flush the EntityManager.
+    * The calling service is responsible for managing the transaction boundary.
+    * @param user - The User entity to be promoted.
+    * @returns The newly created Professor profile entity.
+    */
+    public createFromUser(user: User): Professor {
+    user.role = UserRole.PROFESSOR
+
+    const newProfessorProfile = this.em.create(Professor, {
+      user: user,
+      state: 'active',
+    })
+
+    user.professorProfile = newProfessorProfile
+    this.em.persist(newProfessorProfile)
+
+    return newProfessorProfile
+  }
 
   /**
    * Retrieves all professor profiles from the database.
@@ -31,7 +50,7 @@ export class ProfessorService {
       Professor,
       {},
       { populate: ['courses', 'institution'] }
-    );
+    )
   }
 
   /**
@@ -45,7 +64,7 @@ export class ProfessorService {
       Professor,
       { id },
       { populate: ['courses', 'institution'] }
-    );
+    )
   }
 
   /**
@@ -59,10 +78,10 @@ export class ProfessorService {
     id: string,
     professorData: UpdateProfessorType
   ): Promise<Professor> {
-    const professor = await this.em.findOneOrFail(Professor, { id });
-    this.em.assign(professor, professorData);
-    await this.em.flush();
-    return professor;
+    const professor = await this.em.findOneOrFail(Professor, { id })
+    this.em.assign(professor, professorData)
+    await this.em.flush()
+    return professor
   }
 
   /**
@@ -71,7 +90,7 @@ export class ProfessorService {
    * @returns A promise that resolves when the profile is deleted.
    */
   public async remove(id: string): Promise<void> {
-    const professor = this.em.getReference(Professor, id);
-    await this.em.removeAndFlush(professor);
+    const professor = this.em.getReference(Professor, id)
+    await this.em.removeAndFlush(professor)
   }
 }
