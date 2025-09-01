@@ -5,7 +5,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start:dev": "tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/app.js\"",
+    "start:dev": "tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/src/app.js\"",
+    "build": "tsc -p ./tsconfig.json",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "audit": "pnpm audit",
