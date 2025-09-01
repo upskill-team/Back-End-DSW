@@ -12,8 +12,12 @@ import { RequestContext } from '@mikro-orm/core'
 import { authRouter } from './auth/auth.routes.js'
 import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
+import helmet from 'helmet'
 
 const app = express()
+
+// Apply Helmet to set various security-related HTTP headers
+app.use(helmet())
 
 app.use(cors({ origin: 'http://localhost:5173' }))
 
