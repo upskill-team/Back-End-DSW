@@ -2,6 +2,7 @@ import { MikroORM } from '@mikro-orm/core';
 import { MongoHighlighter } from '@mikro-orm/mongo-highlighter';
 import { MongoDriver } from '@mikro-orm/mongodb';
 import * as dotenv from 'dotenv';
+import { PinoLogger } from '../utils/pino-logger.adapter.js';
 
 dotenv.config();
 
@@ -20,7 +21,8 @@ export const orm = await MikroORM.init({
   driver: MongoDriver,
   clientUrl: connectionString,
   highlighter: new MongoHighlighter(),
-  debug: true,
+  // Replace the default console logger with our Pino adapter
+  loggerFactory: (options) => new PinoLogger(options),
   schemaGenerator: {
     disableForeignKeys: true,
     createForeignKeyConstraints: true,
