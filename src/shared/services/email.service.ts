@@ -1,5 +1,6 @@
-import 'dotenv/config';
-import nodemailer from 'nodemailer';
+import 'dotenv/config'
+import nodemailer from 'nodemailer'
+import { logger } from '../utils/logger.js'
 
 // Interface for email options
 interface MailOptions {
@@ -32,12 +33,12 @@ export const sendEmail = async (options: MailOptions): Promise<void> => {
       to: options.to,
       subject: options.subject,
       html: options.html,
-    };
+    }
 
-    await transporter.sendMail(mailOptions);
-    console.log(`Email sent to ${options.to}`);
+    await transporter.sendMail(mailOptions)
+    logger.info({ to: options.to, subject: options.subject }, `Email sent successfully`)
   } catch (error) {
-    console.error('Error sending email:', error);
-    throw new Error('Could not send email.');
+    logger.error({ err: error, to: options.to }, 'Error sending email')
+    throw new Error('Could not send email.')
   }
 }
