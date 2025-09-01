@@ -12,6 +12,8 @@ import { RequestContext } from '@mikro-orm/core'
 import { authRouter } from './auth/auth.routes.js'
 import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
+import swaggerUi from 'swagger-ui-express';
+import specs from './shared/swagger/swagger.js'
 
 const app = express()
 
@@ -26,10 +28,13 @@ async function startApp() {
   const migrator = orm.getMigrator()
   await migrator.up()
 
+
   app.use((req, res, next) => {
     RequestContext.create(orm.em, next) //em is the EntityManager
   })
 
+  // Swagger setup
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs))
   app.use('/api/courseTypes', courseTypeRouter)
   app.use('/api/institutions', institutionRouter)
   app.use('/api/students', studentRouter)
