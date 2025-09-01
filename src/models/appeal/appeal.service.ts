@@ -1,15 +1,15 @@
-import { EntityManager } from '@mikro-orm/core';
-import { Appeal } from './appeal.entity.js';
-import { CreateAppealType } from './appeal.schemas.js';
-import { User, UserRole } from '../user/user.entity.js';
-import { Professor } from '../professor/professor.entity.js';
-import { ObjectId } from '@mikro-orm/mongodb';
+import { EntityManager } from '@mikro-orm/core'
+import { Appeal } from './appeal.entity.js'
+import { CreateAppealType } from './appeal.schemas.js'
+import { User } from '../user/user.entity.js'
+import { ProfessorService } from '../professor/professor.services.js'
+import { ObjectId } from '@mikro-orm/mongodb'
 
 export class AppealService {
-  private em: EntityManager;
+  private em: EntityManager
 
   constructor(em: EntityManager) {
-    this.em = em;
+    this.em = em
   }
 
   public async create(
@@ -26,46 +26,40 @@ export class AppealService {
       state: 'pending',
       user: userReference,
       documentUrl: documentPath,
-    });
+    })
 
-    await this.em.flush();
+    await this.em.flush()
 
-    return appeal;
+    return appeal
   }
 
   public async findAll(): Promise<Appeal[]> {
-    return this.em.find(Appeal, {}, { populate: ['user'] });
+    return this.em.find(Appeal, {}, { populate: ['user'] })
   }
 
   public async findOne(id: string): Promise<Appeal | null> {
-    return this.em.findOne(Appeal, { id }, { populate: ['user'] });
+    return this.em.findOne(Appeal, { id }, { populate: ['user'] })
   }
 
   public async update(
     id: string,
     appealData: Partial<Appeal>
   ): Promise<Appeal> {
-    const objectId = new ObjectId(id);
-    const appeal = await this.em.findOneOrFail(Appeal, { _id: objectId }, {populate: ['user']});
-    this.em.assign(appeal, appealData);
+    const objectId = new ObjectId(id)
+    const appeal = await this.em.findOneOrFail(Appeal, { _id: objectId }, {populate: ['user']})
+    this.em.assign(appeal, appealData)
 
     if (appealData.state === 'accepted' && appeal.user) {
-      const userToPromote = appeal.user;
-      userToPromote.role = UserRole.PROFESSOR;
-      const newProfessorProfile = this.em.create(Professor, {
-        user: userToPromote,
-        state: 'active', 
-      });
-      userToPromote.professorProfile = newProfessorProfile;
-      this.em.persist(newProfessorProfile);
+      const professorService = new ProfessorService(this.em)
+      professorService.createFromUser(appeal.user)
     }
 
-    await this.em.flush();
-    return appeal;
+    await this.em.flush()
+    return appeal
   }
 
   public async remove(id: string): Promise<void> {
-    const appeal = this.em.getReference(Appeal, id);
-    await this.em.removeAndFlush(appeal);
+    const appeal = this.em.getReference(Appeal, id)
+    await this.em.removeAndFlush(appeal)
   }
 }
