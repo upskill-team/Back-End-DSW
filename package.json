@@ -10,7 +10,8 @@
     "type-check": "tsc --noEmit",
     "audit": "pnpm audit",
     "test": "pnpm run lint && pnpm run type-check && pnpm run audit",
-    "tdocs": "typedoc --entryPointStrategy expand ./src"
+    "tdocs": "typedoc --entryPointStrategy expand ./src",
+    "migration:create": "mikro-orm migration:create"
   },
   "keywords": [],
   "author": "",
