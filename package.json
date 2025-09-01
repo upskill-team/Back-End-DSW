@@ -50,6 +50,7 @@
     "@typescript-eslint/parser": "^8.39.1",
     "eslint": "^9.33.0",
     "globals": "^16.3.0",
+    "ts-node": "^10.9.2",
     "tsc-watch": "7.1.1",
     "typedoc": "^0.28.11",
     "typescript": "5.9.2",
