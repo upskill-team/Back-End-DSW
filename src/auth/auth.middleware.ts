@@ -42,3 +42,23 @@ export const authMiddleware = (
     return HttpResponse.Unauthorized(res, 'Token inválido o expirado.');
   }
 };
+
+/**
+ * Middleware to authorize users based on their roles.
+ * @param {UserRole[]} allowedRoles - An array of roles that are allowed to access the route.
+ * @returns An Express middleware function.
+ */
+export const roleAuthMiddleware = (allowedRoles: UserRole[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const userRole = req.user?.role;
+
+    if (userRole && allowedRoles.includes(userRole)) {
+      return next();
+    }
+
+    return HttpResponse.Unauthorized(
+      res,
+      'No tienes permiso para realizar esta acción.'
+    );
+  };
+};

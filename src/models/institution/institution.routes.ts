@@ -20,13 +20,15 @@ import {
   CreateInstitutionSchema,
   UpdateInstitutionSchema,
 } from './institution.schemas.js'
-import { authMiddleware } from '../../auth/auth.middleware.js'
+import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js'
+import { UserRole } from '../user/user.entity.js'
 
 export const institutionRouter = Router()
 
 // Apply the authentication middleware to all routes within this module.
 // This ensures that only authenticated users can access these endpoints.
 institutionRouter.use(authMiddleware)
+
 
 
 /**
@@ -75,6 +77,9 @@ institutionRouter.use(authMiddleware)
  *               items:
  *                 $ref: '#/components/schemas/Institution'
  */
+
+const adminOnly = roleAuthMiddleware([UserRole.ADMIN])
+
 institutionRouter.get('/', findAll)
 
 
@@ -100,8 +105,8 @@ institutionRouter.get('/', findAll)
  *       404:
  *         description: The institution was not found
  */
-institutionRouter.get('/:id', findOne)
 
+institutionRouter.get('/:id', findOne)
 
 /**
  * @swagger
@@ -125,7 +130,7 @@ institutionRouter.get('/:id', findOne)
  *       500:
  *         description: Some server error
  */
-institutionRouter.post('/', validationMiddleware(CreateInstitutionSchema), add)
+institutionRouter.post('/', adminOnly, validationMiddleware(CreateInstitutionSchema), add)
 
 /**
  * @swagger
@@ -184,17 +189,19 @@ institutionRouter.post('/', validationMiddleware(CreateInstitutionSchema), add)
  *       500:
  *         description: Some error happened
  */
+
 institutionRouter.put(
   '/:id',
+  adminOnly,
   validationMiddleware(UpdateInstitutionSchema),
   update
 )
 institutionRouter.patch(
   '/:id',
+  adminOnly,
   validationMiddleware(UpdateInstitutionSchema),
   update
 )
-
 
 /**
  * @swagger
@@ -205,4 +212,4 @@ institutionRouter.patch(
  *     parameters:
  *       - in: path
  */
-institutionRouter.delete('/:id', remove)
+institutionRouter.delete('/:id', adminOnly, remove)

@@ -7,12 +7,6 @@ import { orm } from '../../shared/db/orm.js'
 import { StudentService } from './student.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
 
-async function add(req: Request, res: Response) {
-  const studentService = new StudentService(orm.em.fork())
-  const newStudent = await studentService.create(req.body)
-  return HttpResponse.Created(res, newStudent)
-}
-
 async function findAll(req: Request, res: Response) {
   const studentService = new StudentService(orm.em.fork())
   const students = await studentService.findAll()
@@ -44,4 +38,4 @@ async function remove(req: Request, res: Response) {
   return HttpResponse.Ok(res, { message: 'Student deleted successfully' })
 }
 
-export { findAll, findOne, add, update, remove }
+export { findAll, findOne, update, remove }

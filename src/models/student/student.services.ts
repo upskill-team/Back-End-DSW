@@ -8,12 +8,6 @@ export class StudentService {
     this.em = em;
   }
 
-  public async create(studentData: any): Promise<Student> {
-    const student = this.em.create(Student, studentData);
-    await this.em.flush();
-    return student;
-  }
-
   public async findAll(): Promise<Student[]> {
     return this.em.find(Student, {}, { populate: ['courses'] });
   }
