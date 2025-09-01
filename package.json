@@ -31,6 +31,8 @@
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.5",
+    "pino": "^9.9.0",
+    "pino-http": "^10.5.0",
     "react": "19.1.1",
     "reflect-metadata": "0.2.2",
     "valibot": "^1.1.0"
@@ -48,6 +50,7 @@
     "@typescript-eslint/parser": "^8.39.1",
     "eslint": "^9.33.0",
     "globals": "^16.3.0",
+    "pino-pretty": "^13.1.1",
     "tsc-watch": "7.1.1",
     "typedoc": "^0.28.11",
     "typescript": "5.9.2",
