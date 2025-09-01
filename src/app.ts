@@ -14,6 +14,8 @@ import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
+import swaggerUi from 'swagger-ui-express';
+import specs from './shared/swagger/swagger.js'
 
 const app = express()
 
@@ -61,6 +63,9 @@ app.use('/api', apiLimiter);
 
 // Apply the stricter limiter specifically to auth routes, overriding the general one
 app.use('/api/auth', authLimiter);
+
+// Swagger setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs))
 
 app.use('/api/courseTypes', courseTypeRouter)
 app.use('/api/institutions', institutionRouter)
