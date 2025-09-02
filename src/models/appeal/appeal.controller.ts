@@ -9,7 +9,7 @@ import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function add(req: Request, res: Response, next: NextFunction) {
   try {
-    const appealService = new AppealService(orm.em.fork())
+    const appealService = new AppealService(orm.em.fork(), req.log)
     const userId = req.user?.id
     if (!userId) {
       return HttpResponse.Unauthorized(res, 'User ID not found in token')
@@ -32,7 +32,7 @@ async function add(req: Request, res: Response, next: NextFunction) {
 
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
-    const appealService = new AppealService(orm.em.fork())
+    const appealService = new AppealService(orm.em.fork(), req.log)
     const appeals = await appealService.findAll()
     return HttpResponse.Ok(res, appeals)
   } catch (error) {
@@ -42,7 +42,7 @@ async function findAll(req: Request, res: Response, next: NextFunction) {
 
 async function findOne(req: Request, res: Response, next: NextFunction) {
   try {
-    const appealService = new AppealService(orm.em.fork())
+    const appealService = new AppealService(orm.em.fork(), req.log)
     const { id } = req.params
     const appeal = await appealService.findOne(id)
 
@@ -57,7 +57,7 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
 
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
-    const appealService = new AppealService(orm.em.fork())
+    const appealService = new AppealService(orm.em.fork(), req.log)
     const { id } = req.params
     const updatedAppeal = await appealService.update(id, req.body)
     return HttpResponse.Ok(res, updatedAppeal)
@@ -68,7 +68,7 @@ async function update(req: Request, res: Response, next: NextFunction) {
 
 async function remove(req: Request, res: Response, next: NextFunction) {
   try {
-    const appealService = new AppealService(orm.em.fork())
+    const appealService = new AppealService(orm.em.fork(), req.log)
     const { id } = req.params
     await appealService.remove(id)
     return HttpResponse.Ok(res, { message: 'Appeal deleted successfully' })

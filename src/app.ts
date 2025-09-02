@@ -24,17 +24,26 @@ const app = express()
  * It adds a unique request ID to each log entry for easy tracing and redacts
  * sensitive information like passwords and authorization headers.
  */
+// Attach pino-http logger to each request. It will automatically handle
+// request/response logging and add a `log` property to the `req` object.
 app.use(
   pinoHttp({
     logger,
+    // Assigns a unique ID to each request. This ID is accessible on req.id
+    // and is automatically included in every log entry for this request.
     genReqId: function (req, res) {
-      const id = randomUUID();
-      res.setHeader('X-Request-Id', id);
-      return id;
+      const existingId = req.id ?? req.headers['x-request-id']
+      if (existingId) return existingId
+      const id = randomUUID()
+      res.setHeader('X-Request-Id', id)
+      return id
     },
-    
+
+    // customProps is the SAFE way to add context to logs.
+    // It does NOT mutate the original `req` object, solving our previous issues.
     customProps: function (req, _res) {
       return {
+        // We log a sanitized version of the request context here.
         context: {
           authorization: req.headers.authorization ? 'Bearer [REDACTED]' : undefined,
           body:
@@ -42,10 +51,10 @@ app.use(
               ? { ...req.body, password: '[REDACTED]', password_plaintext: '[REDACTED]' }
               : req.body,
         },
-      };
+      }
     },
   })
-);
+)
 
 app.use(cors({ origin: 'http://localhost:5173' }))
 

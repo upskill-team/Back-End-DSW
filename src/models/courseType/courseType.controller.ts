@@ -9,7 +9,7 @@ import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function add(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new CourseTypeService(orm.em.fork())
+    const service = new CourseTypeService(orm.em.fork(), req.log)
     const newCourseType = await service.create(req.body)
     return HttpResponse.Created(res, newCourseType)
   } catch (error: any) {
@@ -23,9 +23,9 @@ async function add(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-async function findAll(_: Request, res: Response, next: NextFunction) {
+async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new CourseTypeService(orm.em.fork())
+    const service = new CourseTypeService(orm.em.fork(), req.log)
     const courseTypes = await service.findAll()
     return HttpResponse.Ok(res, courseTypes)
   } catch (error) {
@@ -35,7 +35,7 @@ async function findAll(_: Request, res: Response, next: NextFunction) {
 
 async function findOne(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new CourseTypeService(orm.em.fork())
+    const service = new CourseTypeService(orm.em.fork(), req.log)
     const { id } = req.params
     const courseType = await service.findOne(id)
     if (!courseType) {
@@ -49,7 +49,7 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
 
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new CourseTypeService(orm.em.fork())
+    const service = new CourseTypeService(orm.em.fork(), req.log)
     const { id } = req.params
     const updatedCourseType = await service.update(id, req.body)
     return HttpResponse.Ok(res, updatedCourseType)
@@ -60,7 +60,7 @@ async function update(req: Request, res: Response, next: NextFunction) {
 
 async function remove(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new CourseTypeService(orm.em.fork())
+    const service = new CourseTypeService(orm.em.fork(), req.log)
     const { id } = req.params
     await service.remove(id)
     return HttpResponse.Ok(res, { message: 'Course type successfully deleted.' })

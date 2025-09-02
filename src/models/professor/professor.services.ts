@@ -3,18 +3,21 @@
  * Encapsulates the business logic for managing professor profiles.
  * @see {@link Professor}
  */
-import { EntityManager } from '@mikro-orm/core';
-import { Professor } from './professor.entity.js';
-import { UpdateProfessorType } from './professor.schema.js';
+import { EntityManager } from '@mikro-orm/core'
+import { Professor } from './professor.entity.js'
+import { UpdateProfessorType } from './professor.schema.js'
+import { Logger } from 'pino'
 
 /**
  * Provides methods for CRUD operations on Professor entities.
  */
 export class ProfessorService {
-  private em: EntityManager;
+  private em: EntityManager
+  private logger: Logger
 
-  constructor(em: EntityManager) {
-    this.em = em;
+  constructor(em: EntityManager, logger: Logger) {
+    this.em = em
+    this.logger = logger.child({ context: { service: 'ProfessorService' } })
   }
 
   // The `create` method is intentionally omitted. Professor profiles should be created
@@ -27,11 +30,13 @@ export class ProfessorService {
    * @returns A promise resolving to an array of professors.
    */
   public async findAll(): Promise<Professor[]> {
+    this.logger.info('Fetching all professors.')
+
     return this.em.find(
       Professor,
       {},
       { populate: ['courses', 'institution'] }
-    );
+    )
   }
 
   /**
@@ -41,11 +46,13 @@ export class ProfessorService {
    * @throws NotFoundError If no professor with the given ID is found.
    */
   public async findOne(id: string): Promise<Professor> {
+    this.logger.info({ professorId: id }, 'Fetching professor.')
+
     return this.em.findOneOrFail(
       Professor,
       { id },
       { populate: ['courses', 'institution'] }
-    );
+    )
   }
 
   /**
@@ -59,10 +66,15 @@ export class ProfessorService {
     id: string,
     professorData: UpdateProfessorType
   ): Promise<Professor> {
-    const professor = await this.em.findOneOrFail(Professor, { id });
+    this.logger.info({ professorId: id, data: professorData }, 'Updating professor.')
+
+    const professor = await this.em.findOneOrFail(Professor, { id })
     this.em.assign(professor, professorData);
-    await this.em.flush();
-    return professor;
+    await this.em.flush()
+
+    this.logger.info({ professorId: id }, 'Professor updated successfully.')
+
+    return professor
   }
 
   /**
@@ -71,7 +83,9 @@ export class ProfessorService {
    * @returns A promise that resolves when the profile is deleted.
    */
   public async remove(id: string): Promise<void> {
-    const professor = this.em.getReference(Professor, id);
+    this.logger.info({ professorId: id }, 'Deleting professor.')
+    
+    const professor = this.em.getReference(Professor, id)
     await this.em.removeAndFlush(professor);
   }
 }

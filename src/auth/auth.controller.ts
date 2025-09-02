@@ -6,7 +6,7 @@ import { HttpResponse } from '../shared/response/http.response.js'
 // Registers a new user
 async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const authService = new AuthService(orm.em.fork())
+    const authService = new AuthService(orm.em.fork(), req.log)
     const user = await authService.register(req.body)
     return HttpResponse.Created(res, user)
   } catch (error: any) {
@@ -18,7 +18,7 @@ async function register(req: Request, res: Response, next: NextFunction) {
 // Logs in a user
 async function login(req: Request, res: Response, next: NextFunction) {
   try {
-    const authService = new AuthService(orm.em.fork())
+    const authService = new AuthService(orm.em.fork(), req.log)
     const result = await authService.login(req.body)
     return HttpResponse.Ok(res, result)
   } catch (error: any) {
@@ -44,7 +44,7 @@ async function getProfile(req: Request, res: Response, next: NextFunction) {
       )
     }
 
-    const authService = new AuthService(orm.em.fork())
+    const authService = new AuthService(orm.em.fork(), req.log)
     // Get profile info from database
     const userProfile = await authService.getProfile(userId)
 
@@ -65,7 +65,7 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
     if (!mail) {
       return HttpResponse.BadRequest(res, 'El correo electrónico es requerido.')
     }
-    const authService = new AuthService(orm.em.fork());
+    const authService = new AuthService(orm.em.fork(), req.log);
     await authService.forgotPassword(mail)
     return HttpResponse.Ok(res, { message: 'Si el correo está registrado, se ha enviado un enlace de recuperación.' })
   } catch (error: any) {
@@ -79,7 +79,7 @@ async function resetPassword(req: Request, res: Response, next: NextFunction) {
     if (!token || !password_plaintext) {
       return HttpResponse.BadRequest(res, 'El token y la nueva contraseña son requeridos.')
     }
-    const authService = new AuthService(orm.em.fork());
+    const authService = new AuthService(orm.em.fork(), req.log);
     await authService.resetPassword(token, password_plaintext);
     return HttpResponse.Ok(res, { message: 'Contraseña actualizada correctamente.' });
   } catch (error: any) {

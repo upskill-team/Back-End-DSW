@@ -8,15 +8,18 @@ import { EntityManager } from '@mikro-orm/core'
 import { Institution } from './institution.entity.js'
 // Import the new, precise type for creation data.
 import { CreateInstitutionType } from './institution.schemas.js'
+import { Logger } from 'pino'
 
 /**
  * Provides methods for performing CRUD (Create, Read, Update, Delete) operations on Institution entities.
  */
 export class InstitutionService {
   private em: EntityManager
+   private logger: Logger
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, logger: Logger) {
     this.em = em
+    this.logger = logger.child({ context: { service: 'InstitutionService' } })
   }
 
   /**
@@ -27,10 +30,15 @@ export class InstitutionService {
   public async create(
     institutionData: CreateInstitutionType
   ): Promise<Institution> {
+    this.logger.info({ name: institutionData.name }, 'Creating new institution.')
+
     // Now, TypeScript knows that institutionData contains `name` and `description` as strings,
     // matching what `em.create` expects.
     const institution = this.em.create(Institution, institutionData)
     await this.em.flush()
+
+    this.logger.info({ institutionId: institution.id }, 'Institution created successfully.')
+
     return institution
   }
 
@@ -39,6 +47,8 @@ export class InstitutionService {
    * @returns A promise that resolves to an array of all Institution entities.
    */
   public async findAll(): Promise<Institution[]> {
+    this.logger.info('Fetching all institutions.')
+
     return this.em.find(Institution, {}, { populate: ['professors'] })
   }
 
@@ -49,6 +59,8 @@ export class InstitutionService {
    * @throws NotFoundError If no institution with the given ID is found (from findOneOrFail).
    */
   public async findOne(id: string): Promise<Institution> {
+    this.logger.info({ institutionId: id }, 'Fetching institution.')
+
     return this.em.findOneOrFail(
       Institution,
       { id },
@@ -67,9 +79,14 @@ export class InstitutionService {
     id: string,
     institutionData: Partial<Institution>
   ): Promise<Institution> {
+    this.logger.info({ institutionId: id, data: institutionData }, 'Updating institution.')
+
     const institution = await this.em.findOneOrFail(Institution, { id })
     this.em.assign(institution, institutionData)
     await this.em.flush()
+
+    this.logger.info({ institutionId: id }, 'Institution updated successfully.')
+
     return institution
   }
 
@@ -79,7 +96,11 @@ export class InstitutionService {
    * @returns A promise that resolves when the deletion is complete.
    */
   public async remove(id: string): Promise<void> {
+    this.logger.info({ institutionId: id }, 'Deleting institution.')
+
     const institution = this.em.getReference(Institution, id)
     await this.em.removeAndFlush(institution)
+
+    this.logger.info({ institutionId: id }, 'Institution deleted successfully.')
   }
 }

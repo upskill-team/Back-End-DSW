@@ -11,7 +11,7 @@ import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new InstitutionService(orm.em.fork())
+    const service = new InstitutionService(orm.em.fork(), req.log)
     const institutions = await service.findAll()
     return HttpResponse.Ok(res, institutions)
   } catch (error) {
@@ -21,7 +21,7 @@ async function findAll(req: Request, res: Response, next: NextFunction) {
 
 async function findOne(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new InstitutionService(orm.em.fork())
+    const service = new InstitutionService(orm.em.fork(), req.log)
     const { id } = req.params
     const institution = await service.findOne(id)
     return HttpResponse.Ok(res, institution)
@@ -32,7 +32,7 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
 
 async function add(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new InstitutionService(orm.em.fork())
+    const service = new InstitutionService(orm.em.fork(), req.log)
     const newInstitution = await service.create(req.body)
     return HttpResponse.Created(res, newInstitution)
   } catch (error) {
@@ -42,7 +42,7 @@ async function add(req: Request, res: Response, next: NextFunction) {
 
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new InstitutionService(orm.em.fork())
+    const service = new InstitutionService(orm.em.fork(), req.log)
     const { id } = req.params
     const updatedInstitution = await service.update(id, req.body)
     return HttpResponse.Ok(res, updatedInstitution)
@@ -53,7 +53,7 @@ async function update(req: Request, res: Response, next: NextFunction) {
 
 async function remove(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new InstitutionService(orm.em.fork())
+    const service = new InstitutionService(orm.em.fork(), req.log)
     const { id } = req.params
     await service.remove(id)
     return HttpResponse.Ok(res, { message: 'Institution deleted successfully' })

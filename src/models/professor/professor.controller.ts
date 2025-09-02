@@ -10,7 +10,7 @@ import { HttpResponse } from '../../shared/response/http.response.js'
 
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new ProfessorService(orm.em.fork())
+    const service = new ProfessorService(orm.em.fork(), req.log)
     const professors = await service.findAll()
     return HttpResponse.Ok(res, professors)
   } catch (error) {
@@ -20,7 +20,7 @@ async function findAll(req: Request, res: Response, next: NextFunction) {
 
 async function findOne(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new ProfessorService(orm.em.fork())
+    const service = new ProfessorService(orm.em.fork(), req.log)
     const { id } = req.params
     const professor = await service.findOne(id)
     return HttpResponse.Ok(res, professor)
@@ -31,7 +31,7 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
 
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new ProfessorService(orm.em.fork())
+    const service = new ProfessorService(orm.em.fork(), req.log)
     const { id } = req.params
     const updatedProfessor = await service.update(id, req.body)
     return HttpResponse.Ok(res, updatedProfessor)
@@ -42,7 +42,7 @@ async function update(req: Request, res: Response, next: NextFunction) {
 
 async function remove(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new ProfessorService(orm.em.fork())
+    const service = new ProfessorService(orm.em.fork(), req.log)
     const { id } = req.params
     await service.remove(id)
     return HttpResponse.Ok(res, { message: 'Professor deleted successfully' })
