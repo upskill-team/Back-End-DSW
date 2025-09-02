@@ -5,7 +5,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start:dev": "tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/app.js\"",
+    "start:dev": "cross-env NODE_ENV=development tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/app.js\"",
+    "start:prod": "cross-env NODE_ENV=production node ./dist/app.js",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "audit": "pnpm audit",
@@ -49,6 +50,7 @@
     "@types/react": "^19.1.12",
     "@typescript-eslint/eslint-plugin": "^8.39.1",
     "@typescript-eslint/parser": "^8.39.1",
+    "cross-env": "^10.0.0",
     "eslint": "^9.33.0",
     "globals": "^16.3.0",
     "pino-pretty": "^13.1.1",
