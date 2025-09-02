@@ -34,3 +34,7 @@ node_modules
 
 ## built vscode extensions
 *.vsix
+
+# Logs
+*.log
+/logs/

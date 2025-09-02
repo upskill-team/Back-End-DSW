@@ -1,8 +1,22 @@
+/**
+ * @module AuthController
+ * @description Handles HTTP requests for user authentication.
+ * @see {@link AuthService}
+ */
+
 import { NextFunction, Request, Response } from 'express'
 import { AuthService } from './auth.service.js'
 import { orm } from '../shared/db/orm.js'
 import { HttpResponse } from '../shared/response/http.response.js'
 
+/**
+ * @function register
+ * @description Registers a new user.
+ * @param {Request} req - The HTTP request object.
+ * @param {Response} res - The HTTP response object.
+ * @param {NextFunction} next - The next middleware function.
+ * @returns {Promise<Response>}
+ */
 // Registers a new user
 async function register(req: Request, res: Response, next: NextFunction) {
   try {
@@ -15,6 +29,14 @@ async function register(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * @function login
+ * @description Logs in an existing user.
+ * @param {Request} req - The HTTP request object.
+ * @param {Response} res - The HTTP response object.
+ * @param {NextFunction} next - The next middleware function.
+ * @returns {Promise<Response>}
+ */
 // Logs in a user
 async function login(req: Request, res: Response, next: NextFunction) {
   try {
@@ -31,6 +53,14 @@ async function login(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * @function getProfile
+ * @description Gets the profile of the authenticated user.
+ * @param {Request} req - The HTTP request object, expects `req.user` to be populated.
+ * @param {Response} res - The HTTP response object.
+ * @param {NextFunction} next - The next middleware function.
+ * @returns {Promise<Response>}
+ */
 // Gets the profile of the logged-in user
 async function getProfile(req: Request, res: Response, next: NextFunction) {
   try {
@@ -59,6 +89,14 @@ async function getProfile(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * @function forgotPassword
+ * @description Initiates the password recovery process.
+ * @param {Request} req - The HTTP request object.
+ * @param {Response} res - The HTTP response object.
+ * @param {NextFunction} next - The next middleware function.
+ * @returns {Promise<Response>}
+ */
 async function forgotPassword(req: Request, res: Response, next: NextFunction) {
   try {
     const { mail } = req.body
@@ -73,6 +111,14 @@ async function forgotPassword(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * @function resetPassword
+ * @description Resets the user's password using a token.
+ * @param {Request} req - The HTTP request object.
+ * @param {Response} res - The HTTP response object.
+ * @param {NextFunction} next - The next middleware function.
+ * @returns {Promise<Response>}
+ */
 async function resetPassword(req: Request, res: Response, next: NextFunction) {
   try {
     const { token, password_plaintext } = req.body;

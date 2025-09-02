@@ -1,3 +1,8 @@
+/**
+ * @module AuthSchemas
+ * @description Defines validation schemas for authentication-related operations using Valibot.
+ */
+
 import * as v from 'valibot';
 
 /**

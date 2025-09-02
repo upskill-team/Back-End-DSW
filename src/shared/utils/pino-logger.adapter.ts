@@ -1,11 +1,18 @@
+/**
+ * @module PinoLoggerAdapter
+ * @description An adapter to bridge MikroORM's logging system with our application's Pino logger.
+ */
+
 import { Logger as MikroOrmLogger, LogContext, LoggerOptions } from '@mikro-orm/core';
 import { logger as pinoLogger } from './logger.js';
 
 /**
  * @class PinoLogger
  * @implements {MikroOrmLogger}
- * @description An adapter class to bridge MikroORM's logging system with Pino.
- * This allows database queries to be logged in a structured JSON format.
+ * @description This class implements the MikroORM Logger interface and redirects
+ * its log output to our centralized Pino logger instance. This ensures that all
+ * logs, whether from our application logic or from the ORM (like database queries),
+ * share the same structured format.
  */
 export class PinoLogger implements MikroOrmLogger {
   private readonly logger = pinoLogger.child({ context: 'mikro-orm' })
@@ -19,8 +26,7 @@ export class PinoLogger implements MikroOrmLogger {
   }
 
   /**
-   * Sets the debug mode for the logger. This implementation is a no-op
-   * because Pino's log level is configured independently at initialization.
+   * Sets the debug mode. This is a no-op as Pino's log level is configured independently.
    * @param {boolean | string[]} _debugMode - The debug mode settings from MikroORM.
    */
   setDebugMode(_debugMode: boolean | string[]): void {
@@ -28,10 +34,9 @@ export class PinoLogger implements MikroOrmLogger {
   }
 
   /**
-   * Checks if a specific logging namespace is enabled.
-   * We always return true to allow MikroORM to pass all logs to our `log` method,
-   * where Pino's own level filtering will take over.
-   * @param {string} _namespace - The logging namespace to check.
+   * Checks if a logging namespace is enabled. We always return true to let
+   * MikroORM pass all logs to our `log` method, where Pino's level filtering takes over.
+   * @param {string} _namespace - The logging namespace to check (e.g., 'query').
    * @returns {boolean} Always returns true.
    */
   isEnabled(_namespace: string): boolean {
@@ -39,8 +44,8 @@ export class PinoLogger implements MikroOrmLogger {
   }
 
   /**
-   * Logs MikroORM messages. Maps MikroORM's log namespaces to Pino's log levels.
-   * @param {string} namespace - The MikroORM logging namespace (e.g., 'query', 'discovery').
+   * Logs messages from MikroORM, mapping its namespaces to appropriate Pino log levels.
+   * @param {string} namespace - The MikroORM logging namespace.
    * @param {string} message - The log message.
    */
   log(namespace: string, message: string): void {

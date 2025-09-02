@@ -1,3 +1,10 @@
+/**
+ * @module App
+ * @description Main application entry point.
+ * Configures the Express server, initializes middleware, registers routes,
+ * sets up the MikroORM context, and starts the server.
+ */
+
 import './shared/config/env.validator.js'
 
 import express, { Response } from 'express'
@@ -24,8 +31,6 @@ const app = express()
  * It adds a unique request ID to each log entry for easy tracing and redacts
  * sensitive information like passwords and authorization headers.
  */
-// Attach pino-http logger to each request. It will automatically handle
-// request/response logging and add a `log` property to the `req` object.
 app.use(
   pinoHttp({
     logger,
