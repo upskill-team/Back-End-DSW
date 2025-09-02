@@ -19,6 +19,10 @@ import { RequestContext } from '@mikro-orm/core'
 import { authRouter } from './auth/auth.routes.js'
 import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
+import swaggerUi from 'swagger-ui-express';
+import specs from './shared/swagger/swagger.js'
 import { logger } from './shared/utils/logger.js'
 import pinoHttp from 'pino-http'
 import { randomUUID } from 'crypto'
@@ -73,15 +77,53 @@ app.use(
   })
 );
 
+// Apply Helmet to set various security-related HTTP headers
+app.use(helmet())
+
 app.use(cors({ origin: 'http://localhost:5173' }))
 
 app.use(express.json())
 
 app.use(express.urlencoded({ extended: true }))
 
+/**
+ * @description Rate limiter for sensitive authentication endpoints.
+ * Helps prevent brute-force attacks on login and password reset functionalities.
+ * Limits each IP to 10 requests per 15 minutes.
+ */
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: { message: 'Too many requests from this IP, please try again after 15 minutes' },
+})
+
+/**
+ * @description General rate limiter for all other API routes.
+ * Protects against general DoS attacks and abuse.
+ * Limits each IP to 100 requests per 15 minutes.
+ */
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many requests from this IP, please try again after 15 minutes' },
+})
+
 app.use((req, res, next) => {
   RequestContext.create(orm.em, next) //em is the EntityManager
 })
+
+// Apply the general limiter to all API routes
+app.use('/api', apiLimiter);
+
+// Apply the stricter limiter specifically to auth routes, overriding the general one
+app.use('/api/auth', authLimiter);
+
+// Swagger setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs))
 
 app.use('/api/courseTypes', courseTypeRouter)
 app.use('/api/institutions', institutionRouter)
