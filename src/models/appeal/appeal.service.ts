@@ -1,8 +1,7 @@
 import { EntityManager } from '@mikro-orm/core'
 import { Appeal } from './appeal.entity.js'
 import { CreateAppealType, UpdateAppealSchema, UpdateAppealType } from './appeal.schemas.js'
-import { User, UserRole } from '../user/user.entity.js'
-import { Professor } from '../professor/professor.entity.js'
+import { User } from '../user/user.entity.js'
 import { ProfessorService } from '../professor/professor.services.js'
 import { ObjectId } from '@mikro-orm/mongodb'
 import { Logger } from 'pino'
@@ -15,6 +14,7 @@ export class AppealService {
   constructor(em: EntityManager, logger: Logger) {
     this.em = em
     this.logger = logger.child({ context: { service: 'AppealService' } })
+  }
 
   public async create(
     appealInput: CreateAppealType,
@@ -71,7 +71,7 @@ export class AppealService {
     this.em.assign(appeal, data);
 
     if (data.state === 'accepted' && appeal.user) {
-      const professorService = new ProfessorService(this.em)
+      const professorService = new ProfessorService(this.em, this.logger)
       professorService.createFromUser(appeal.user)
     } else if (data.state === 'rejected') {
       this.logger.info({ appealId: id, userId: appeal.user.id }, 'Appeal rejected.')
