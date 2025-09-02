@@ -5,8 +5,10 @@
  */
 import { EntityManager } from '@mikro-orm/core'
 import { Professor } from './professor.entity.js'
-import { UpdateProfessorType } from './professor.schema.js'
+import { UpdateProfessorSchema, UpdateProfessorType } from './professor.schema.js'
 import { Logger } from 'pino'
+import { ObjectId } from '@mikro-orm/mongodb'
+import { safeParse } from 'valibot'
 
 /**
  * Provides methods for CRUD operations on Professor entities.
@@ -48,9 +50,10 @@ export class ProfessorService {
   public async findOne(id: string): Promise<Professor> {
     this.logger.info({ professorId: id }, 'Fetching professor.')
 
+    const objectId = new ObjectId(id)
     return this.em.findOneOrFail(
       Professor,
-      { id },
+      { _id: objectId },
       { populate: ['courses', 'institution'] }
     )
   }
@@ -64,12 +67,19 @@ export class ProfessorService {
    */
   public async update(
     id: string,
-    professorData: UpdateProfessorType
+    data: UpdateProfessorType
   ): Promise<Professor> {
-    this.logger.info({ professorId: id, data: professorData }, 'Updating professor.')
+    this.logger.info({ professorId: id, data: data }, 'Updating professor.')
 
-    const professor = await this.em.findOneOrFail(Professor, { id })
-    this.em.assign(professor, professorData);
+    const result = safeParse(UpdateProfessorSchema, data)
+      if (!result.success) {
+        this.logger.error({ issues: result.issues }, 'Validation failed for professor update.')
+        throw new Error('Invalid data for professor update.')
+      }
+
+    const objectId = new ObjectId(id)
+    const professor = await this.em.findOneOrFail(Professor, { _id: objectId })
+    this.em.assign(professor, data);
     await this.em.flush()
 
     this.logger.info({ professorId: id }, 'Professor updated successfully.')
@@ -85,7 +95,10 @@ export class ProfessorService {
   public async remove(id: string): Promise<void> {
     this.logger.info({ professorId: id }, 'Deleting professor.')
     
-    const professor = this.em.getReference(Professor, id)
+    const objectId = new ObjectId(id)
+    const professor = this.em.getReference(Professor, objectId)
     await this.em.removeAndFlush(professor);
+
+    this.logger.info({ professorId: id }, 'Professor deleted successfully.')
   }
 }

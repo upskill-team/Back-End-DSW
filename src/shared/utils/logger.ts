@@ -3,29 +3,34 @@ import pino from 'pino';
 /**
  * @module Logger
  * @description Centralized pino logger configuration for the application.
- * It uses pino-pretty for human-readable logs in development and structured
- * JSON logs in production.
  */
+
+const transport = pino.transport({
+  targets: [
+    {
+      target: 'pino-pretty',
+      level: 'trace',
+      options: {
+        colorize: true,
+        ignore: 'pid,hostname,context,req,res',
+        translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
+        messageFormat: '{reqId} - {msg}',
+      },
+    },
+    {
+      target: 'pino-socket',
+      level: 'trace',
+      options: {
+        address: 'localhost',
+        port: 5044,
+      },
+    }
+  ],
+});
 
 /**
  * @description Shared logger instance.
- * @example
- * import { logger } from '../shared/utils/logger';
- * logger.info('This is an informational message.');
- * logger.error({ err }, 'An error occurred.');
  */
-export const logger = pino({
-  // Use pino-pretty for nicely formatted logs in development.
-  // In production, it will output structured JSON.
-  transport:
-    process.env.NODE_ENV !== 'production'
-      ? {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            ignore: 'pid,hostname',
-            translateTime: 'SYS:yyyy-mm-dd HH:MM:ss',
-          },
-        }
-      : undefined,
-});
+export const logger = pino(
+  process.env.NODE_ENV !== 'production' ? transport : undefined
+);

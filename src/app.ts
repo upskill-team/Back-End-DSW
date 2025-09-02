@@ -1,6 +1,6 @@
 import './shared/config/env.validator.js'
 
-import express from 'express'
+import express, { Response } from 'express'
 import { courseTypeRouter } from './models/courseType/courseType.routes.js'
 import { institutionRouter } from './models/institution/institution.routes.js'
 import { studentRouter } from './models/student/student.routes.js'
@@ -29,21 +29,33 @@ const app = express()
 app.use(
   pinoHttp({
     logger,
-    // Assigns a unique ID to each request. This ID is accessible on req.id
-    // and is automatically included in every log entry for this request.
-    genReqId: function (req, res) {
-      const existingId = req.id ?? req.headers['x-request-id']
-      if (existingId) return existingId
+    
+    genReqId: (req, res) => {
       const id = randomUUID()
       res.setHeader('X-Request-Id', id)
       return id
     },
 
-    // customProps is the SAFE way to add context to logs.
-    // It does NOT mutate the original `req` object, solving our previous issues.
-    customProps: function (req, _res) {
+    autoLogging: false,
+
+    customLogLevel: function (req, res: Response, err) {
+      if (res.statusCode >= 400 && res.statusCode < 500) {
+        return 'warn'
+      } else if (res.statusCode >= 500 || err) {
+        return 'error'
+      }
+      return 'info'
+    },
+
+    customSuccessMessage: function (req, res: Response & { responseTime?: number }) {
+      return `${req.method} ${req.url} - ${res.statusCode} ${res.statusMessage} - ${res.responseTime}ms`
+    },
+    customErrorMessage: function (req, res: Response, err) {
+      return `${req.method} ${req.url} - ${res.statusCode} ${res.statusMessage} - ${err.message}`
+    },
+
+    customProps: function (req, _res: Response) {
       return {
-        // We log a sanitized version of the request context here.
         context: {
           authorization: req.headers.authorization ? 'Bearer [REDACTED]' : undefined,
           body:
@@ -54,7 +66,7 @@ app.use(
       }
     },
   })
-)
+);
 
 app.use(cors({ origin: 'http://localhost:5173' }))
 

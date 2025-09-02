@@ -1,10 +1,11 @@
 import { EntityManager } from '@mikro-orm/core'
 import { Appeal } from './appeal.entity.js'
-import { CreateAppealType } from './appeal.schemas.js'
+import { CreateAppealType, UpdateAppealSchema, UpdateAppealType } from './appeal.schemas.js'
 import { User, UserRole } from '../user/user.entity.js'
 import { Professor } from '../professor/professor.entity.js'
 import { ObjectId } from '@mikro-orm/mongodb'
 import { Logger } from 'pino'
+import { safeParse } from 'valibot'
 
 export class AppealService {
   private em: EntityManager
@@ -41,26 +42,35 @@ export class AppealService {
   }
 
   public async findAll(): Promise<Appeal[]> {
+    this.logger.info('Fetching all appeals.')
+
     return this.em.find(Appeal, {}, { populate: ['user'] })
   }
 
   public async findOne(id: string): Promise<Appeal | null> {
-    this.logger.info('Fetching all appeals.')
+    this.logger.info({ appealId: id }, 'Fetching appeal.')
 
-    return this.em.findOne(Appeal, { id }, { populate: ['user'] })
+    const objectId = new ObjectId(id);
+    return this.em.findOne(Appeal, { _id: objectId }, { populate: ['user'] })
   }
 
   public async update(
     id: string,
-    appealData: Partial<Appeal>
+    data: UpdateAppealType
   ): Promise<Appeal> {
-    this.logger.info({ appealId: id, data: appealData }, 'Updating appeal.')
+    this.logger.info({ appealId: id, data: data }, 'Updating appeal.')
 
-    const objectId = new ObjectId(id);
+    const result = safeParse(UpdateAppealSchema, data)
+      if (!result.success) {
+        this.logger.error({ issues: result.issues }, 'Validation failed for appeal update.')
+        throw new Error('Invalid data for appeal update.')
+      }
+
+    const objectId = new ObjectId(id)
     const appeal = await this.em.findOneOrFail(Appeal, { _id: objectId }, {populate: ['user']})
-    this.em.assign(appeal, appealData);
+    this.em.assign(appeal, data);
 
-    if (appealData.state === 'accepted' && appeal.user) {
+    if (data.state === 'accepted' && appeal.user) {
       const userToPromote = appeal.user;
       userToPromote.role = UserRole.PROFESSOR
       const newProfessorProfile = this.em.create(Professor, {
@@ -69,7 +79,8 @@ export class AppealService {
       });
       userToPromote.professorProfile = newProfessorProfile
       this.em.persist(newProfessorProfile)
-    } else if (appealData.state === 'rejected') {
+      this.logger.info({ appealId: id, userId: appeal.user.id }, 'Appeal accepted and user promoted to professor.')
+    } else if (data.state === 'rejected') {
       this.logger.info({ appealId: id, userId: appeal.user.id }, 'Appeal rejected.')
     }
 
@@ -83,7 +94,8 @@ export class AppealService {
   public async remove(id: string): Promise<void> {
     this.logger.info({ appealId: id }, 'Deleting appeal.')
 
-    const appeal = this.em.getReference(Appeal, id);
+    const objectId = new ObjectId(id);
+    const appeal = this.em.getReference(Appeal, objectId);
     await this.em.removeAndFlush(appeal);
 
     this.logger.info({ appealId: id }, 'Appeal deleted successfully.')

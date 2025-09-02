@@ -33,6 +33,7 @@
     "nodemailer": "^7.0.5",
     "pino": "^9.9.0",
     "pino-http": "^10.5.0",
+    "pino-socket": "^7.4.0",
     "react": "19.1.1",
     "reflect-metadata": "0.2.2",
     "valibot": "^1.1.0"

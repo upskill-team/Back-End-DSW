@@ -6,8 +6,11 @@
  */
 import { EntityManager } from '@mikro-orm/core'
 import { Institution } from './institution.entity.js'
+import { ObjectId } from '@mikro-orm/mongodb'
+import * as v from 'valibot'
+import { safeParse } from 'valibot'
 // Import the new, precise type for creation data.
-import { CreateInstitutionType } from './institution.schemas.js'
+import { CreateInstitutionType, UpdateInstitutionSchema } from './institution.schemas.js'
 import { Logger } from 'pino'
 
 /**
@@ -61,9 +64,10 @@ export class InstitutionService {
   public async findOne(id: string): Promise<Institution> {
     this.logger.info({ institutionId: id }, 'Fetching institution.')
 
+    const objectId = new ObjectId(id)
     return this.em.findOneOrFail(
       Institution,
-      { id },
+      { _id: objectId },
       { populate: ['professors'] }
     )
   }
@@ -77,12 +81,19 @@ export class InstitutionService {
    */
   public async update(
     id: string,
-    institutionData: Partial<Institution>
+    data: v.InferOutput<typeof UpdateInstitutionSchema>
   ): Promise<Institution> {
-    this.logger.info({ institutionId: id, data: institutionData }, 'Updating institution.')
+    this.logger.info({ institutionId: id, data: data }, 'Updating institution.')
 
-    const institution = await this.em.findOneOrFail(Institution, { id })
-    this.em.assign(institution, institutionData)
+    const result = safeParse(UpdateInstitutionSchema, data)
+  if (!result.success) {
+    this.logger.error({ issues: result.issues }, 'Validation failed for institution update.')
+    throw new Error('Invalid data for institution update.')
+  }
+
+    const objectId = new ObjectId(id);
+    const institution = await this.em.findOneOrFail(Institution, { _id: objectId })
+    this.em.assign(institution, data)
     await this.em.flush()
 
     this.logger.info({ institutionId: id }, 'Institution updated successfully.')
@@ -98,7 +109,8 @@ export class InstitutionService {
   public async remove(id: string): Promise<void> {
     this.logger.info({ institutionId: id }, 'Deleting institution.')
 
-    const institution = this.em.getReference(Institution, id)
+    const objectId = new ObjectId(id);
+    const institution = this.em.getReference(Institution, objectId)
     await this.em.removeAndFlush(institution)
 
     this.logger.info({ institutionId: id }, 'Institution deleted successfully.')

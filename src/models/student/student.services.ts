@@ -1,6 +1,9 @@
 import { EntityManager } from "@mikro-orm/core"
 import { Student } from "./student.entity.js"
 import { Logger } from "pino";
+import { ObjectId } from "@mikro-orm/mongodb";
+import { safeParse } from "valibot";
+import { UpdateStudentSchema, UpdateStudentType } from "./student.schemas.js";
 
 export class StudentService {
   private em: EntityManager
@@ -20,26 +23,36 @@ export class StudentService {
   public async findOne(id: string): Promise<Student> {
     this.logger.info({ studentId: id }, 'Fetching student.')
 
-    return this.em.findOneOrFail(Student, { id }, { populate: ['courses'] })
+    const objectId = new ObjectId(id)
+    return this.em.findOneOrFail(Student, { _id: objectId }, { populate: ['courses'] })
   }
 
-  public async update(id: string, studentData: Partial<Student>): Promise<Student> {
-    this.logger.info({ studentId: id, data: studentData }, 'Updating student.')
+  public async update(id: string, data: UpdateStudentType): Promise<Student> {
+    this.logger.info({ studentId: id, data: data }, 'Updating student.')
 
-    const student = await this.em.findOneOrFail(Student, { id })
-    this.em.assign(student, studentData);
+    const result = safeParse(UpdateStudentSchema, data)
+      if (!result.success) {
+        this.logger.error({ issues: result.issues }, 'Validation failed for student update.')
+        throw new Error('Invalid data for student update.')
+      }
+
+    const objectId = new ObjectId(id)
+    const student = await this.em.findOneOrFail(Student, { _id: objectId })
+    this.em.assign(student, result.output as Partial<Student>)
     await this.em.flush()
 
     this.logger.info({ studentId: id }, 'Student updated successfully.')
 
-    return student;
+    return student
   }
 
-  public async remove(id: string): Promise<Student> {
+  public async remove(id: string): Promise<void> {
     this.logger.info({ studentId: id }, 'Deleting student.')
     
-    const student = this.em.getReference(Student, id)
-    await this.em.removeAndFlush(student);
-    return student
+    const objectId = new ObjectId(id)
+    const student = this.em.getReference(Student, objectId)
+    await this.em.removeAndFlush(student)
+    
+    this.logger.info({ studentId: id }, 'Student deleted successfully.')
   }
 }

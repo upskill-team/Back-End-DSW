@@ -1,9 +1,11 @@
 import { EntityManager } from '@mikro-orm/core'
 import { Course } from './course.entity.js'
-import { CreateCourseType, UpdateCourseType } from './course.schemas.js'
+import { CreateCourseType, UpdateCourseSchema, UpdateCourseType } from './course.schemas.js'
 import { Professor } from '../professor/professor.entity.js'
 import { CourseType } from '../courseType/courseType.entity.js'
 import { Logger } from 'pino'
+import { ObjectId } from '@mikro-orm/mongodb'
+import { safeParse } from 'valibot'
 
 export class CourseService {
   private em: EntityManager
@@ -62,9 +64,10 @@ export class CourseService {
   public async findOne(id: string): Promise<Course> {
     this.logger.info({ courseId: id }, 'Fetching course.')
 
+    const objectId = new ObjectId(id)
     return this.em.findOneOrFail(
       Course,
-      { id },
+      { _id: objectId },
       {
         populate: ['courseType', 'professor'],
       }
@@ -73,12 +76,19 @@ export class CourseService {
 
   public async update(
     id: string,
-    courseData: UpdateCourseType
+    data: UpdateCourseType
   ): Promise<Course> {
-    this.logger.info({ courseId: id, data: courseData }, 'Updating course.')
+    this.logger.info({ courseId: id, data: data }, 'Updating course.')
 
-    const course = await this.em.findOneOrFail(Course, { id });
-    this.em.assign(course, courseData);
+    const result = safeParse(UpdateCourseSchema, data)
+      if (!result.success) {
+        this.logger.error({ issues: result.issues }, 'Validation failed for course update.')
+        throw new Error('Invalid data for course update.')
+      }
+
+    const objectId = new ObjectId(id)
+    const course = await this.em.findOneOrFail(Course, { _id: objectId });
+    this.em.assign(course, data);
     await this.em.flush();
 
     this.logger.info({ courseId: id }, 'Course updated successfully.')
@@ -89,8 +99,9 @@ export class CourseService {
   public async remove(id: string): Promise<void> {
     this.logger.info({ courseId: id }, 'Deleting course.')
 
-    const courseRef = this.em.getReference(Course, id);
-    await this.em.removeAndFlush(courseRef);
+    const objectId = new ObjectId(id)
+    const courseRef = this.em.getReference(Course, objectId)
+    await this.em.removeAndFlush(courseRef)
 
     this.logger.info({ courseId: id }, 'Course deleted successfully.')
   }
