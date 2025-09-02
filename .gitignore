@@ -36,5 +36,4 @@ node_modules
 *.vsix
 
 # Logs
-*.log
-/logs/
+logs/app.log
