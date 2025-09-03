@@ -15,6 +15,7 @@ import { ObjectId } from '@mikro-orm/mongodb'
 import { sendEmail } from '../shared/services/email.service.js'
 import { render } from '@react-email/render'
 import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
+import { Logger } from 'pino'
 
 /**
  * Provides methods for handling the user authentication lifecycle.
@@ -22,9 +23,11 @@ import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
  */
 export class AuthService {
   private em: EntityManager
+  private logger: Logger
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, logger: Logger) {
     this.em = em
+    this.logger = logger.child({ context: { service: 'AuthService' } })
   }
 
   /**
@@ -37,8 +40,12 @@ export class AuthService {
   public async register(
     userData: Omit<User, 'password'> & { password_plaintext: string }
   ): Promise<User> {
+    this.logger.info({ mail: userData.mail }, 'Attempting to register new user.')
+
     const existingUser = await this.em.findOne(User, { mail: userData.mail })
     if (existingUser) {
+      this.logger.warn({ mail: userData.mail }, 'Registration failed: email already in use.')
+
       throw new Error('Email already used')
     }
 
@@ -61,6 +68,8 @@ export class AuthService {
 
     await this.em.persistAndFlush([newUser, newStudentProfile])
 
+    this.logger.info({ userId: newUser.id }, 'User registered successfully.')
+
     delete (newUser as Partial<User>).password
     return newUser
   }
@@ -75,9 +84,13 @@ export class AuthService {
     mail: string
     password_plaintext: string
   }): Promise<{ token: string }> {
+    this.logger.info({ mail: credentials.mail }, 'User login attempt.')
+
     const user = await this.em.findOne(User, { mail: credentials.mail })
 
     if (!user) {
+      this.logger.warn({ mail: credentials.mail }, 'Login failed: user not found.')
+
       throw new Error('Credenciales inválidas.')
     }
 
@@ -87,6 +100,8 @@ export class AuthService {
     )
 
     if (!isPasswordValid) {
+      this.logger.warn({ mail: credentials.mail }, 'Login failed: invalid password.')
+
       throw new Error('Credenciales inválidas.')
     }
 
@@ -94,6 +109,8 @@ export class AuthService {
     // FIX: The '||' fallback is now removed.
     const JWT_SECRET = process.env.JWT_SECRET!
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' })
+
+    this.logger.info({ userId: user.id }, 'User logged in successfully.')
 
     return { token }
   }
@@ -104,6 +121,8 @@ export class AuthService {
    * @returns {Promise<User | null>} The User entity or null if not found.
    */
   public async getProfile(userId: string): Promise<User | null> {
+    this.logger.info({ userId }, 'Fetching user profile.')
+
     const userObjectId = new ObjectId(userId)
     const user = await this.em.findOne(
       User,
@@ -111,7 +130,11 @@ export class AuthService {
       { populate: ['studentProfile', 'professorProfile'] }
     )
 
-    if (!user) return null
+    if (!user) {
+      this.logger.warn({ userId }, 'User profile not found.')
+
+      return null
+    }
 
     delete (user as Partial<User>).password
     return user
@@ -125,6 +148,8 @@ export class AuthService {
    * @throws {Error} If the email sending fails.
    */
   public async forgotPassword(mail: string): Promise<void> {
+     this.logger.info({ mail }, 'Forgot password process initiated.')
+
     const user = await this.em.findOne(User, { mail })
 
     // For security, don't reveal if the user exists.
@@ -151,13 +176,19 @@ export class AuthService {
           subject: 'Restablecimiento de Contraseña - UpSkill',
           html: emailHtml,
         })
-      } catch {
+        this.logger.info({ mail }, 'Password reset email sent successfully.')
+
+      } catch(error) {
+        this.logger.error({ err: error, mail }, 'Failed to send password reset email.')
+
         // If email sending fails, clear the tokens to allow the user to try again.
         user.resetPasswordToken = undefined
         user.resetPasswordExpires = undefined
         await this.em.persistAndFlush(user)
         throw new Error('Could not send password reset email.')
       }
+    } else {
+      this.logger.info({ mail }, 'Forgot password attempt for non-existent user.')
     }
   }
 
@@ -172,6 +203,8 @@ export class AuthService {
     token: string,
     password_plaintext: string
   ): Promise<void> {
+    this.logger.info('Attempting to reset password with token.')
+
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
 
     const user = await this.em.findOne(User, {
@@ -180,6 +213,8 @@ export class AuthService {
     })
 
     if (!user) {
+      this.logger.warn('Password reset failed: token is invalid or has expired.')
+
       throw new Error('El token es inválido o ha expirado.')
     }
 
@@ -189,5 +224,7 @@ export class AuthService {
     user.resetPasswordExpires = undefined
 
     await this.em.persistAndFlush(user)
+    
+    this.logger.info({ userId: user.id }, 'Password reset successfully.')
   }
 }

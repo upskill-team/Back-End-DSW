@@ -4,6 +4,7 @@
  */
 import { Request, Response, NextFunction } from 'express'
 import { HttpResponse } from '../response/http.response.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Global error handler for the application.
@@ -20,6 +21,8 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
-  console.error(`Error: ${err.message}\nStack: ${err.stack}`)
+  // Log the full error object for detailed debugging in production
+  logger.error({ err }, 'Unhandled error caught by error handler')
+  
   return HttpResponse.InternalServerError(res, err.message) // Maybe we could change it to BadRequest
 }

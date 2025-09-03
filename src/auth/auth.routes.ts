@@ -1,3 +1,9 @@
+/**
+ * @module AuthRoutes
+ * @description Defines the routes for the authentication module.
+ * @see {@link AuthController}
+ */
+
 import { Router } from 'express';
 import { register, login, getProfile, forgotPassword, resetPassword } from './auth.controller.js';
 import { authMiddleware } from './auth.middleware.js';

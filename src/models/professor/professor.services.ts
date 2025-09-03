@@ -5,7 +5,10 @@
  */
 import { EntityManager } from '@mikro-orm/core'
 import { Professor } from './professor.entity.js'
-import { UpdateProfessorType } from './professor.schema.js'
+import { UpdateProfessorSchema, UpdateProfessorType } from './professor.schema.js'
+import { Logger } from 'pino'
+import { ObjectId } from '@mikro-orm/mongodb'
+import { safeParse } from 'valibot'
 import { User, UserRole } from '../user/user.entity.js'
 
 /**
@@ -13,9 +16,11 @@ import { User, UserRole } from '../user/user.entity.js'
  */
 export class ProfessorService {
   private em: EntityManager
+  private logger: Logger
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, logger: Logger) {
     this.em = em
+    this.logger = logger.child({ context: { service: 'ProfessorService' } })
   }
 
     /**
@@ -46,6 +51,8 @@ export class ProfessorService {
    * @returns A promise resolving to an array of professors.
    */
   public async findAll(): Promise<Professor[]> {
+    this.logger.info('Fetching all professors.')
+
     return this.em.find(
       Professor,
       {},
@@ -60,9 +67,12 @@ export class ProfessorService {
    * @throws NotFoundError If no professor with the given ID is found.
    */
   public async findOne(id: string): Promise<Professor> {
+    this.logger.info({ professorId: id }, 'Fetching professor.')
+
+    const objectId = new ObjectId(id)
     return this.em.findOneOrFail(
       Professor,
-      { id },
+      { _id: objectId },
       { populate: ['courses', 'institution'] }
     )
   }
@@ -76,11 +86,23 @@ export class ProfessorService {
    */
   public async update(
     id: string,
-    professorData: UpdateProfessorType
+    data: UpdateProfessorType
   ): Promise<Professor> {
-    const professor = await this.em.findOneOrFail(Professor, { id })
-    this.em.assign(professor, professorData)
+    this.logger.info({ professorId: id, data: data }, 'Updating professor.')
+
+    const result = safeParse(UpdateProfessorSchema, data)
+      if (!result.success) {
+        this.logger.error({ issues: result.issues }, 'Validation failed for professor update.')
+        throw new Error('Invalid data for professor update.')
+      }
+
+    const objectId = new ObjectId(id)
+    const professor = await this.em.findOneOrFail(Professor, { _id: objectId })
+    this.em.assign(professor, data);
     await this.em.flush()
+
+    this.logger.info({ professorId: id }, 'Professor updated successfully.')
+      
     return professor
   }
 
@@ -90,7 +112,12 @@ export class ProfessorService {
    * @returns A promise that resolves when the profile is deleted.
    */
   public async remove(id: string): Promise<void> {
-    const professor = this.em.getReference(Professor, id)
-    await this.em.removeAndFlush(professor)
+    this.logger.info({ professorId: id }, 'Deleting professor.')
+    
+    const objectId = new ObjectId(id)
+    const professor = this.em.getReference(Professor, objectId)
+    await this.em.removeAndFlush(professor);
+
+    this.logger.info({ professorId: id }, 'Professor deleted successfully.')
   }
 }

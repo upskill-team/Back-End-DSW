@@ -1,5 +1,12 @@
+/**
+ * @module App
+ * @description Main application entry point.
+ * Configures the Express server, initializes middleware, registers routes,
+ * sets up the MikroORM context, and starts the server.
+ */
+
 import './shared/config/env.validator.js'
-import express from 'express'
+import express, {Response} from 'express'
 import { courseTypeRouter } from './models/courseType/courseType.routes.js'
 import { institutionRouter } from './models/institution/institution.routes.js'
 import { studentRouter } from './models/student/student.routes.js'
@@ -15,8 +22,59 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import swaggerUi from 'swagger-ui-express';
 import specs from './shared/swagger/swagger.js'
+import { logger } from './shared/utils/logger.js'
+import pinoHttp from 'pino-http'
+import { randomUUID } from 'crypto'
 
 const app = express()
+
+/**
+ * @description HTTP request logger middleware.
+ * Uses the shared pino logger instance to log incoming requests and their responses.
+ * It adds a unique request ID to each log entry for easy tracing and redacts
+ * sensitive information like passwords and authorization headers.
+ */
+app.use(
+  pinoHttp({
+    logger,
+    
+    genReqId: (req, res) => {
+      const id = randomUUID()
+      res.setHeader('X-Request-Id', id)
+      return id
+    },
+
+    autoLogging: false,
+
+    customLogLevel: function (req, res: Response, err) {
+      if (res.statusCode >= 400 && res.statusCode < 500) {
+        return 'warn'
+      } else if (res.statusCode >= 500 || err) {
+        return 'error'
+      }
+      return 'info'
+    },
+
+    customSuccessMessage: function (req, res: Response & { responseTime?: number }) {
+      return `${req.method} ${req.url} - ${res.statusCode} ${res.statusMessage} - ${res.responseTime}ms`
+    },
+    customErrorMessage: function (req, res: Response, err) {
+      return `${req.method} ${req.url} - ${res.statusCode} ${res.statusMessage} - ${err.message}`
+    },
+
+    customProps: function (req, _res: Response) {
+      return {
+        context: {
+          authorization: req.headers.authorization ? 'Bearer [REDACTED]' : undefined,
+          body:
+            req.body && (req.body.password || req.body.password_plaintext)
+              ? { ...req.body, password: '[REDACTED]', password_plaintext: '[REDACTED]' }
+              : req.body,
+        },
+      }
+    },
+  })
+);
 
 // Apply Helmet to set various security-related HTTP headers
 app.use(helmet())

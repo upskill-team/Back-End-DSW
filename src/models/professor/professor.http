@@ -1,12 +1,17 @@
+@token = 
+
 ###Obtener todas los profesores
 GET http://localhost:3000/api/professors
+Authorization: Bearer {{token}}
 
 ###Obtener un profesor (id: a02b91bc-3769-4221-beb1-d7a3aeba7dad)
 GET http://localhost:3000/api/professors/686c0cca07fd2bcda26f8117
+Authorization: Bearer {{token}}
 
 ###Crear un profesor - rápido
 POST http://localhost:3000/api/professors
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "Carlos",
@@ -20,6 +25,7 @@ Content-Type: application/json
 ###Modificar un profesor existente (PUT) 
 PUT http://localhost:3000/api/professors/a02b91bc-6769-4221-beb1-d7a3aeba7dac
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "Pablo",
@@ -32,6 +38,7 @@ Content-Type: application/json
 ###Modificar un profesor existente (PATCH)
 PATCH http://localhost:3000/api/professors/a02b91dc-3769-4221-beb1-d7a3aeba7dac
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "surname": "Milardovich"
@@ -39,3 +46,4 @@ Content-Type: application/json
 
 ###Borrar un profesor
 DELETE http://localhost:3000/api/professors/686d8986b5844246c6494e31
+Authorization: Bearer {{token}}

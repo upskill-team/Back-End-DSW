@@ -1,8 +1,12 @@
+@token = 
+
 ###Obtener todas los alumnos
 GET http://localhost:3000/api/students
+Authorization: Bearer {{token}}
 
 ###Obtener un alumno (id: a02b91bc-3769-4221-beb1-d7a3aeba7dad)
 GET http://localhost:3000/api/students/a02b91bc-3769-4221-beb1-d7a3aeba7dad
+Authorization: Bearer {{token}}
 
 ###Crear un alumno
 # @prompt name
@@ -10,6 +14,7 @@ GET http://localhost:3000/api/students/a02b91bc-3769-4221-beb1-d7a3aeba7dad
 # @prompt mail
 POST http://localhost:3000/api/students
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "{{name}}",
@@ -21,6 +26,7 @@ Content-Type: application/json
 ###Crear un alumno - rápido
 POST http://localhost:3000/api/students
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "Carlos",
@@ -32,6 +38,7 @@ Content-Type: application/json
 ###Modificar un alumno existente (PUT) 
 PUT http://localhost:3000/api/students/a02b91bc-3769-4221-beb1-d7a3aeba7dad
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "name": "Lucas",
@@ -43,6 +50,7 @@ Content-Type: application/json
 ###Modificar un alumno existente (PATCH)
 PATCH http://localhost:3000/api/students/a02b91bc-3769-4221-beb1-d7a3aeba7dad
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
     "surname": "Pedemonte"
@@ -50,3 +58,4 @@ Content-Type: application/json
 
 ###Borrar un alumno
 DELETE http://localhost:3000/api/students/686d7a5c46c27757b7f72ba1
+Authorization: Bearer {{token}}
