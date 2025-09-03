@@ -54,7 +54,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
-    "@mikro-orm/cli": "^6.5.1",
+    "@mikro-orm/cli": "6.5.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
