@@ -6,17 +6,15 @@
  */
 
 import './shared/config/env.validator.js'
-
-import express, { Response } from 'express'
 import { courseTypeRouter } from './models/courseType/courseType.routes.js'
 import { institutionRouter } from './models/institution/institution.routes.js'
 import { studentRouter } from './models/student/student.routes.js'
 import { professorRouter } from './models/professor/professor.routes.js'
 import { courseRouter } from './models/course/course.routes.js'
 import { appealRouter } from './models/appeal/appeal.routes.js'
+import { authRouter } from './auth/auth.routes.js'
 import { orm } from './shared/db/orm.js'
 import { RequestContext } from '@mikro-orm/core'
-import { authRouter } from './auth/auth.routes.js'
 import cors from 'cors'
 import { errorHandler } from './shared/middlewares/error.middleware.js'
 import helmet from 'helmet'
