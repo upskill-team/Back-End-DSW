@@ -5,21 +5,33 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start:dev": "tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/app.js\"",
+    "start:dev": "tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/src/app.js\"",
+    "build": "tsc -p ./tsconfig.json",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "audit": "pnpm audit",
     "test": "pnpm run lint && pnpm run type-check && pnpm run audit",
-    "tdocs": "typedoc --entryPointStrategy expand ./src"
+    "tdocs": "typedoc --entryPointStrategy expand ./src",
+    "migration:create": "tsx node_modules/.bin/mikro-orm migration:create",
+    "migration:up": "tsx node_modules/.bin/mikro-orm migration:up",
+    "migration:down": "tsx node_modules/.bin/mikro-orm migration:down",
+    "migration:fresh": "tsx node_modules/.bin/mikro-orm migration:fresh"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.9.0",
+  "mikro-orm": {
+    "useTsNode": true,
+    "configPaths": [
+      "./mikro-orm.config.ts"
+    ]
+  },
   "dependencies": {
-    "@mikro-orm/core": "6.4.16",
+    "@mikro-orm/core": "6.5.1",
+    "@mikro-orm/migrations-mongodb": "6.5.1",
     "@mikro-orm/mongo-highlighter": "1.0.0",
-    "@mikro-orm/mongodb": "6.4.16",
+    "@mikro-orm/mongodb": "6.5.1",
     "@react-email/components": "0.5.1",
     "@react-email/render": "1.2.1",
     "@types/swagger-ui-express": "^4.1.8",
@@ -42,6 +54,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@mikro-orm/cli": "^6.5.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
@@ -54,8 +67,10 @@
     "@typescript-eslint/parser": "^8.39.1",
     "eslint": "^9.33.0",
     "globals": "^16.3.0",
+    "ts-node": "^10.9.2",
     "swagger-ui-express`": "link:@types/swagger-ui-express`",
     "tsc-watch": "7.1.1",
+    "tsx": "^4.20.5",
     "typedoc": "^0.28.11",
     "typescript": "5.9.2",
     "typescript-eslint": "^8.39.1"
