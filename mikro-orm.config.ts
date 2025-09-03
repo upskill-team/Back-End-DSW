@@ -1,6 +1,7 @@
 import { defineConfig } from '@mikro-orm/mongodb'
 import { MongoHighlighter } from '@mikro-orm/mongo-highlighter'
 import * as dotenv from 'dotenv'
+import { PinoLogger } from './src/shared/utils/pino-logger.adapter.js'
 
 dotenv.config()
 
@@ -18,7 +19,7 @@ export default defineConfig({
   dbName: MONGO_DB_NAME,
   clientUrl: connectionString,
   highlighter: new MongoHighlighter(),
-  debug: true,
+  loggerFactory: (options) => new PinoLogger(options),
   migrations: {
     path: 'dist/migrations', 
     pathTs: 'src/migrations',
