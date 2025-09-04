@@ -1,15 +1,21 @@
+/**
+ * @module Models/Course/Embeddables/Unit
+ * @remarks Defines the embeddable class for a course Unit, which acts as a container for content.
+ */
+
 import { Embeddable, Property, Embedded } from '@mikro-orm/core';
 import { Activity } from './activity.entity.js';
 import { Material } from './material.entity.js';
 
 /**
- * Represents a unit of study embedded within a course.
+ * Represents a unit of study embedded within a course, similar to a chapter or a lesson.
+ * It contains learning materials and interactive activities.
  * @class Unit
  */
 @Embeddable()
 export class Unit {
   /**
-   * The sequential number of the unit for ordering.
+   * The sequential number of the unit, used for ordering within a course.
    * @type {number}
    */
   @Property()
@@ -23,7 +29,7 @@ export class Unit {
   name!: string;
 
   /**
-   * The main content of the unit, expected to be in Markdown format.
+   * The main instructional content of the unit, typically in Markdown format.
    * @type {string}
    */
   @Property({ type: 'text' })

@@ -1,24 +1,11 @@
 {
   "entryPoints": [
     "src/app.ts",
-    "src/models",
-    "src/auth",
-    "src/shared"
+    "src/auth/**/*.ts",
+    "src/models/**/*.ts",
+    "src/shared/**/*.ts",
   ],
-   "jsDocCompatibility": {
-        "exampleTag": true,
-        "defaultTag": true,
-        "inheritDocTag": true,
-        "ignoreUnescapedBraces": true
-    },
-  "visibilityFilters": { // Configuración para incluir miembros heredados
-        "protected": false,
-        "private": false,
-        "inherited": false,
-        "external": false,
-        "@alpha": false,
-        "@beta": false
-    },
+  "entryPointStrategy": "expand",
   "out": "docs",
   "tsconfig": "tsconfig.json",
   "exclude": [

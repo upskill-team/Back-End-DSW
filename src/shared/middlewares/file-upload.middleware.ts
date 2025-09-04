@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Middleware/FileUpload
+ * @remarks Configures and exports Multer middleware for handling file uploads via Cloudinary.
+ */
+
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
@@ -21,7 +26,11 @@ const cvStorage = new CloudinaryStorage({
   } as any,
 });
 
-// Middleware to handle CV uploads (max 10MB)
+/**
+ * Multer middleware instance configured to handle CV uploads to Cloudinary.
+ * It accepts a single file with the field name 'document' and imposes a 10MB size limit.
+ * @const {multer.Instance} uploadCvToCloudinary
+ */
 export const uploadCvToCloudinary = multer({
   storage: cvStorage,
   limits: {

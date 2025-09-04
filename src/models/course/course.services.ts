@@ -1,3 +1,8 @@
+/**
+ * @module Models/Course/Service
+ * @remarks Encapsulates the business logic for managing courses.
+ */
+
 import { EntityManager } from '@mikro-orm/core'
 import { Course } from './course.entity.js'
 import { CreateCourseType, UpdateCourseSchema, UpdateCourseType } from './course.schemas.js'
@@ -7,6 +12,10 @@ import { Logger } from 'pino'
 import { ObjectId } from '@mikro-orm/mongodb'
 import { safeParse } from 'valibot'
 
+/**
+ * Provides methods for CRUD operations on Course entities.
+ * @class CourseService
+ */
 export class CourseService {
   private em: EntityManager
   private logger: Logger
@@ -16,6 +25,12 @@ export class CourseService {
     this.logger = logger.child({ context: { service: 'CourseService' } })
   }
 
+  /**
+   * Creates a new course.
+   * @param {CreateCourseType} courseData - The validated data for the new course.
+   * @param {string} professorId - The ID of the professor creating the course.
+   * @returns {Promise<Course>} A promise that resolves to the newly created course.
+   */
   public async create(
     courseData: CreateCourseType,
     professorId: string
@@ -49,6 +64,10 @@ export class CourseService {
     return course
   }
 
+  /**
+   * Retrieves all courses from the database.
+   * @returns {Promise<Course[]>} A promise that resolves to an array of all courses.
+   */
   public async findAll(): Promise<Course[]> {
     this.logger.info('Fetching all courses.')
 
@@ -61,6 +80,12 @@ export class CourseService {
     )
   }
 
+  /**
+   * Retrieves a single course by its ID.
+   * @param {string} id - The ID of the course to find.
+   * @returns {Promise<Course>} A promise that resolves to the found course.
+   * @throws {NotFoundError} If no course with the given ID is found.
+   */
   public async findOne(id: string): Promise<Course> {
     this.logger.info({ courseId: id }, 'Fetching course.')
 
@@ -74,6 +99,13 @@ export class CourseService {
     );
   }
 
+  /**
+   * Updates an existing course.
+   * @param {string} id - The ID of the course to update.
+   * @param {UpdateCourseType} data - An object containing the fields to update.
+   * @returns {Promise<Course>} A promise that resolves to the updated course entity.
+   * @throws {Error} If validation fails or the course is not found.
+   */
   public async update(
     id: string,
     data: UpdateCourseType
@@ -96,6 +128,11 @@ export class CourseService {
     return course;
   }
 
+  /**
+   * Deletes a course from the database.
+   * @param {string} id - The ID of the course to remove.
+   * @returns {Promise<void>} A promise that resolves when the course is deleted.
+   */
   public async remove(id: string): Promise<void> {
     this.logger.info({ courseId: id }, 'Deleting course.')
 

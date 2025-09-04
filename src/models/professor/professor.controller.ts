@@ -1,6 +1,6 @@
 /**
- * @module models/professor
- * Handles HTTP requests for the professor module.
+ * @module Models/Professor/Controller
+ * @remarks Handles HTTP requests for the professor module.
  * @see {@link ProfessorService}
  */
 import { NextFunction, Request, Response } from 'express'

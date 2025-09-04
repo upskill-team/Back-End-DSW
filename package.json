@@ -5,14 +5,14 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "start:dev": "cross-env NODE_ENV=development tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/src/app.js\"",
+    "start:dev": "cross-env NODE_ENV=development tsc-watch --noClear -p ./tsconfig.json --onSuccess \"node ./dist/app.js\"",
     "start:prod": "cross-env NODE_ENV=production node ./dist/app.js",
     "build": "tsc -p ./tsconfig.json",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "audit": "pnpm audit",
     "test": "pnpm run lint && pnpm run type-check && pnpm run audit",
-    "tdocs": "typedoc --entryPointStrategy expand ./src",
+    "tdocs": "typedoc",
     "migration:create": "tsx node_modules/.bin/mikro-orm migration:create",
     "migration:up": "tsx node_modules/.bin/mikro-orm migration:up",
     "migration:down": "tsx node_modules/.bin/mikro-orm migration:down",
@@ -25,7 +25,8 @@
   "mikro-orm": {
     "useTsNode": true,
     "configPaths": [
-      "./mikro-orm.config.ts"
+      "./dist/src/shared/db/mikro-orm.config.js",
+      "./src/shared/db/mikro-orm.config.ts"
     ]
   },
   "dependencies": {

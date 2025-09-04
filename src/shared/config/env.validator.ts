@@ -1,6 +1,9 @@
 /**
- * @module EnvValidator
- * @description Validates essential environment variables at application startup.
+ * @module Shared/Config
+ * @remarks Validates essential environment variables at application startup using Valibot.
+ * This script runs automatically when the application starts, ensuring that all necessary
+ * configuration is present before the server attempts to initialize. It will cause the
+ * application to exit with a non-zero status code if any variable is missing or invalid.
  */
 import * as v from 'valibot';
 import * as dotenv from 'dotenv';
@@ -10,7 +13,7 @@ dotenv.config();
 
 /**
  * Defines the schema for the required environment variables.
- * This ensures that the application has the necessary configuration to run safely.
+ * This schema acts as a contract for the application's configuration.
  */
 const EnvSchema = v.object({
   // MongoDB

@@ -1,12 +1,21 @@
 /**
- * @module StudentController
- * @description Handles HTTP requests for the Student module.
+ * @module Models/Student/Controller
+ * @remarks Handles HTTP requests for the Student module.
+ * @see {@link StudentService} for business logic.
  */
+
 import { NextFunction, Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'
 import { StudentService } from './student.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
 
+/**
+ * Handles the retrieval of all students.
+ * @param {Request} req The Express request object.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} A list of all students.
+ */
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
     const studentService = new StudentService(orm.em.fork(), req.log)
@@ -17,6 +26,13 @@ async function findAll(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles the retrieval of a single student by ID.
+ * @param {Request} req The Express request object, with student ID in params.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} The requested student's data.
+ */
 async function findOne(req: Request, res: Response, next: NextFunction) {
   try {
     const studentService = new StudentService(orm.em.fork(), req.log)
@@ -32,6 +48,13 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles updating an existing student's profile.
+ * @param {Request} req The Express request object, with student ID in params and update data in body.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} The updated student data.
+ */
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
     const studentService = new StudentService(orm.em.fork(), req.log)
@@ -43,6 +66,13 @@ async function update(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles the deletion of a student profile.
+ * @param {Request} req The Express request object, with student ID in params.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} A confirmation message.
+ */
 async function remove(req: Request, res: Response, next: NextFunction) {
   try {
     const studentService = new StudentService(orm.em.fork(), req.log)

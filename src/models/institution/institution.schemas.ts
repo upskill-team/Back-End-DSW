@@ -1,6 +1,6 @@
 /**
- * @module models/institution
- * Defines the validation schemas for the institution module using Valibot.
+ * @module Models/Institution/Schemas
+ * @remarks Defines the validation schemas for the institution module using Valibot.
  * These schemas are used by the validationMiddleware to ensure data integrity for incoming requests.
  * @see {@link InstitutionRoutes}
  */

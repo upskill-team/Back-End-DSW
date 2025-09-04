@@ -1,3 +1,8 @@
+/**
+ * @module Models/CourseType/Routes
+ * @remarks Defines the API routes for the CourseType module.
+ */
+
 import {Router} from 'express'
 import { findAll, findOne, add, update, remove } from './courseType.controller.js'
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'

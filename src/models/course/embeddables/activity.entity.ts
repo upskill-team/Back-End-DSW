@@ -1,7 +1,13 @@
+/**
+ * @module Models/Course/Embeddables/Activity
+ * @remarks Defines the embeddable classes for course activities.
+ */
+
 import { Embeddable, Property, Embedded } from '@mikro-orm/core';
 
 /**
  * Represents a single option in a multiple-choice question.
+ * This class is embedded within an Activity.
  * @class MultipleChoiceOption
  */
 @Embeddable()
@@ -43,15 +49,15 @@ export class Activity {
   description!: string;
 
   /**
-   * The start date for the activity (optional).
-   * @type {Date}
+   * The start date for when the activity becomes available (optional).
+   * @type {Date | undefined}
    */
   @Property({ nullable: true })
   startDate?: Date;
 
   /**
    * The end date or deadline for the activity (optional).
-   * @type {Date}
+   * @type {Date | undefined}
    */
   @Property({ nullable: true })
   endDate?: Date;

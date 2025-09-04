@@ -1,6 +1,6 @@
 /**
- * @module models/professor
- * Encapsulates the business logic for managing professor profiles.
+ * @module Models/Professor/Service
+ * @remarks Encapsulates the business logic for managing professor profiles.
  * @see {@link Professor}
  */
 import { EntityManager } from '@mikro-orm/core'
@@ -13,6 +13,7 @@ import { User, UserRole } from '../user/user.entity.js'
 
 /**
  * Provides methods for CRUD operations on Professor entities.
+ * @class ProfessorService
  */
 export class ProfessorService {
   private em: EntityManager
@@ -24,13 +25,13 @@ export class ProfessorService {
   }
 
     /**
-    * Creates a new Professor profile from an existing User entity and promotes their role.
-    * This method handles the business logic of turning a user into a professor.
-    * Note: This method persists the new entity but does NOT flush the EntityManager.
-    * The calling service is responsible for managing the transaction boundary.
-    * @param user - The User entity to be promoted.
-    * @returns The newly created Professor profile entity.
-    */
+   * Creates a new Professor profile from an existing User entity and promotes their role.
+   * This method handles the business logic of turning a user into a professor.
+   * It persists the new entity but does NOT flush the EntityManager.
+   * The calling service is responsible for managing the transaction boundary.
+   * @param {User} user - The User entity to be promoted.
+   * @returns {Professor} The newly created Professor profile entity.
+   */
     public createFromUser(user: User): Professor {
     user.role = UserRole.PROFESSOR
 
@@ -48,7 +49,7 @@ export class ProfessorService {
   /**
    * Retrieves all professor profiles from the database.
    * Populates related courses and institution data.
-   * @returns A promise resolving to an array of professors.
+   * @returns {Promise<Professor[]>} A promise resolving to an array of professors.
    */
   public async findAll(): Promise<Professor[]> {
     this.logger.info('Fetching all professors.')
@@ -62,9 +63,9 @@ export class ProfessorService {
 
   /**
    * Retrieves a single professor profile by its ID.
-   * @param id - The ID of the professor to find.
-   * @returns A promise resolving to the found professor.
-   * @throws NotFoundError If no professor with the given ID is found.
+   * @param {string} id - The ID of the professor to find.
+   * @returns {Promise<Professor>} A promise resolving to the found professor.
+   * @throws {NotFoundError} If no professor with the given ID is found.
    */
   public async findOne(id: string): Promise<Professor> {
     this.logger.info({ professorId: id }, 'Fetching professor.')
@@ -79,10 +80,10 @@ export class ProfessorService {
 
   /**
    * Updates an existing professor's profile.
-   * @param id - The ID of the professor to update.
-   * @param professorData - The data to update.
-   * @returns A promise resolving to the updated professor profile.
-   * @throws NotFoundError If no professor with the given ID is found.
+   * @param {string} id - The ID of the professor to update.
+   * @param {UpdateProfessorType} data - The data to update.
+   * @returns {Promise<Professor>} A promise resolving to the updated professor profile.
+   * @throws {NotFoundError} If no professor with the given ID is found.
    */
   public async update(
     id: string,
@@ -108,8 +109,8 @@ export class ProfessorService {
 
   /**
    * Deletes a professor's profile by its ID.
-   * @param id - The ID of the professor to remove.
-   * @returns A promise that resolves when the profile is deleted.
+   * @param {string} id - The ID of the professor to remove.
+   * @returns {Promise<void>} A promise that resolves when the profile is deleted.
    */
   public async remove(id: string): Promise<void> {
     this.logger.info({ professorId: id }, 'Deleting professor.')

@@ -1,7 +1,13 @@
+/**
+ * @module Models/Course/Embeddables/Material
+ * @remarks Defines the embeddable class for course materials.
+ */
+
 import { Embeddable, Property } from '@mikro-orm/core';
 
 /**
- * Represents a learning material embedded within a course unit.
+ * Represents a learning material (e.g., a PDF, video link, or external resource)
+ * embedded within a course unit.
  * @class Material
  */
 @Embeddable()
@@ -14,14 +20,14 @@ export class Material {
   title!: string;
 
   /**
-   * A brief description of the material.
-   * @type {string}
+   * A brief, optional description of the material.
+   * @type {string | undefined}
    */
   @Property({ type: 'text', nullable: true })
   description?: string;
 
   /**
-   * The URL to access the material.
+   * The URL to access the material resource.
    * @type {string}
    */
   @Property()

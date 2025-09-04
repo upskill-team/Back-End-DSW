@@ -6,6 +6,7 @@
     "moduleResolution": "bundler",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "src",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -15,6 +16,6 @@
     "experimentalDecorators": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*", "**/*.ts"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules","docs"]
 }

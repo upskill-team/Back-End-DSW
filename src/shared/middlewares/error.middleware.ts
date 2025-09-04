@@ -1,6 +1,6 @@
 /**
- * @module ErrorMiddleware
- * @description Provides a global error handling middleware for the Express application.
+ * @module Shared/Middleware/Error
+ * @remarks Provides a global error handling middleware for the Express application.
  */
 import { Request, Response, NextFunction } from 'express'
 import { HttpResponse } from '../response/http.response.js'
@@ -8,12 +8,12 @@ import { logger } from '../utils/logger.js'
 
 /**
  * Global error handler for the application.
- * This middleware catches any errors that occur in the route handlers
- * and sends a standardized 500 Internal Server Error response.
+ * This middleware catches any unhandled errors that occur in the route handlers,
+ * logs them for debugging, and sends a standardized 500 Internal Server Error response.
  * @param {Error} err - The error object.
  * @param {Request} req - The Express request object.
  * @param {Response} res - The Express response object.
- * @param {NextFunction} _next - The next middleware function. Required for Express to identify this as an error handler, but unused in this implementation.
+ * @param {NextFunction} _next - The next middleware function (unused, but required by Express).
  */
 export const errorHandler = (
   err: Error,

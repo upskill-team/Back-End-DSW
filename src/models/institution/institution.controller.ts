@@ -1,6 +1,6 @@
 /**
- * @module models/institution
- * Handles the HTTP request/response logic for the institution module.
+ * @module Models/Institution/Controller
+ * @remarks Handles the HTTP request/response logic for the institution module.
  * It uses the InstitutionService to perform business logic and responds with standardized HTTP responses.
  * @see {@link InstitutionService}
  */

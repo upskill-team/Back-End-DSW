@@ -1,6 +1,6 @@
 /**
- * @module AuthRoutes
- * @description Defines the routes for the authentication module.
+ * @module Auth/Routes
+ * @remarks Defines the routes for the authentication module.
  * @see {@link AuthController}
  */
 

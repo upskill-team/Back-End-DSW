@@ -1,8 +1,8 @@
 /**
  * @module App
- * @description Main application entry point.
- * Configures the Express server, initializes middleware, registers routes,
- * sets up the MikroORM context, and starts the server.
+ * @remarks Main application entry point. This file configures and initializes the Express server,
+ * including middleware setup, route registration, MikroORM integration, and error handling.
+ * It serves as the central hub for assembling all parts of the application.
  */
 
 import './shared/config/env.validator.js'
@@ -29,10 +29,9 @@ import { randomUUID } from 'crypto'
 const app = express()
 
 /**
- * @description HTTP request logger middleware.
- * Uses the shared pino logger instance to log incoming requests and their responses.
- * It adds a unique request ID to each log entry for easy tracing and redacts
- * sensitive information like passwords and authorization headers.
+ * @remarks HTTP request logger middleware using pino-http.
+ * It logs every incoming request and its response, adding a unique request ID for tracing.
+ * Sensitive data like passwords and authorization headers are automatically redacted.
  */
 app.use(
   pinoHttp({
@@ -85,15 +84,18 @@ app.use(express.json())
 
 app.use(express.urlencoded({ extended: true }))
 
+/**
+ * Main function to bootstrap and start the application.
+ * It initializes the database connection, runs migrations, sets up rate limiters,
+ * registers routes, and starts the Express server.
+ */
 async function startApp() {
   await orm.connect()
   const migrator = orm.getMigrator()
   await migrator.up()
   
    /**
-   * @description Rate limiter for sensitive authentication endpoints.
-   * Helps prevent brute-force attacks on login and password reset functionalities.
-   * Limits each IP to 10 requests per 15 minutes.
+   * Rate limiter for sensitive authentication endpoints to prevent brute-force attacks.
    */
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -104,9 +106,7 @@ async function startApp() {
   })
 
   /**
-   * @description General rate limiter for all other API routes.
-   * Protects against general DoS attacks and abuse.
-   * Limits each IP to 100 requests per 15 minutes.
+   * General rate limiter for all other API routes to protect against DoS attacks.
    */
   const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -116,6 +116,10 @@ async function startApp() {
     message: { message: 'Too many requests from this IP, please try again after 15 minutes' },
   })
   
+  /**
+   * MikroORM middleware to create a new RequestContext for each request.
+   * This is crucial for isolating database operations per request.
+   */
   app.use((req, res, next) => {
     RequestContext.create(orm.em, next) //em is the EntityManager
   })
