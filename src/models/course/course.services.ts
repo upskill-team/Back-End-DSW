@@ -53,7 +53,7 @@ export class CourseService {
 
     // If the payload includes units, we use `em.assign`. This is the best way to handle
     // nested embeddable data, as it correctly converts the plain objects from the
-    // validated payload into the required Embeddable class instances (Unit, Activity, etc.).
+    // validated payload into the required Embeddable class instances (Unit, Material, etc.).
     if (units && units.length > 0) {
       this.em.assign(course, { units })
     }
