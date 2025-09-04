@@ -25,6 +25,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'eslint.config.js','docs/'],
+    ignores: ['dist/', 'eslint.config.js', './docs/'],
   },
 ];
