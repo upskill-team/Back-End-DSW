@@ -4,7 +4,6 @@
  */
 
 import { Embeddable, Property, Embedded } from '@mikro-orm/core';
-import { Activity } from './activity.entity.js';
 import { Material } from './material.entity.js';
 
 /**
@@ -34,13 +33,6 @@ export class Unit {
    */
   @Property({ type: 'text' })
   detail!: string;
-
-  /**
-   * A collection of activities associated with this unit.
-   * @type {Activity[]}
-   */
-  @Embedded(() => Activity, { array: true, default: [] })
-  activities: Activity[] = [];
 
   /**
    * A collection of learning materials associated with this unit.
