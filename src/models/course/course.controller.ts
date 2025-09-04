@@ -10,6 +10,30 @@ import { HttpResponse } from '../../shared/response/http.response.js'
 import { User } from '../user/user.entity.js'
 
 /**
+ * Handles the retrieval of courses for the currently authenticated professor.
+ * @param {Request} req The Express request object, containing the user payload from auth.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} A list of the professor's courses.
+ */
+async function findMyCourses(req: Request, res: Response, next: NextFunction) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log)
+    const userId = req.user!.id
+
+    const courses = await courseService.findByAuthenticatedProfessor(userId)
+    
+    return HttpResponse.Ok(res, courses)
+  } catch (error: any) {
+
+    if (error.message === 'User is not a professor') {
+        return HttpResponse.Unauthorized(res, 'The authenticated user is not a professor.')
+    }
+    next(error)
+  }
+}
+
+/**
  * Handles the retrieval of all courses.
  * @param {Request} req The Express request object.
  * @param {Response} res The Express response object.
@@ -115,4 +139,4 @@ async function remove(req: Request, res: Response, next: NextFunction) {
     next(error)
   }
 }
-export { findAll, findOne, add, update, remove }
+export { findAll, findOne, add, update, remove, findMyCourses }

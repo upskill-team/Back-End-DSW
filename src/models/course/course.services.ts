@@ -11,6 +11,7 @@ import { CourseType } from '../courseType/courseType.entity.js'
 import { Logger } from 'pino'
 import { ObjectId } from '@mikro-orm/mongodb'
 import { safeParse } from 'valibot'
+import { User } from '../user/user.entity.js'
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -141,5 +142,35 @@ export class CourseService {
     await this.em.removeAndFlush(courseRef)
 
     this.logger.info({ courseId: id }, 'Course deleted successfully.')
+  }
+
+  /**
+   * Retrieves all courses for a user, ensuring they have a professor profile.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<Course[]>} A promise that resolves to an array of courses.
+   * @throws {Error} If the user is not found or is not a professor.
+   */
+  public async findByAuthenticatedProfessor(userId: string): Promise<Course[]> {
+    this.logger.info({ userId }, "Fetching courses for an authenticated professor.")
+
+    const userObjectId = new ObjectId(userId)
+
+    const user = await this.em.findOne(
+      User,
+      { _id: userObjectId },
+      { populate: ['professorProfile'] }
+    );
+    
+    if (!user || !user.professorProfile) {
+      throw new Error('User is not a professor');
+    }
+
+    const professorId = user.professorProfile.id;
+
+    return this.em.find(
+      Course,
+      { professor: professorId },
+      { populate: ['courseType', 'professor'] }
+    );
   }
 }
