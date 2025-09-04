@@ -1,4 +1,10 @@
-// institution.routes.ts (versión limpia)
+/**
+ * @module Models/Institution/Routes
+ * @remarks Defines the API routes for the Institution module.
+ * @requires express
+ * @requires InstitutionController
+ * @requires authMiddleware
+ */
 
 import { Router } from 'express';
 import {
@@ -21,17 +27,11 @@ import { UserRole } from '../user/user.entity.js';
 
 export const institutionRouter = Router();
 
-// Middleware de autenticación para todas las rutas de este módulo
 institutionRouter.use(authMiddleware);
 
 const adminOnly = roleAuthMiddleware([UserRole.ADMIN]);
 
-// Las rutas ahora están limpias y son fáciles de leer.
-// swagger-jsdoc las asociará automáticamente con las definiciones en el YAML
-// gracias a la configuración en `apis`.
-
 institutionRouter.get('/', findAll);
-
 institutionRouter.get('/:id', findOne);
 
 institutionRouter.post(
