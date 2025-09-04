@@ -1,3 +1,8 @@
+/**
+ * @module Models/Course/Entity
+ * @remarks Defines the database schema for the Course entity and its embeddable components.
+ */
+
 import {
   Entity,
   Property,
@@ -14,10 +19,10 @@ import { Unit } from './embeddables/unit.entity.js';
 import { Student } from '../student/student.entity.js';
 
 /**
- * Represents a course entity, the central element of the platform.
+ * Represents a course, the central element of the platform.
  * It contains all metadata and the structured content of the course itself.
- *
  * @class Course
+ * @extends BaseEntity
  */
 @Entity()
 export class Course extends BaseEntity {
@@ -36,7 +41,7 @@ export class Course extends BaseEntity {
   description!: string;
 
   /**
-   * Determines if the course requires payment. Defaults to true.
+   * Determines if the course requires payment. Defaults to true (free).
    * @type {boolean}
    */
   @Property({ default: true })
@@ -44,7 +49,7 @@ export class Course extends BaseEntity {
 
   /**
    * The cost of the course if `isFree` is false.
-   * @type {number}
+   * @type {number | undefined}
    */
   @Property({ type: 'number', nullable: true })
   price?: number;
@@ -71,7 +76,7 @@ export class Course extends BaseEntity {
   professor!: Rel<Professor>;
 
   /**
-   * The students enrolled in the course.
+   * A collection of students enrolled in the course.
    * @type {Collection<Student>}
    */
   @ManyToMany(() => Student, (student) => student.courses)

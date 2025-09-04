@@ -1,7 +1,16 @@
+/**
+ * @module Shared/Service
+ * @description Provides a centralized service for sending emails via Nodemailer.
+ */
+
 import 'dotenv/config'
 import nodemailer from 'nodemailer'
 import { logger } from '../utils/logger.js'
 
+/**
+ * Defines the structure for the email options.
+ * @interface MailOptions
+ */
 // Interface for email options
 interface MailOptions {
   to: string;
@@ -25,6 +34,12 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+/**
+ * Sends an email using the pre-configured transporter.
+ * @param {MailOptions} options - The email options including recipient, subject, and HTML content.
+ * @returns {Promise<void>} A promise that resolves on success or rejects on failure.
+ * @throws {Error} If the email fails to send.
+ */
 // Function to send an email
 export const sendEmail = async (options: MailOptions): Promise<void> => {
   try {

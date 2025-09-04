@@ -1,6 +1,6 @@
 /**
- * @module PinoLoggerAdapter
- * @description An adapter to bridge MikroORM's logging system with our application's Pino logger.
+ * @module Shared/Utils/LoggerAdapter
+ * @remarks An adapter to bridge MikroORM's logging system with our application's Pino logger.
  */
 
 import { Logger as MikroOrmLogger, LogContext, LoggerOptions } from '@mikro-orm/core';
@@ -9,7 +9,7 @@ import { logger as pinoLogger } from './logger.js';
 /**
  * @class PinoLogger
  * @implements {MikroOrmLogger}
- * @description This class implements the MikroORM Logger interface and redirects
+ * @remarks This class implements the MikroORM Logger interface and redirects
  * its log output to our centralized Pino logger instance. This ensures that all
  * logs, whether from our application logic or from the ORM (like database queries),
  * share the same structured format.

@@ -1,6 +1,6 @@
 /**
- * @module AuthMiddleware
- * @description Provides middleware for user authentication and authorization.
+ * @module Auth/Middleware
+ * @remarks Provides middleware for user authentication and authorization.
  */
 
 import { Request, Response, NextFunction } from 'express';

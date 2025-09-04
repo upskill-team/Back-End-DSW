@@ -1,5 +1,13 @@
+/**
+ * @module Models/Appeal/Schemas
+ * @remarks Defines validation schemas for the Appeal module using Valibot.
+ */
+
 import * as v from 'valibot';
 
+/**
+ * Schema for creating a new appeal. Validates the required fields for submitting a professor application.
+ */
 export const CreateAppealSchema = v.object({
   expertise: v.pipe(
     v.string('El área de especialización debe ser un texto.'),
@@ -15,6 +23,9 @@ export const CreateAppealSchema = v.object({
   ),
 });
 
+/**
+ * Schema for updating an appeal's state. Primarily used by administrators.
+ */
 export const UpdateAppealSchema = v.object({
   state: v.pipe(
     v.string('El estado debe ser un string.'),

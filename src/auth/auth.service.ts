@@ -1,6 +1,6 @@
 /**
- * @module AuthService
- * @description Manages the business logic for user authentication.
+ * @module Auth/Service
+ * @remarks Manages the business logic for user authentication.
  * Responsibilities: registering new users, validating credentials for login,
  * and handling the password recovery flow.
  * @see {@link ./auth.controller.ts}

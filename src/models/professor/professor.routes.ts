@@ -1,6 +1,6 @@
 /**
- * @module models/professor
- * Defines the API routes for the professor module.
+ * @module Models/Professor/Routes
+ * @remarks Defines the API routes for the professor module.
  * All routes are protected by authentication.
  * @see {@link ProfessorController}
  */

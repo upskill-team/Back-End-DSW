@@ -1,3 +1,8 @@
+/**
+ * @module Models/Student/Routes
+ * @remarks Defines the API routes for the Student module.
+ */
+
 import { Router } from 'express';
 import {
   findAll,

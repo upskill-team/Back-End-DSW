@@ -1,6 +1,6 @@
 /**
- * @module CourseTypeController
- * @description Handles HTTP requests for the CourseType module.
+ * @module Models/CourseType/Controller
+ * @remarks Handles HTTP requests for the CourseType module.
  */
 import { NextFunction, Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'

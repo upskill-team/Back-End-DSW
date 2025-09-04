@@ -1,6 +1,6 @@
 /**
- * @module models/institution
- * Defines the database schema and relationships for the Institution entity.
+ * @module Models/Institution/Entity
+ * @remarks Defines the database schema and relationships for the Institution entity.
  */
 import {
   Entity,

@@ -1,3 +1,11 @@
+/**
+ * @module Models/Appeal/Routes
+ * @remarks Defines the API routes for the Appeal module.
+ * @requires express
+ * @requires AppealController
+ * @requires authMiddleware
+ */
+
 import {Router} from 'express'
 import { findAll, findOne, add, update, remove } from "./appeal.controller.js"
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'

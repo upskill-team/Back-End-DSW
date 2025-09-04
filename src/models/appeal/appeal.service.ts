@@ -1,3 +1,8 @@
+/**
+ * @module Models/Appeal/Service
+ * @remarks Encapsulates the business logic for managing professor appeals.
+ */
+
 import { EntityManager } from '@mikro-orm/core'
 import { Appeal } from './appeal.entity.js'
 import { CreateAppealType, UpdateAppealSchema, UpdateAppealType } from './appeal.schemas.js'
@@ -7,6 +12,10 @@ import { ObjectId } from '@mikro-orm/mongodb'
 import { Logger } from 'pino'
 import { safeParse } from 'valibot'
 
+/**
+ * Provides methods for CRUD operations on Appeal entities.
+ * @class AppealService
+ */
 export class AppealService {
   private em: EntityManager
   private logger: Logger
@@ -16,6 +25,13 @@ export class AppealService {
     this.logger = logger.child({ context: { service: 'AppealService' } })
   }
 
+  /**
+   * Creates a new appeal for a user to become a professor.
+   * @param {CreateAppealType} appealInput - The validated appeal data.
+   * @param {string} userId - The ID of the user submitting the appeal.
+   * @param {string} [documentPath] - The optional path to the uploaded CV document.
+   * @returns {Promise<Appeal>} A promise that resolves to the newly created appeal.
+   */
   public async create(
     appealInput: CreateAppealType,
     userId: string,
@@ -41,12 +57,21 @@ export class AppealService {
     return appeal
   }
 
+  /**
+   * Retrieves all appeals, populating the associated user information.
+   * @returns {Promise<Appeal[]>} A promise that resolves to an array of all appeals.
+   */
   public async findAll(): Promise<Appeal[]> {
     this.logger.info('Fetching all appeals.')
 
     return this.em.find(Appeal, {}, { populate: ['user'] })
   }
 
+  /**
+   * Retrieves a single appeal by its ID.
+   * @param {string} id - The ID of the appeal to find.
+   * @returns {Promise<Appeal | null>} A promise that resolves to the appeal or null if not found.
+   */
   public async findOne(id: string): Promise<Appeal | null> {
     this.logger.info({ appealId: id }, 'Fetching appeal.')
 
@@ -54,6 +79,13 @@ export class AppealService {
     return this.em.findOne(Appeal, { _id: objectId }, { populate: ['user'] })
   }
 
+  /**
+   * Updates an appeal's state. If the state is changed to 'accepted', it also promotes the user to a professor.
+   * @param {string} id - The ID of the appeal to update.
+   * @param {UpdateAppealType} data - The data for updating the appeal (e.g., the new state).
+   * @returns {Promise<Appeal>} A promise that resolves to the updated appeal.
+   * @throws {Error} If validation fails or the appeal is not found.
+   */
   public async update(
     id: string,
     data: UpdateAppealType
@@ -84,6 +116,11 @@ export class AppealService {
     return appeal
   }
 
+  /**
+   * Deletes an appeal from the database.
+   * @param {string} id - The ID of the appeal to remove.
+   * @returns {Promise<void>} A promise that resolves when the appeal has been deleted.
+   */
   public async remove(id: string): Promise<void> {
     this.logger.info({ appealId: id }, 'Deleting appeal.')
 

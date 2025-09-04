@@ -1,12 +1,20 @@
 /**
- * @module AppealController
- * @description Handles HTTP requests for the Appeal module.
+ * @module Models/Appeal/Controller
+ * @remarks Handles HTTP requests for the Appeal module.
+ * @see {@link AppealService} for business logic.
  */
 import { NextFunction, Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'
 import { AppealService } from './appeal.service.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
 
+/**
+ * Handles the creation of a new appeal.
+ * @param {Request} req The Express request object, containing appeal data in the body and user ID from auth middleware.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} The created appeal data.
+ */
 async function add(req: Request, res: Response, next: NextFunction) {
   try {
     const appealService = new AppealService(orm.em.fork(), req.log)
@@ -30,6 +38,13 @@ async function add(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles the retrieval of all appeals.
+ * @param {Request} req The Express request object.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} A list of all appeals.
+ */
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
     const appealService = new AppealService(orm.em.fork(), req.log)
@@ -40,6 +55,13 @@ async function findAll(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles the retrieval of a single appeal by its ID.
+ * @param {Request} req The Express request object, containing the appeal ID in params.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} The requested appeal data.
+ */
 async function findOne(req: Request, res: Response, next: NextFunction) {
   try {
     const appealService = new AppealService(orm.em.fork(), req.log)
@@ -55,6 +77,13 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles the update of an appeal's state.
+ * @param {Request} req The Express request object, containing the appeal ID in params and update data in the body.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} The updated appeal data.
+ */
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
     const appealService = new AppealService(orm.em.fork(), req.log)
@@ -66,6 +95,13 @@ async function update(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+/**
+ * Handles the deletion of an appeal.
+ * @param {Request} req The Express request object, containing the appeal ID in params.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} A confirmation message.
+ */
 async function remove(req: Request, res: Response, next: NextFunction) {
   try {
     const appealService = new AppealService(orm.em.fork(), req.log)

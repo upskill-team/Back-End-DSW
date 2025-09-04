@@ -1,6 +1,6 @@
 /**
- * @module models/professor
- * Defines the validation schemas for updating a professor's profile.
+ * @module Models/Professor/Schemas
+ * @remarks Defines the validation schemas for updating a professor's profile.
  */
 import * as v from 'valibot';
 

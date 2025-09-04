@@ -1,10 +1,10 @@
-import pino from 'pino';
-
 /**
- * @module Logger
- * @description Centralized pino logger configuration for the application.
+ * @module Shared/Utils/Logger
+ * @remarks Centralized pino logger configuration for the application.
  * It adapts its output based on the NODE_ENV environment variable.
  */
+
+import pino from 'pino';
 
 let transport;
 
@@ -40,7 +40,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 /**
- * @description Shared logger instance.
+ * @remarks Shared logger instance.
  * Configured to output logs differently for development and production environments.
  */
 export const logger = pino(transport);

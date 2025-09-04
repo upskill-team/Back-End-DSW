@@ -1,6 +1,6 @@
 /**
- * @module models/institution
- * Defines the API routes for the institution module.
+ * @module Models/Institution/Routes
+ * @remarks Defines the API routes for the institution module.
  * It maps HTTP endpoints to controller functions, applies authentication middleware to all routes,
  * and uses validation middleware for create/update operations.
  * @see {@link InstitutionController}

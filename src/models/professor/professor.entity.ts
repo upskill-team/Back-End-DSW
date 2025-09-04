@@ -1,6 +1,6 @@
 /**
- * @module models/professor
- * Defines the database schema for the Professor profile entity.
+ * @module Models/Professor/Entity
+ * @remarks Defines the database schema for the Professor profile entity.
  */
 import {
   Entity,
