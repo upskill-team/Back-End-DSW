@@ -1,0 +1,172 @@
+tags:
+  - name: Institutions
+    description: Operations to manage educational institutions.
+
+components:
+  schemas:
+    Institution:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique, auto-generated ID of the institution.
+          example: '507f1f77bcf86cd799439011'
+        name:
+          type: string
+          description: The official name of the institution.
+          example: 'University of Technology'
+        description:
+          type: string
+          description: A brief description of the institution.
+          example: 'A leading institution for technology and innovation.'
+        professors:
+          type: array
+          items:
+            type: string
+            example: '507f191e810c19729de860ea'
+          description: List of professor profile IDs associated with this institution.
+
+    CreateInstitutionInput:
+      type: object
+      required:
+        - name
+        - description
+      properties:
+        name:
+          type: string
+          description: The name of the new institution.
+          example: 'Technical Institute'
+        description:
+          type: string
+          description: The description for the new institution.
+          example: 'An advanced technical education institution.'
+
+paths:
+  /institutions:
+    get:
+      summary: Get all institutions
+      tags: [Institutions]
+      description: Returns a list of all registered institutions.
+      responses:
+        '200':
+          description: A list of institutions was successfully retrieved.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Institution'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      summary: Create a new institution (Admin Only)
+      tags: [Institutions]
+      description: Registers a new institution in the system. Requires administrator privileges.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInstitutionInput'
+      responses:
+        '201':
+          description: Institution created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '400':
+          description: Validation Error. The request body is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /institutions/{id}:
+    get:
+      summary: Get an institution by its ID
+      tags: [Institutions]
+      description: Finds and returns a specific institution using its unique ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the institution to retrieve.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The institution's data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Update an institution (Admin Only)
+      tags: [Institutions]
+      description: Fully updates an institution's data. Requires administrator privileges.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the institution to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateInstitutionInput'
+      responses:
+        '200':
+          description: Institution updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Institution'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Decommission an institution (Admin Only)
+      tags: [Institutions]
+      description: Permanently deletes an institution from the system. Requires administrator privileges.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the institution to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Institution deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Institution deleted successfully'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
