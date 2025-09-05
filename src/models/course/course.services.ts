@@ -5,12 +5,11 @@
 
 import { EntityManager } from '@mikro-orm/core'
 import { Course } from './course.entity.js'
-import { CreateCourseType, UpdateCourseSchema, UpdateCourseType } from './course.schemas.js'
+import { CreateCourseType, UpdateCourseType } from './course.schemas.js'
 import { Professor } from '../professor/professor.entity.js'
 import { CourseType } from '../courseType/courseType.entity.js'
 import { Logger } from 'pino'
 import { ObjectId } from '@mikro-orm/mongodb'
-import { safeParse } from 'valibot'
 import { User } from '../user/user.entity.js'
 
 /**
@@ -34,33 +33,46 @@ export class CourseService {
    */
   public async create(
     courseData: CreateCourseType,
-    professorId: string
+    professorId: string,
+    imageUrl?: string
   ): Promise<Course> {
     this.logger.info({ name: courseData.name }, 'Creating new course.')
 
-    const { courseTypeId, units, ...topLevelData } = courseData
+    const { courseTypeId, ...topLevelData } = courseData
 
-    // Create the course entity. It's important to provide default values for properties
-    // like 'isFree' and 'units' here to satisfy TypeScript's strict type check,
-    // as it doesn't infer the defaults from the class definition in this context.
-    const course = this.em.create(Course, {
+    await this.em.findOneOrFail(Professor, { _id: new ObjectId(professorId) })
+    await this.em.findOneOrFail(CourseType, { _id: new ObjectId(courseTypeId) })
+
+    const professorRef = this.em.getReference(Professor, new ObjectId(professorId))
+    const courseTypeRef = this.em.getReference(CourseType, new ObjectId(courseTypeId))
+
+    const course = new Course()
+
+    this.em.assign(course, {
       ...topLevelData,
-      isFree: topLevelData.isFree ?? true,
-      units: [], // Start with an empty array. We'll assign the real units below if they exist.
-      courseType: this.em.getReference(CourseType, courseTypeId),
-      professor: this.em.getReference(Professor, professorId),
+      isFree: topLevelData.price === 0 || topLevelData.price === undefined,
+      units: [],
+      imageUrl: imageUrl,
+      courseType: courseTypeRef,
+      professor: professorRef,
     })
 
-    // If the payload includes units, we use `em.assign`. This is the best way to handle
-    // nested embeddable data, as it correctly converts the plain objects from the
-    // validated payload into the required Embeddable class instances (Unit, Material, etc.).
-    if (units && units.length > 0) {
-      this.em.assign(course, { units })
-    }
+    await this.em.persistAndFlush(course)
 
-    await this.em.flush()
+    this.logger.info({ courseId: course.id }, 'Course entity created successfully. Now syncing relations.')
 
-    this.logger.info({ courseId: course.id }, 'Course created successfully.')
+    const emFork = this.em.fork()
+    
+    const professorRefFork = emFork.getReference(Professor, new ObjectId(professorId))
+    const courseTypeRefFork = emFork.getReference(CourseType, new ObjectId(courseTypeId))
+    const courseRefFork = emFork.getReference(Course, new ObjectId(course.id!))
+
+    professorRefFork.courses.add(courseRefFork)
+    courseTypeRefFork.courses.add(courseRefFork)
+
+    await emFork.flush()
+
+    this.logger.info({ courseId: course.id }, 'Professor and CourseType relations synced.')
 
     return course
   }
@@ -81,12 +93,6 @@ export class CourseService {
     )
   }
 
-  /**
-   * Retrieves a single course by its ID.
-   * @param {string} id - The ID of the course to find.
-   * @returns {Promise<Course>} A promise that resolves to the found course.
-   * @throws {NotFoundError} If no course with the given ID is found.
-   */
   public async findOne(id: string): Promise<Course> {
     this.logger.info({ courseId: id }, 'Fetching course.')
 
@@ -104,24 +110,42 @@ export class CourseService {
    * Updates an existing course.
    * @param {string} id - The ID of the course to update.
    * @param {UpdateCourseType} data - An object containing the fields to update.
+   * @param {string} userId - The ID of the authenticated user.
    * @returns {Promise<Course>} A promise that resolves to the updated course entity.
-   * @throws {Error} If validation fails or the course is not found.
+   * @throws {Error} If validation fails, the course is not found, or user doesn't own the course.
    */
   public async update(
     id: string,
-    data: UpdateCourseType
+    data: UpdateCourseType,
+    userId: string
   ): Promise<Course> {
-    this.logger.info({ courseId: id, data: data }, 'Updating course.')
-
-    const result = safeParse(UpdateCourseSchema, data)
-      if (!result.success) {
-        this.logger.error({ issues: result.issues }, 'Validation failed for course update.')
-        throw new Error('Invalid data for course update.')
-      }
+    this.logger.info({ courseId: id, data: data, userId }, 'Updating course.')
 
     const objectId = new ObjectId(id)
-    const course = await this.em.findOneOrFail(Course, { _id: objectId });
-    this.em.assign(course, data);
+    const userObjectId = new ObjectId(userId)
+
+    const user = await this.em.findOne(
+      User,
+      { _id: userObjectId },
+      { populate: ['professorProfile'] }
+    );
+    
+    if (!user?.professorProfile) {
+      throw new Error('User is not a professor');
+    }
+
+    const course = await this.em.findOneOrFail(Course, { 
+      _id: objectId, 
+      professor: new ObjectId(user.professorProfile.id)
+    });
+
+    const updateData = { ...data };
+    if (data.price !== undefined) {
+      (updateData as any).isFree = data.price === 0;
+    }
+
+    this.em.assign(course, updateData);
+    
     await this.em.flush();
 
     this.logger.info({ courseId: id }, 'Course updated successfully.')
@@ -132,25 +156,43 @@ export class CourseService {
   /**
    * Deletes a course from the database.
    * @param {string} id - The ID of the course to remove.
+   * @param {string} userId - The ID of the authenticated user.
    * @returns {Promise<void>} A promise that resolves when the course is deleted.
+   * @throws {Error} If the course is not found or user doesn't own the course.
    */
-  public async remove(id: string): Promise<void> {
-    this.logger.info({ courseId: id }, 'Deleting course.')
+  public async remove(id: string, userId: string): Promise<void> {
+    this.logger.info({ courseId: id, userId }, 'Deleting course.')
 
     const objectId = new ObjectId(id)
-    const courseRef = this.em.getReference(Course, objectId)
-    await this.em.removeAndFlush(courseRef)
+    const userObjectId = new ObjectId(userId)
+
+    const user = await this.em.findOne(
+      User,
+      { _id: userObjectId },
+      { populate: ['professorProfile'] }
+    );
+    
+    if (!user?.professorProfile) {
+      throw new Error('User is not a professor');
+    }
+
+    const course = await this.em.findOneOrFail(Course, { 
+      _id: objectId, 
+      professor: new ObjectId(user.professorProfile.id)
+    });
+
+    await this.em.removeAndFlush(course)
 
     this.logger.info({ courseId: id }, 'Course deleted successfully.')
   }
 
   /**
-   * Retrieves all courses for a user, ensuring they have a professor profile.
-   * @param {string} userId - The ID of the user.
-   * @returns {Promise<Course[]>} A promise that resolves to an array of courses.
+   * Retrieves all courses for a professor user.
+   * @param {string} userId - The ID of the authenticated user.
+   * @returns {Promise<Course[]>} A promise that resolves to an array of courses owned by the professor.
    * @throws {Error} If the user is not found or is not a professor.
    */
-  public async findByAuthenticatedProfessor(userId: string): Promise<Course[]> {
+  public async findCoursesOfProfessor(userId: string): Promise<Course[]> {
     this.logger.info({ userId }, "Fetching courses for an authenticated professor.")
 
     const userObjectId = new ObjectId(userId)
@@ -165,11 +207,11 @@ export class CourseService {
       throw new Error('User is not a professor');
     }
 
-    const professorId = user.professorProfile.id;
+    const professorObjectId = new ObjectId(user.professorProfile.id);
 
-    return this.em.find(
+    return await this.em.find(
       Course,
-      { professor: professorId },
+      { professor: professorObjectId },
       { populate: ['courseType', 'professor'] }
     );
   }

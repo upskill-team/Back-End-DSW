@@ -33,9 +33,15 @@ export const CreateCourseSchema = v.object({
     v.string(),
     v.minLength(1, 'Course description is required.')
   ),
-  isFree: v.optional(v.boolean()),
   price: v.optional(
-    v.pipe(v.number(), v.minValue(0, 'Price cannot be negative.'))
+    v.pipe(
+      v.union([v.string(), v.number()]),
+      v.transform((input) =>
+        typeof input === 'string' ? Number(input) : input
+      ),
+      v.number('Price must be a number.'),
+      v.minValue(0, 'Price cannot be negative.')
+    )
   ),
   courseTypeId: v.pipe(
     v.string(),
