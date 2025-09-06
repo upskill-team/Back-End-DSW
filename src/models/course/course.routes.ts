@@ -56,7 +56,11 @@ courseRouter.patch(
 courseRouter.delete('/:id', professorOrAdmin, courseController.remove);
 
 // Question routes not nested under courses
-courseRouter.get('/questions/my', professorOnly, questionController.findMyQuestions);
+courseRouter.get(
+  '/questions/my',
+  professorOnly,
+  questionController.findMyQuestions
+);
 
 // Question routes - nested under courses
 courseRouter.get(
