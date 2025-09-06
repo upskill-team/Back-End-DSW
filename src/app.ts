@@ -97,8 +97,13 @@ app.use(express.urlencoded({ extended: true }));
 async function startApp() {
   // Initialize database connection and run migrations
   await orm.connect();
-  const migrator = orm.getMigrator();
-  await migrator.up();
+
+  // FIX: Temporarily disabled migrations due to issues, using syncSchema instead
+  // const migrator = orm.getMigrator();
+  // await migrator.up();
+
+  // FIX: Using syncSchema to update database schema automatically
+  await orm.getSchemaGenerator().updateSchema();
 
   /**
    * Rate limiter for sensitive authentication endpoints to prevent brute-force attacks.
