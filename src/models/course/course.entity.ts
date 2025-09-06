@@ -55,6 +55,13 @@ export class Course extends BaseEntity {
   price?: number;
 
   /**
+   * The image of the course.
+   * @type {string | undefined}
+   */
+  @Property({ type: 'string', nullable: true })
+  imageUrl?: string;
+
+  /**
    * The structured content of the course, divided into units.
    * @type {Unit[]}
    */

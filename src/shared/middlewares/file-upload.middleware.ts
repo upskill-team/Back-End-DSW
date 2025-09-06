@@ -37,3 +37,23 @@ export const uploadCvToCloudinary = multer({
     fileSize: 10 * 1024 * 1024,
   },
 });
+
+const imageStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'upskill/course_images',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+  } as any,
+});
+
+/**
+ * Multer middleware instance configured to handle course image uploads to Cloudinary.
+ * It accepts a single file with the field name 'image' and imposes a 5MB size limit.
+ * @const {multer.Instance} uploadCourseImage
+ */
+export const uploadCourseImage = multer({
+  storage: imageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
