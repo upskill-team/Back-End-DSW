@@ -63,12 +63,21 @@ export class CourseService {
 
     const emFork = this.em.fork()
     
-    const professorRefFork = emFork.getReference(Professor, new ObjectId(professorId))
-    const courseTypeRefFork = emFork.getReference(CourseType, new ObjectId(courseTypeId))
-    const courseRefFork = emFork.getReference(Course, new ObjectId(course.id!))
+    const professor = await emFork.findOneOrFail(
+      Professor,
+      { _id: new ObjectId(professorId) },
+      { populate: ['courses'] }
+    );
+    const courseType = await emFork.findOneOrFail(
+      CourseType,
+      { _id: new ObjectId(courseTypeId) },
+      { populate: ['courses'] }
+    );
 
-    professorRefFork.courses.add(courseRefFork)
-    courseTypeRefFork.courses.add(courseRefFork)
+    const courseRef = emFork.getReference(Course, new ObjectId(course.id!));
+
+    professor.courses.add(courseRef)
+    courseType.courses.add(courseRef)
 
     await emFork.flush()
 
