@@ -17,18 +17,32 @@ import { CreateQuestionType, UpdateQuestionType } from './question.schemas.js';
  * @returns {Promise<Response>} The newly created question.
  */
 async function add(req: Request, res: Response) {
-  const questionService = new QuestionService(orm.em.fork(), req.log);
-  const { courseId } = req.params;
-  const professorId = req.user!.id;
-  const questionData = req.body as CreateQuestionType;
+  try {
+    const questionService = new QuestionService(orm.em.fork(), req.log);
+    const { courseId } = req.params;
+    const professorId = req.user!.id;
+    const questionData = req.body as CreateQuestionType;
 
-  const newQuestion = await questionService.create(
-    questionData,
-    courseId,
-    professorId
-  );
+    const newQuestion = await questionService.create(
+      questionData,
+      courseId,
+      professorId
+    );
 
-  return HttpResponse.Created(res, newQuestion);
+    return HttpResponse.Created(res, newQuestion);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      // Check if it's a course not found or professor not found error
+      if (error.message.includes('Course not found')) {
+        return HttpResponse.NotFound(
+          res,
+          'Course not found or you do not have permission to add questions to this course.'
+        );
+      }
+      return HttpResponse.NotFound(res, 'Resource not found.');
+    }
+    throw error;
+  }
 }
 
 /**

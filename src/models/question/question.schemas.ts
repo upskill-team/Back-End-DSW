@@ -33,15 +33,12 @@ export const CreateQuestionSchema = v.object({
     'Invalid question type.'
   ),
   payload: QuestionPayloadSchema,
-  courseId: v.pipe(v.string(), v.minLength(1, 'Course ID is required.')),
 });
 
 /**
- * Schema for updating an existing question, making all fields optional except course ID.
+ * Schema for updating an existing question, making all fields optional.
  */
-export const UpdateQuestionSchema = v.partial(
-  v.omit(CreateQuestionSchema, ['courseId'])
-);
+export const UpdateQuestionSchema = v.partial(CreateQuestionSchema);
 
 // Infer TypeScript types from the schemas for strong typing.
 export type CreateQuestionType = v.InferOutput<typeof CreateQuestionSchema>;
