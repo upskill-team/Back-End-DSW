@@ -9,6 +9,7 @@ import { orm } from '../../shared/db/orm.js';
 import { QuestionService } from './question.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
 import { CreateQuestionType, UpdateQuestionType } from './question.schemas.js';
+import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
 
 /**
  * Handles the creation of a new question for a specific course.
@@ -20,8 +21,11 @@ async function add(req: Request, res: Response) {
   try {
     const questionService = new QuestionService(orm.em.fork(), req.log);
     const { courseId } = req.params;
-    const professorId = req.user!.id;
+    const userId = req.user!.id;
     const questionData = req.body as CreateQuestionType;
+
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
 
     const newQuestion = await questionService.create(
       questionData,
@@ -41,6 +45,15 @@ async function add(req: Request, res: Response) {
       }
       return HttpResponse.NotFound(res, 'Resource not found.');
     }
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
+    }
     throw error;
   }
 }
@@ -52,13 +65,29 @@ async function add(req: Request, res: Response) {
  * @returns {Promise<Response>} A list of questions for the course.
  */
 async function findByCourse(req: Request, res: Response) {
-  const questionService = new QuestionService(orm.em.fork(), req.log);
-  const { courseId } = req.params;
-  const professorId = req.user!.id;
+  try {
+    const questionService = new QuestionService(orm.em.fork(), req.log);
+    const { courseId } = req.params;
+    const userId = req.user!.id;
 
-  const questions = await questionService.findByCourse(courseId, professorId);
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
 
-  return HttpResponse.Ok(res, questions);
+    const questions = await questionService.findByCourse(courseId, professorId);
+
+    return HttpResponse.Ok(res, questions);
+  } catch (error: any) {
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
+    }
+    throw error;
+  }
 }
 
 /**
@@ -68,12 +97,28 @@ async function findByCourse(req: Request, res: Response) {
  * @returns {Promise<Response>} A list of the professor's questions.
  */
 async function findMyQuestions(req: Request, res: Response) {
-  const questionService = new QuestionService(orm.em.fork(), req.log);
-  const professorId = req.user!.id;
+  try {
+    const questionService = new QuestionService(orm.em.fork(), req.log);
+    const userId = req.user!.id;
 
-  const questions = await questionService.findByProfessor(professorId);
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
 
-  return HttpResponse.Ok(res, questions);
+    const questions = await questionService.findByProfessor(professorId);
+
+    return HttpResponse.Ok(res, questions);
+  } catch (error: any) {
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
+    }
+    throw error;
+  }
 }
 
 /**
@@ -86,7 +131,10 @@ async function findOne(req: Request, res: Response) {
   try {
     const questionService = new QuestionService(orm.em.fork(), req.log);
     const { id, courseId } = req.params;
-    const professorId = req.user!.id;
+    const userId = req.user!.id;
+
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
 
     const question = await questionService.findOne(id, courseId, professorId);
 
@@ -94,6 +142,15 @@ async function findOne(req: Request, res: Response) {
   } catch (error: any) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Question not found.');
+    }
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
     }
     throw error;
   }
@@ -109,8 +166,11 @@ async function update(req: Request, res: Response) {
   try {
     const questionService = new QuestionService(orm.em.fork(), req.log);
     const { id, courseId } = req.params;
-    const professorId = req.user!.id;
+    const userId = req.user!.id;
     const updateData = req.body as UpdateQuestionType;
+
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
 
     const updatedQuestion = await questionService.update(
       id,
@@ -124,6 +184,15 @@ async function update(req: Request, res: Response) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Question not found.');
     }
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
+    }
     throw error;
   }
 }
@@ -135,13 +204,29 @@ async function update(req: Request, res: Response) {
  * @returns {Promise<Response>} A confirmation message.
  */
 async function remove(req: Request, res: Response) {
-  const questionService = new QuestionService(orm.em.fork(), req.log);
-  const { id, courseId } = req.params;
-  const professorId = req.user!.id;
+  try {
+    const questionService = new QuestionService(orm.em.fork(), req.log);
+    const { id, courseId } = req.params;
+    const userId = req.user!.id;
 
-  await questionService.remove(id, courseId, professorId);
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
 
-  return HttpResponse.Ok(res, { message: 'Question deleted successfully' });
+    await questionService.remove(id, courseId, professorId);
+
+    return HttpResponse.Ok(res, { message: 'Question deleted successfully' });
+  } catch (error: any) {
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
+    }
+    throw error;
+  }
 }
 
 export { add, findByCourse, findMyQuestions, findOne, update, remove };
