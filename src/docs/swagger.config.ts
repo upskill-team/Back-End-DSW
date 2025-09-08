@@ -52,6 +52,11 @@ const swaggerDefinition = {
             description: 'Object detailing which fields failed validation.',
             example: {
               name: ['Name is required.'],
+              questionText: ['Question text is required.'],
+              payload: {
+                options: ['At least 2 options are required.'],
+                correctAnswer: ['Correct answer index must be an integer.'],
+              },
             },
           },
         },
@@ -89,10 +94,24 @@ const swaggerDefinition = {
             schema: {
               $ref: '#/components/schemas/ErrorResponse',
             },
-            example: {
-              status: 403,
-              message: 'Forbidden',
-              errors: 'No tienes permiso para realizar esta acción.',
+            examples: {
+              rolePermission: {
+                summary: 'Insufficient role permissions',
+                value: {
+                  status: 403,
+                  message: 'Forbidden',
+                  errors: 'No tienes permiso para realizar esta acción.',
+                },
+              },
+              resourceOwnership: {
+                summary: 'Resource ownership required',
+                value: {
+                  status: 403,
+                  message: 'Forbidden',
+                  errors:
+                    'User is not a professor or does not own this resource.',
+                },
+              },
             },
           },
         },
@@ -104,10 +123,31 @@ const swaggerDefinition = {
             schema: {
               $ref: '#/components/schemas/ErrorResponse',
             },
-            example: {
-              status: 404,
-              message: 'Not Found',
-              errors: 'Resource not found',
+            examples: {
+              general: {
+                summary: 'Resource not found',
+                value: {
+                  status: 404,
+                  message: 'Not Found',
+                  errors: 'Resource not found',
+                },
+              },
+              course: {
+                summary: 'Course not found',
+                value: {
+                  status: 404,
+                  message: 'Not Found',
+                  errors: 'Course not found.',
+                },
+              },
+              question: {
+                summary: 'Question not found',
+                value: {
+                  status: 404,
+                  message: 'Not Found',
+                  errors: 'Question not found.',
+                },
+              },
             },
           },
         },

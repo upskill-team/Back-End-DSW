@@ -1,9 +1,94 @@
 tags:
   - name: Courses
     description: Operations to manage courses and their content.
+  - name: Questions
+    description: Operations to manage questions within courses.
 
 components:
   schemas:
+    QuestionPayload:
+      type: object
+      properties:
+        options:
+          type: array
+          items:
+            type: string
+          minItems: 2
+          description: Array of available options for the question.
+          example: ['Option A', 'Option B', 'Option C', 'Option D']
+        correctAnswer:
+          oneOf:
+            - type: integer
+              description: Index of the correct answer (0-based).
+              example: 0
+            - type: string
+              description: String identifier of the correct answer.
+              example: 'A'
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique, auto-generated ID of the question.
+          example: '507f1f77bcf86cd799439011'
+        questionText:
+          type: string
+          description: The text content of the question.
+          example: 'What is the correct way to declare a variable in JavaScript?'
+        questionType:
+          type: string
+          enum: ['MultipleChoiceOption']
+          description: The type of question.
+          example: 'MultipleChoiceOption'
+        payload:
+          $ref: '#/components/schemas/QuestionPayload'
+        course:
+          type: string
+          description: The ID of the course this question belongs to.
+          example: '507f1f77bcf86cd799439012'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the question was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the question was last updated.
+
+    CreateQuestionInput:
+      type: object
+      required:
+        - questionText
+        - questionType
+        - payload
+      properties:
+        questionText:
+          type: string
+          description: The text content of the question.
+          example: 'What is the correct way to declare a variable in JavaScript?'
+        questionType:
+          type: string
+          enum: ['MultipleChoiceOption']
+          description: The type of question.
+          example: 'MultipleChoiceOption'
+        payload:
+          $ref: '#/components/schemas/QuestionPayload'
+
+    UpdateQuestionInput:
+      type: object
+      properties:
+        questionText:
+          type: string
+          description: The updated text content of the question.
+          example: 'What is the preferred way to declare a variable in modern JavaScript?'
+        questionType:
+          type: string
+          enum: ['MultipleChoiceOption']
+          description: The updated type of question.
+          example: 'MultipleChoiceOption'
+        payload:
+          $ref: '#/components/schemas/QuestionPayload'
     Material:
       type: object
       properties:
@@ -337,6 +422,243 @@ paths:
                   message:
                     type: string
                     example: 'Course deleted successfully'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /courses/questions/my:
+    get:
+      summary: Get all my questions (Professor Only)
+      tags: [Questions]
+      description: Returns all questions created by the authenticated professor across all their courses.
+      responses:
+        '200':
+          description: A list of the professor's questions was successfully retrieved.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /courses/{courseId}/questions:
+    get:
+      summary: Get all questions for a course (Professor Only)
+      tags: [Questions]
+      description: Returns all questions that belong to a specific course.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: ID of the course to get questions for.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of questions for the course was successfully retrieved.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Question'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    post:
+      summary: Create a new question for a course (Professor Only)
+      tags: [Questions]
+      description: Creates a new question within a specific course. Only the professor who owns the course can create questions.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: ID of the course to create the question in.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuestionInput'
+      responses:
+        '201':
+          description: Question created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          description: Validation Error. The request body is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /courses/{courseId}/questions/{id}:
+    get:
+      summary: Get a specific question (Professor Only)
+      tags: [Questions]
+      description: Returns detailed information about a specific question.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: ID of the course containing the question.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: ID of the question to retrieve.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The question's data.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      summary: Update a question (Professor Only)
+      tags: [Questions]
+      description: Fully updates a question's data. Only the professor who owns the course can modify its questions.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: ID of the course containing the question.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: ID of the question to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuestionInput'
+      responses:
+        '200':
+          description: Question updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          description: Validation Error. The request body is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      summary: Partially update a question (Professor Only)
+      tags: [Questions]
+      description: Partially updates a question's data. Only the professor who owns the course can modify its questions.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: ID of the course containing the question.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: ID of the question to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuestionInput'
+      responses:
+        '200':
+          description: Question updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          description: Validation Error. The request body is invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      summary: Delete a question (Professor/Admin Only)
+      tags: [Questions]
+      description: Permanently deletes a question from the system. Only the professor who owns the course or an admin can delete questions.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          description: ID of the course containing the question.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: ID of the question to delete.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Question deleted successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Question deleted successfully'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
