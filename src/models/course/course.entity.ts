@@ -11,12 +11,24 @@ import {
   ManyToMany,
   Collection,
   Embedded,
+  Enum,
 } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { CourseType } from '../courseType/courseType.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { Unit } from './embeddables/unit.entity.js';
 import { Student } from '../student/student.entity.js';
+
+/**
+ * Defines the possible lifecycle states of a course.
+ * @enum {string}
+ */
+export enum status {
+  IN_DEVELOPMENT = 'en-desarrollo',
+  BLOCKED = 'bloqueado',
+  PUBLISHED = 'publicado',
+  PAUSED = 'pausado',
+}
 
 /**
  * Represents a course, the central element of the platform.
@@ -53,6 +65,15 @@ export class Course extends BaseEntity {
    */
   @Property({ type: 'number', nullable: true })
   price?: number;
+
+  /**
+   * The current lifecycle status of the course.
+   * Defaults to 'en-desarrollo'.
+   * @type {status}
+   */
+  @Enum(() => status)
+  @Property({ default: status.IN_DEVELOPMENT, nullable: false })
+  status: status = status.IN_DEVELOPMENT
 
   /**
    * The image of the course.

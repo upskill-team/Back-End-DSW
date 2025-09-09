@@ -12,6 +12,7 @@ import { institutionRouter } from './models/institution/institution.routes.js';
 import { studentRouter } from './models/student/student.routes.js';
 import { professorRouter } from './models/professor/professor.routes.js';
 import { courseRouter } from './models/course/course.routes.js';
+import { materialRouter } from './models/course/embeddables/material.routes.js'
 import { appealRouter } from './models/appeal/appeal.routes.js';
 import { authRouter } from './auth/auth.routes.js';
 import { orm } from './shared/db/orm.js';
@@ -150,6 +151,7 @@ async function startApp() {
   app.use('/api/students', apiLimiter, studentRouter);
   app.use('/api/professors', apiLimiter, professorRouter);
   app.use('/api/courses', apiLimiter, courseRouter);
+  app.use('/api/materials', apiLimiter, materialRouter)
   app.use('/api/appeals', apiLimiter, appealRouter);
 
   // Middleware for handling 404 Not Found errors

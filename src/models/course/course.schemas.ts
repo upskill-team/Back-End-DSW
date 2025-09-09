@@ -3,7 +3,8 @@
  * @remarks Defines validation schemas for the Course module and its embeddable components.
  */
 
-import * as v from 'valibot';
+import * as v from 'valibot'
+import { status } from './course.entity.js'
 
 /**
  * Schema for a single learning material resource within a course unit.
@@ -22,6 +23,7 @@ const UnitSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
   materials: v.optional(v.array(MaterialSchema)),
+  questions: v.optional(v.array(v.pipe(v.string(), v.minLength(1, 'El ID de la pregunta no puede estar vacío.'))))
 });
 
 /**
@@ -48,7 +50,14 @@ export const CreateCourseSchema = v.object({
     v.minLength(1, 'Course type ID is required.')
   ),
   units: v.optional(v.array(UnitSchema)),
-});
+
+  status: v.optional(
+    v.picklist(
+      Object.values(status),
+      'The provided status is not valid.'
+    )
+  ),
+})
 
 /**
  * Schema for updating an existing course, making all fields optional.

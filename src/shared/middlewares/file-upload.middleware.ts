@@ -57,3 +57,23 @@ export const uploadCourseImage = multer({
     fileSize: 5 * 1024 * 1024,
   },
 });
+
+const materialStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'upskill/course_materials', // Carpeta dedicada para materiales
+    allowed_formats: ['pdf', 'docx', 'xlsx', 'pptx', 'zip'], // Formatos permitidos
+  } as any,
+})
+
+/**
+ * Multer middleware instance configured to handle course material uploads to Cloudinary.
+ * It accepts a single file with the field name 'material' and imposes a 25MB size limit.
+ * @const {multer.Instance} uploadMaterialToCloudinary
+ */
+export const uploadMaterialToCloudinary = multer({
+  storage: materialStorage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // Límite de 25MB por archivo
+  },
+})
