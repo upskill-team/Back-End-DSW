@@ -77,3 +77,16 @@ export const uploadMaterialToCloudinary = multer({
     fileSize: 25 * 1024 * 1024, // Límite de 25MB por archivo
   },
 })
+
+/**
+ * Multer middleware para manejar la subida de datos completos del curso:
+ * - Un único archivo de imagen para el curso (campo 'image').
+ * - Múltiples archivos de materiales del curso (campo 'materials').
+ * @const {multer.Instance} uploadCourseData
+ */
+export const uploadCourseData = multer({
+  storage: materialStorage,
+  limits: {
+    fileSize: 25 * 1024 * 1024,
+  },
+}).any()

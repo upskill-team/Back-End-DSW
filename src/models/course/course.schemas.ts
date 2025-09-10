@@ -11,7 +11,6 @@ import { status } from './course.entity.js'
  */
 const MaterialSchema = v.object({
   title: v.pipe(v.string(), v.minLength(1, 'Material title is required.')),
-  description: v.optional(v.string()),
   url: v.pipe(v.string(), v.url('Must be a valid URL.')),
 });
 
@@ -22,7 +21,7 @@ const UnitSchema = v.object({
   unitNumber: v.pipe(v.number(), v.integer('Unit number must be an integer.')),
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
-  materials: v.optional(v.array(MaterialSchema)),
+  materials: v.optional(v.array(MaterialSchema), []),
   questions: v.optional(v.array(v.pipe(v.string(), v.minLength(1, 'El ID de la pregunta no puede estar vacío.'))))
 });
 

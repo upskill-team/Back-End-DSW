@@ -126,7 +126,9 @@ export class CourseService {
   public async update(
     id: string,
     data: UpdateCourseType,
-    userId: string
+    userId: string,
+    imageUrl?: string,
+    materialFiles: Express.Multer.File[] = []
   ): Promise<Course> {
     this.logger.info({ courseId: id, data: data, userId }, 'Updating course.')
 
@@ -148,9 +150,31 @@ export class CourseService {
       professor: new ObjectId(user.professorProfile.id)
     });
 
-    const updateData = { ...data };
+    const fileUrlMap = new Map<string, string>();
+    for (const file of materialFiles) {
+      fileUrlMap.set(file.originalname, file.path);
+    }
+
+    if (data.units && data.units.length > 0) {
+      for (const unit of data.units) {
+        if (unit.materials && unit.materials.length > 0) {
+          for (const material of unit.materials) {
+            const placeholder = material.url;
+            if (fileUrlMap.has(placeholder)) {
+              material.url = fileUrlMap.get(placeholder)!;
+            }
+          }
+        }
+      }
+    }
+
+    const updateData: Partial<Course> = { ...(data as any) }
     if (data.price !== undefined) {
       (updateData as any).isFree = data.price === 0;
+    }
+    
+    if (imageUrl) {
+      updateData.imageUrl = imageUrl;
     }
 
     this.em.assign(course, updateData);
