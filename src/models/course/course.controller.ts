@@ -9,8 +9,6 @@ import { CourseService } from './course.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
 import { User } from '../user/user.entity.js';
 import { ObjectId } from '@mikro-orm/mongodb';
-import { safeParse } from 'valibot'
-import { UpdateCourseSchema } from './course.schemas.js'
 
 /**
  * Handles the retrieval of courses for the currently authenticated professor.
@@ -107,12 +105,6 @@ async function add(req: Request, res: Response) {
  */
 async function update(req: Request, res: Response) {
 
-  console.log('--- INICIO DE PETICIÓN DE ACTUALIZACIÓN DE CURSO ---');
-  console.log('Headers Content-Type:', req.headers['content-type']);
-  console.log('Request Body (Datos de texto):', req.body);
-  console.log('Request Files (Archivos subidos):', req.files);
-  console.log('----------------------------------------------------')
-
   try {
     const courseService = new CourseService(orm.em.fork(), req.log);
     const { id } = req.params;
@@ -124,29 +116,33 @@ async function update(req: Request, res: Response) {
       return HttpResponse.BadRequest(res, "No se proporcionaron los datos del curso (courseData).");
     }
     const parsedData = JSON.parse(courseData);
-
+    /*
     const validationResult = safeParse(UpdateCourseSchema, parsedData);
     if (!validationResult.success) {
       return HttpResponse.BadRequest(res, validationResult.issues);
     }
     const validatedData = validationResult.output;
-
+    */
     const files = (req.files as Express.Multer.File[]) || []
 
     const imageFile = files.find(f => f.fieldname === 'image');
-    const materialFiles = files.filter(f => f.fieldname === 'materials');
+    const materialFiles = files.filter(f => f.fieldname.startsWith('materials'))
     
     const imageUrl = imageFile?.path;
 
-    const updatedCourse = await courseService.update(id, validatedData, userId, imageUrl, materialFiles);
+    const updatedCourse = await courseService.update(id, parsedData, userId, imageUrl, materialFiles);
     return HttpResponse.Ok(res, updatedCourse);
     
   } catch (error: any) {
+    console.log('Error capturado en el controlador de actualización de curso:', error);
     if (error instanceof SyntaxError) {
       return HttpResponse.BadRequest(res, "El formato de courseData no es un JSON válido.");
     }
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Curso no encontrado o no tienes permiso para editarlo.');
+    }
+    if (error.message.startsWith('Validation failed:')) {
+      return HttpResponse.BadRequest(res, JSON.parse(error.message.replace('Validation failed: ', '')));
     }
     throw error;
   }

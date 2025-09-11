@@ -5,6 +5,16 @@
 
 import * as v from 'valibot'
 import { status } from './course.entity.js'
+import { QuestionType } from '../question/question.entity.js'
+
+const QuestionUpdateSchema = v.object({
+  questionText: v.pipe(v.string(), v.minLength(1)),
+  questionType: v.picklist(Object.values(QuestionType)),
+  payload: v.object({
+    options: v.pipe(v.array(v.string()), v.minLength(2)),
+    correctAnswer: v.union([v.number(), v.string()]),
+  }),
+})
 
 /**
  * Schema for a single learning material resource within a course unit.
@@ -22,7 +32,7 @@ const UnitSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
   materials: v.optional(v.array(MaterialSchema), []),
-  questions: v.optional(v.array(v.pipe(v.string(), v.minLength(1, 'El ID de la pregunta no puede estar vacío.'))))
+  questions: v.optional(v.array(QuestionUpdateSchema), []) 
 });
 
 /**

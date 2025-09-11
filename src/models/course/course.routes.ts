@@ -19,6 +19,8 @@ import {
 import { UserRole } from '../user/user.entity.js';
 import { uploadCourseImage } from '../../shared/middlewares/file-upload.middleware.js';
 import { uploadCourseData } from '../../shared/middlewares/file-upload.middleware.js'
+import multer from 'multer'
+import { Request, Response, NextFunction } from 'express';
 
 export const courseRouter = Router();
 
@@ -44,7 +46,19 @@ courseRouter.post(
 courseRouter.put(
   '/:id',
   professorOnly,
-  validationMiddleware(UpdateCourseSchema),
+  (req: Request, res: Response, next: NextFunction) => {
+    uploadCourseData(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        console.error("Error de Multer:", err);
+        return res.status(400).json({ status: 400, message: "Error en la subida de archivos", errors: err.message });
+      } else if (err) {
+        console.error("Error desconocido en la subida:", err);
+        return res.status(500).json({ status: 500, message: "Error interno en la subida de archivos", errors: err.message });
+      }
+      next();
+    });
+  },
+  //validationMiddleware(UpdateCourseSchema),
   courseController.update
 );
 courseRouter.patch(

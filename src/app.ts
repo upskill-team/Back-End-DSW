@@ -84,7 +84,11 @@ app.use(
 app.use(helmet());
 
 // Configure CORS
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}))
 
 // Middlewares for parsing request bodies
 app.use(express.json());
