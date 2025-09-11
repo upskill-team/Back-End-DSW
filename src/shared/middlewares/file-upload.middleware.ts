@@ -64,7 +64,7 @@ const courseDataStorage = new CloudinaryStorage({
   params: async (req, file) => {
     // Esta función se ejecuta para CADA archivo
     let folder = 'upskill/course_data/other'; // Carpeta por defecto
-    let allowed_formats = ['pdf', 'docx', 'xlsx', 'pptx', 'zip', 'jpg', 'jpeg', 'png', 'webp']; // Formatos combinados
+    const allowed_formats = ['pdf', 'docx', 'xlsx', 'pptx', 'zip', 'jpg', 'jpeg', 'png', 'webp']; // Formatos combinados
 
     // Si el archivo viene del campo 'image', lo mandamos a la carpeta de imágenes
     if (file.fieldname === 'image') {
