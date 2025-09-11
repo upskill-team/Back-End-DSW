@@ -20,13 +20,6 @@ export class Material {
   title!: string;
 
   /**
-   * A brief, optional description of the material.
-   * @type {string | undefined}
-   */
-  @Property({ type: 'text', nullable: true })
-  description?: string;
-
-  /**
    * The URL to access the material resource.
    * @type {string}
    */

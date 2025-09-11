@@ -104,16 +104,45 @@ async function add(req: Request, res: Response) {
  * @returns {Promise<Response>} The updated course data.
  */
 async function update(req: Request, res: Response) {
-  // This try...catch also remains for specific NotFoundError handling.
+
   try {
     const courseService = new CourseService(orm.em.fork(), req.log);
     const { id } = req.params;
     const userId = req.user!.id;
-    const updatedCourse = await courseService.update(id, req.body, userId);
+
+    const { courseData } = req.body;
+    if (!courseData) {
+      console.error("ERROR: No se encontró 'courseData' en req.body.")
+      return HttpResponse.BadRequest(res, "No se proporcionaron los datos del curso (courseData).");
+    }
+    const parsedData = JSON.parse(courseData);
+    /*
+    const validationResult = safeParse(UpdateCourseSchema, parsedData);
+    if (!validationResult.success) {
+      return HttpResponse.BadRequest(res, validationResult.issues);
+    }
+    const validatedData = validationResult.output;
+    */
+    const files = (req.files as Express.Multer.File[]) || []
+
+    const imageFile = files.find(f => f.fieldname === 'image');
+    const materialFiles = files.filter(f => f.fieldname.startsWith('materials'))
+    
+    const imageUrl = imageFile?.path;
+
+    const updatedCourse = await courseService.update(id, parsedData, userId, imageUrl, materialFiles);
     return HttpResponse.Ok(res, updatedCourse);
+    
   } catch (error: any) {
+    console.log('Error capturado en el controlador de actualización de curso:', error);
+    if (error instanceof SyntaxError) {
+      return HttpResponse.BadRequest(res, "El formato de courseData no es un JSON válido.");
+    }
     if (error.name === 'NotFoundError') {
-      return HttpResponse.NotFound(res, 'Course not found.');
+      return HttpResponse.NotFound(res, 'Curso no encontrado o no tienes permiso para editarlo.');
+    }
+    if (error.message.startsWith('Validation failed:')) {
+      return HttpResponse.BadRequest(res, JSON.parse(error.message.replace('Validation failed: ', '')));
     }
     throw error;
   }

@@ -11,6 +11,8 @@ import { CourseType } from '../courseType/courseType.entity.js'
 import { Logger } from 'pino'
 import { ObjectId } from '@mikro-orm/mongodb'
 import { User } from '../user/user.entity.js'
+import { safeParse } from 'valibot'
+import { UpdateCourseSchema } from './course.schemas.js'
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -125,8 +127,10 @@ export class CourseService {
    */
   public async update(
     id: string,
-    data: UpdateCourseType,
-    userId: string
+    data: any,
+    userId: string,
+    imageUrl?: string,
+    materialFiles: Express.Multer.File[] = []
   ): Promise<Course> {
     this.logger.info({ courseId: id, data: data, userId }, 'Updating course.')
 
@@ -148,9 +152,45 @@ export class CourseService {
       professor: new ObjectId(user.professorProfile.id)
     });
 
-    const updateData = { ...data };
-    if (data.price !== undefined) {
-      (updateData as any).isFree = data.price === 0;
+    console.log('--- Archivos recibidos por Multer ---');
+    console.log(materialFiles)
+
+    const fileUrlMap = new Map<string, string>();
+    for (const file of materialFiles) {
+      fileUrlMap.set(file.originalname, file.path);
+    }
+
+    console.log('--- Mapa de URLs generado ---');
+    console.log(fileUrlMap)
+
+    if (data.units && data.units.length > 0) {
+      for (const unit of data.units) {
+        if (unit.materials && unit.materials.length > 0) {
+          for (const material of unit.materials) {
+            const placeholder = material.url;
+            if (fileUrlMap.has(placeholder)) {
+              material.url = fileUrlMap.get(placeholder)!;
+            }
+          }
+        }
+      }
+    }
+
+    const validationResult = safeParse(UpdateCourseSchema, data);
+    if (!validationResult.success) {
+      this.logger.error({ issues: validationResult.issues }, 'Validation failed AFTER URL replacement.');
+      throw new Error('Validation failed: ' + JSON.stringify(validationResult.issues));
+    }
+
+    const validatedData: UpdateCourseType = validationResult.output
+
+    const updateData: Partial<Course> = { ...(validatedData as any) };
+    if (validatedData.price !== undefined) {
+      (updateData as any).isFree = validatedData.price === 0;
+    }
+    
+    if (imageUrl) {
+      updateData.imageUrl = imageUrl;
     }
 
     this.em.assign(course, updateData);

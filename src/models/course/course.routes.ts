@@ -18,6 +18,7 @@ import {
 } from '../../auth/auth.middleware.js';
 import { UserRole } from '../user/user.entity.js';
 import { uploadCourseImage } from '../../shared/middlewares/file-upload.middleware.js';
+import { uploadCourseData, handleMulterUpload } from '../../shared/middlewares/file-upload.middleware.js'
 
 export const courseRouter = Router();
 
@@ -43,7 +44,7 @@ courseRouter.post(
 courseRouter.put(
   '/:id',
   professorOnly,
-  validationMiddleware(UpdateCourseSchema),
+  handleMulterUpload(uploadCourseData),
   courseController.update
 );
 courseRouter.patch(
@@ -82,12 +83,16 @@ courseRouter.get(
 courseRouter.put(
   '/:courseId/questions/:id',
   professorOnly,
+  uploadCourseData,
+  courseController.update,
   validationMiddleware(UpdateQuestionSchema),
   questionController.update
 );
 courseRouter.patch(
   '/:courseId/questions/:id',
   professorOnly,
+  uploadCourseData,
+  courseController.update,
   validationMiddleware(UpdateQuestionSchema),
   questionController.update
 );

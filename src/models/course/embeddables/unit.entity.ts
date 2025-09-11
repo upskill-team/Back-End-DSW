@@ -3,8 +3,9 @@
  * @remarks Defines the embeddable class for a course Unit, which acts as a container for content.
  */
 
-import { Embeddable, Property, Embedded } from '@mikro-orm/core';
+import { Embeddable, Property, Embedded, Rel } from '@mikro-orm/core';
 import { Material } from './material.entity.js';
+import { Question } from '../../question/question.entity.js';
 
 /**
  * Represents a unit of study embedded within a course, similar to a chapter or a lesson.
@@ -40,4 +41,11 @@ export class Unit {
    */
   @Embedded(() => Material, { array: true, default: [] })
   materials: Material[] = [];
+
+  /**
+   * An array of ObjectId references to the questions associated with this unit.
+   * @type {ObjectId[]}
+   */
+  @Property({ type: 'array', default: [] })
+  questions: Rel<Question>[] = []
 }
