@@ -7,6 +7,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
 import * as dotenv from 'dotenv';
+import { Request, Response, NextFunction } from 'express'
 
 dotenv.config();
 
@@ -108,3 +109,27 @@ export const uploadCourseData = multer({
     fileSize: 25 * 1024 * 1024,
   },
 }).any()
+
+/**
+ * Un wrapper de middleware que maneja los errores comunes de Multer.
+ * @param uploadMiddleware El middleware de Multer a ejecutar (ej. uploadCourseData).
+ * @returns Un nuevo middleware de Express con manejo de errores incorporado.
+ */
+export const handleMulterUpload = (
+  uploadMiddleware: (req: Request, res: Response, callback: (err?: any) => void) => void
+) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Ejecutamos el middleware de Multer pasándole el callback de manejo de errores.
+    uploadMiddleware(req, res, (err: any) => {
+      if (err instanceof multer.MulterError) {
+        console.error("Error de Multer:", err);
+        return res.status(400).json({ status: 400, message: "Error en la subida de archivos", errors: err.message });
+      } else if (err) {
+        console.error("Error desconocido en la subida:", err);
+        return res.status(500).json({ status: 500, message: "Error interno en la subida de archivos", errors: err.message });
+      }
+      // Si no hay errores, pasamos al siguiente middleware en la cadena (el controlador).
+      next();
+    });
+  };
+};
