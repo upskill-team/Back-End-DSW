@@ -30,7 +30,7 @@ const professorOrAdmin = roleAuthMiddleware([
   UserRole.ADMIN,
 ]);
 
-courseRouter.get('/', courseController.findAll);
+courseRouter.get('/', courseController.findAllWithPagination);
 courseRouter.get('/my-courses', professorOnly, courseController.findMyCourses);
 courseRouter.get('/:id', courseController.findOne);
 
