@@ -65,6 +65,27 @@ export class User extends BaseEntity {
   profile_picture?: string;
 
   /**
+   * The user's phone number.
+   * @type {string | undefined}
+   */
+  @Property({ nullable: true })
+  phone?: string;               
+
+  /**
+   * The user's lcoation (where he lives).
+   * @type {string | undefined}
+   */
+  @Property({ nullable: true }) 
+  location?: string;           
+
+  /**
+   * The user's birthday.
+   * @type {date | undefined}
+   */
+  @Property({ type: 'date', nullable: true })
+  birthdate?: Date;
+
+  /**
    * The user's hashed password. This field is hidden from API responses.
    * @type {string}
    */

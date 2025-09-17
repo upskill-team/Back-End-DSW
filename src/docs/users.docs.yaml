@@ -1,0 +1,103 @@
+tags:
+  - name: Users
+    description: Operations related to user management and profiles.
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The unique identifier for the user.
+        name:
+          type: string
+          description: User's first name.
+        surname:
+          type: string
+          description: User's last name.
+        mail:
+          type: string
+          format: email
+          description: User's email address.
+        role:
+          type: string
+          enum: [student, professor, admin]
+          description: The role of the user.
+        phone:
+          type: string
+          nullable: true
+          description: User's phone number.
+        location:
+          type: string
+          nullable: true
+          description: User's location (e.g., City, Country).
+        birthdate:
+          type: string
+          format: date
+          nullable: true
+          description: User's date of birth.
+
+    UpdateProfileInput:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The new first name for the user.
+          example: 'Anakin'
+        surname:
+          type: string
+          description: The new last name for the user.
+          example: 'Skywalker'
+        mail:
+          type: string
+          format: email
+          description: The new email address for the user.
+          example: 'vader@empire.com'
+        phone:
+          type: string
+          description: The user's phone number.
+          example: '+123456789'
+        location:
+          type: string
+          description: The user's location.
+          example: 'Tatooine'
+        birthdate:
+          type: string
+          format: date
+          description: The user's date of birth in YYYY-MM-DD format.
+          example: '1977-05-25'
+
+paths:
+  /users/me:
+    patch:
+      summary: Update authenticated user's profile and/or avatar
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profilePicture:
+                  type: string
+                  format: binary
+                  description: The new profile picture file to upload.
+                profileData:
+                  type: string
+                  description: A JSON string containing the user profile fields to update.
+                  example: '{"name": "Anakin", "surname": "Skywalker", "mail": "vader@empire.com", "phone": "555-DARK-SIDE", "location": "Death Star", "birthdate": "1977-05-25"}'
+      responses:
+        '200':
+          description: Profile updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'

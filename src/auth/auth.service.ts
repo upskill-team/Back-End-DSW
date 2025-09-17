@@ -11,7 +11,6 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { User, UserRole } from '../models/user/user.entity.js'
 import { Student } from '../models/student/student.entity.js'
-import { ObjectId } from '@mikro-orm/mongodb'
 import { sendEmail } from '../shared/services/email.service.js'
 import { render } from '@react-email/render'
 import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
@@ -113,31 +112,6 @@ export class AuthService {
     this.logger.info({ userId: user.id }, 'User logged in successfully.')
 
     return { token }
-  }
-
-  /**
-   * Retrieves a user's profile by their ID.
-   * @param {string} userId - The ID of the user to retrieve.
-   * @returns {Promise<User | null>} The User entity or null if not found.
-   */
-  public async getProfile(userId: string): Promise<User | null> {
-    this.logger.info({ userId }, 'Fetching user profile.')
-
-    const userObjectId = new ObjectId(userId)
-    const user = await this.em.findOne(
-      User,
-      { _id: userObjectId },
-      { populate: ['studentProfile', 'professorProfile'] }
-    )
-
-    if (!user) {
-      this.logger.warn({ userId }, 'User profile not found.')
-
-      return null
-    }
-
-    delete (user as Partial<User>).password
-    return user
   }
 
   /**

@@ -133,3 +133,24 @@ export const handleMulterUpload = (
     });
   };
 };
+
+const profilePictureStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'upskill/profile_pictures', // Carpeta dedicada para avatares
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 500, height: 500, crop: 'fill' }], // Opcional: redimensiona las imágenes
+  } as any,
+});
+
+/**
+ * Middleware de Multer para manejar la subida de una única foto de perfil.
+ * Acepta un archivo en el campo 'profilePicture' con un límite de 5MB.
+ * @const {multer.Instance} uploadProfilePicture
+ */
+export const uploadProfilePicture = multer({
+  storage: profilePictureStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+});
