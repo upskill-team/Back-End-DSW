@@ -54,42 +54,6 @@ async function login(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
- * @function getProfile
- * @remarks Gets the profile of the authenticated user.
- * @param {Request} req - The HTTP request object, expects `req.user` to be populated.
- * @param {Response} res - The HTTP response object.
- * @param {NextFunction} next - The next middleware function.
- * @returns {Promise<Response>}
- */
-// Gets the profile of the logged-in user
-async function getProfile(req: Request, res: Response, next: NextFunction) {
-  try {
-    // Get user ID from request, set by authentication middleware
-    const userId = (req as Request & { user?: { id: string } }).user?.id;
-    if (!userId) {
-      // If user ID is missing, user is not authenticated
-      return HttpResponse.Unauthorized(
-        res,
-        'No se pudo verificar la identidad del usuario.'
-      )
-    }
-
-    const authService = new AuthService(orm.em.fork(), req.log)
-    // Get profile info from database
-    const userProfile = await authService.getProfile(userId)
-
-    if (!userProfile) {
-      // If profile not found, send not found response
-      return HttpResponse.NotFound(res, 'Perfil de usuario no encontrado.')
-    }
-
-    return HttpResponse.Ok(res, userProfile);
-  } catch (error: any) {
-    return next(error)
-  }
-}
-
-/**
  * @function forgotPassword
  * @remarks Initiates the password recovery process.
  * @param {Request} req - The HTTP request object.
@@ -136,4 +100,4 @@ async function resetPassword(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export { register, login, getProfile, forgotPassword, resetPassword }
+export { register, login, forgotPassword, resetPassword }
