@@ -9,7 +9,9 @@ import { CourseService } from './course.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
 import { User } from '../user/user.entity.js';
 import { ObjectId } from '@mikro-orm/mongodb';
-
+import { SearchCoursesSchema } from './course.schemas.js';
+import { NextFunction } from 'express';
+import * as v from 'valibot';
 /**
  * Handles the retrieval of courses for the currently authenticated professor.
  * @param {Request} req The Express request object, containing the user payload from auth.
@@ -162,4 +164,44 @@ async function remove(req: Request, res: Response) {
   await courseService.remove(id, userId);
   return HttpResponse.Ok(res, { message: 'Course deleted successfully' });
 }
-export { findAll, findOne, add, update, remove, findMyCourses };
+
+async function findAllWithPagination(req: Request, res: Response, next: NextFunction) {
+  try {
+    // --- 1. Validar y transformar los query params usando el schema de Valibot ---
+    // v.parse lanzará un ValiError si la validación falla, que será capturado por el catch.
+    const validatedQuery = v.parse(SearchCoursesSchema, req.query);
+
+    // --- 2. Instanciar el servicio y ejecutar la lógica de negocio ---
+    // Se pasa el objeto de consulta ya limpio y seguro al servicio.
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const result = await courseService.searchCourses(validatedQuery); // Asumiendo que el método se llama `search`
+
+    // --- 3. Enviar la respuesta exitosa ---
+    // Usamos tu helper HttpResponse para devolver un 200 OK con los datos.
+    return HttpResponse.Ok(res, result);
+
+  } catch (error) {
+    // --- 4. Manejar errores de forma centralizada ---
+    if (error instanceof v.ValiError) {
+      // Si el error es de validación, es un error del cliente (400 Bad Request).
+      const errorDetails = error.issues.map(issue => ({
+        field: issue.path?.map((p: { key: any; }) => p.key).join('.'),
+        message: issue.message,
+        receivedValue: issue.input,
+      }));
+      
+      // Devolvemos una respuesta clara y estructurada.
+      return HttpResponse.BadRequest(res, {
+        message: 'Los parámetros de consulta son inválidos.',
+        errors: errorDetails,
+      });
+    }
+
+    // Para cualquier otro error (ej. de la base de datos), lo pasamos al
+    // siguiente middleware de manejo de errores de Express.
+    next(error);
+  }
+}
+
+
+export { findAll, findOne, add, update, remove, findMyCourses,findAllWithPagination };

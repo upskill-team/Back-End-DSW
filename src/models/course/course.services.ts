@@ -3,28 +3,32 @@
  * @remarks Encapsulates the business logic for managing courses.
  */
 
-import { EntityManager } from '@mikro-orm/core'
-import { Course } from './course.entity.js'
-import { CreateCourseType, UpdateCourseType } from './course.schemas.js'
-import { Professor } from '../professor/professor.entity.js'
-import { CourseType } from '../courseType/courseType.entity.js'
-import { Logger } from 'pino'
-import { ObjectId } from '@mikro-orm/mongodb'
-import { User } from '../user/user.entity.js'
-import { safeParse } from 'valibot'
-import { UpdateCourseSchema } from './course.schemas.js'
+import { EntityManager, FilterQuery } from "@mikro-orm/core";
+import { Course } from "./course.entity.js";
+import {
+  CreateCourseType,
+  SearchCoursesQuery,
+  UpdateCourseType,
+} from "./course.schemas.js";
+import { Professor } from "../professor/professor.entity.js";
+import { CourseType } from "../courseType/courseType.entity.js";
+import { Logger } from "pino";
+import { ObjectId } from "@mikro-orm/mongodb";
+import { User } from "../user/user.entity.js";
+import { safeParse } from "valibot";
+import { UpdateCourseSchema } from "./course.schemas.js";
 
 /**
  * Provides methods for CRUD operations on Course entities.
  * @class CourseService
  */
 export class CourseService {
-  private em: EntityManager
-  private logger: Logger
+  private em: EntityManager;
+  private logger: Logger;
 
   constructor(em: EntityManager, logger: Logger) {
-    this.em = em
-    this.logger = logger.child({ context: { service: 'CourseService' } })
+    this.em = em;
+    this.logger = logger.child({ context: { service: "CourseService" } });
   }
 
   /**
@@ -38,17 +42,25 @@ export class CourseService {
     professorId: string,
     imageUrl?: string
   ): Promise<Course> {
-    this.logger.info({ name: courseData.name }, 'Creating new course.')
+    this.logger.info({ name: courseData.name }, "Creating new course.");
 
-    const { courseTypeId, ...topLevelData } = courseData
+    const { courseTypeId, ...topLevelData } = courseData;
 
-    await this.em.findOneOrFail(Professor, { _id: new ObjectId(professorId) })
-    await this.em.findOneOrFail(CourseType, { _id: new ObjectId(courseTypeId) })
+    await this.em.findOneOrFail(Professor, { _id: new ObjectId(professorId) });
+    await this.em.findOneOrFail(CourseType, {
+      _id: new ObjectId(courseTypeId),
+    });
 
-    const professorRef = this.em.getReference(Professor, new ObjectId(professorId))
-    const courseTypeRef = this.em.getReference(CourseType, new ObjectId(courseTypeId))
+    const professorRef = this.em.getReference(
+      Professor,
+      new ObjectId(professorId)
+    );
+    const courseTypeRef = this.em.getReference(
+      CourseType,
+      new ObjectId(courseTypeId)
+    );
 
-    const course = new Course()
+    const course = new Course();
 
     this.em.assign(course, {
       ...topLevelData,
@@ -57,35 +69,41 @@ export class CourseService {
       imageUrl: imageUrl,
       courseType: courseTypeRef,
       professor: professorRef,
-    })
+    });
 
-    await this.em.persistAndFlush(course)
+    await this.em.persistAndFlush(course);
 
-    this.logger.info({ courseId: course.id }, 'Course entity created successfully. Now syncing relations.')
+    this.logger.info(
+      { courseId: course.id },
+      "Course entity created successfully. Now syncing relations."
+    );
 
-    const emFork = this.em.fork()
-    
+    const emFork = this.em.fork();
+
     const professor = await emFork.findOneOrFail(
       Professor,
       { _id: new ObjectId(professorId) },
-      { populate: ['courses'] }
+      { populate: ["courses"] }
     );
     const courseType = await emFork.findOneOrFail(
       CourseType,
       { _id: new ObjectId(courseTypeId) },
-      { populate: ['courses'] }
+      { populate: ["courses"] }
     );
 
     const courseRef = emFork.getReference(Course, new ObjectId(course.id!));
 
-    professor.courses.add(courseRef)
-    courseType.courses.add(courseRef)
+    professor.courses.add(courseRef);
+    courseType.courses.add(courseRef);
 
-    await emFork.flush()
+    await emFork.flush();
 
-    this.logger.info({ courseId: course.id }, 'Professor and CourseType relations synced.')
+    this.logger.info(
+      { courseId: course.id },
+      "Professor and CourseType relations synced."
+    );
 
-    return course
+    return course;
   }
 
   /**
@@ -93,26 +111,26 @@ export class CourseService {
    * @returns {Promise<Course[]>} A promise that resolves to an array of all courses.
    */
   public async findAll(): Promise<Course[]> {
-    this.logger.info('Fetching all courses.')
+    this.logger.info("Fetching all courses.");
 
     return this.em.find(
       Course,
       {},
       {
-        populate: ['courseType', 'professor'],
+        populate: ["courseType", "professor"],
       }
-    )
+    );
   }
 
   public async findOne(id: string): Promise<Course> {
-    this.logger.info({ courseId: id }, 'Fetching course.')
+    this.logger.info({ courseId: id }, "Fetching course.");
 
-    const objectId = new ObjectId(id)
+    const objectId = new ObjectId(id);
     return this.em.findOneOrFail(
       Course,
       { _id: objectId },
       {
-        populate: ['courseType', 'professor'],
+        populate: ["courseType", "professor"],
       }
     );
   }
@@ -132,36 +150,36 @@ export class CourseService {
     imageUrl?: string,
     materialFiles: Express.Multer.File[] = []
   ): Promise<Course> {
-    this.logger.info({ courseId: id, data: data, userId }, 'Updating course.')
+    this.logger.info({ courseId: id, data: data, userId }, "Updating course.");
 
-    const objectId = new ObjectId(id)
-    const userObjectId = new ObjectId(userId)
+    const objectId = new ObjectId(id);
+    const userObjectId = new ObjectId(userId);
 
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
-      { populate: ['professorProfile'] }
+      { populate: ["professorProfile"] }
     );
-    
+
     if (!user?.professorProfile) {
-      throw new Error('User is not a professor');
+      throw new Error("User is not a professor");
     }
 
-    const course = await this.em.findOneOrFail(Course, { 
-      _id: objectId, 
-      professor: new ObjectId(user.professorProfile.id)
+    const course = await this.em.findOneOrFail(Course, {
+      _id: objectId,
+      professor: new ObjectId(user.professorProfile.id),
     });
 
-    console.log('--- Archivos recibidos por Multer ---');
-    console.log(materialFiles)
+    console.log("--- Archivos recibidos por Multer ---");
+    console.log(materialFiles);
 
     const fileUrlMap = new Map<string, string>();
     for (const file of materialFiles) {
       fileUrlMap.set(file.originalname, file.path);
     }
 
-    console.log('--- Mapa de URLs generado ---');
-    console.log(fileUrlMap)
+    console.log("--- Mapa de URLs generado ---");
+    console.log(fileUrlMap);
 
     if (data.units && data.units.length > 0) {
       for (const unit of data.units) {
@@ -178,26 +196,31 @@ export class CourseService {
 
     const validationResult = safeParse(UpdateCourseSchema, data);
     if (!validationResult.success) {
-      this.logger.error({ issues: validationResult.issues }, 'Validation failed AFTER URL replacement.');
-      throw new Error('Validation failed: ' + JSON.stringify(validationResult.issues));
+      this.logger.error(
+        { issues: validationResult.issues },
+        "Validation failed AFTER URL replacement."
+      );
+      throw new Error(
+        "Validation failed: " + JSON.stringify(validationResult.issues)
+      );
     }
 
-    const validatedData: UpdateCourseType = validationResult.output
+    const validatedData: UpdateCourseType = validationResult.output;
 
     const updateData: Partial<Course> = { ...(validatedData as any) };
     if (validatedData.price !== undefined) {
       (updateData as any).isFree = validatedData.price === 0;
     }
-    
+
     if (imageUrl) {
       updateData.imageUrl = imageUrl;
     }
 
     this.em.assign(course, updateData);
-    
+
     await this.em.flush();
 
-    this.logger.info({ courseId: id }, 'Course updated successfully.')
+    this.logger.info({ courseId: id }, "Course updated successfully.");
 
     return course;
   }
@@ -210,29 +233,29 @@ export class CourseService {
    * @throws {Error} If the course is not found or user doesn't own the course.
    */
   public async remove(id: string, userId: string): Promise<void> {
-    this.logger.info({ courseId: id, userId }, 'Deleting course.')
+    this.logger.info({ courseId: id, userId }, "Deleting course.");
 
-    const objectId = new ObjectId(id)
-    const userObjectId = new ObjectId(userId)
+    const objectId = new ObjectId(id);
+    const userObjectId = new ObjectId(userId);
 
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
-      { populate: ['professorProfile'] }
+      { populate: ["professorProfile"] }
     );
-    
+
     if (!user?.professorProfile) {
-      throw new Error('User is not a professor');
+      throw new Error("User is not a professor");
     }
 
-    const course = await this.em.findOneOrFail(Course, { 
-      _id: objectId, 
-      professor: new ObjectId(user.professorProfile.id)
+    const course = await this.em.findOneOrFail(Course, {
+      _id: objectId,
+      professor: new ObjectId(user.professorProfile.id),
     });
 
-    await this.em.removeAndFlush(course)
+    await this.em.removeAndFlush(course);
 
-    this.logger.info({ courseId: id }, 'Course deleted successfully.')
+    this.logger.info({ courseId: id }, "Course deleted successfully.");
   }
 
   /**
@@ -242,18 +265,21 @@ export class CourseService {
    * @throws {Error} If the user is not found or is not a professor.
    */
   public async findCoursesOfProfessor(userId: string): Promise<Course[]> {
-    this.logger.info({ userId }, "Fetching courses for an authenticated professor.")
+    this.logger.info(
+      { userId },
+      "Fetching courses for an authenticated professor."
+    );
 
-    const userObjectId = new ObjectId(userId)
+    const userObjectId = new ObjectId(userId);
 
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
-      { populate: ['professorProfile'] }
+      { populate: ["professorProfile"] }
     );
-    
+
     if (!user || !user.professorProfile) {
-      throw new Error('User is not a professor');
+      throw new Error("User is not a professor");
     }
 
     const professorObjectId = new ObjectId(user.professorProfile.id);
@@ -261,7 +287,42 @@ export class CourseService {
     return await this.em.find(
       Course,
       { professor: professorObjectId },
-      { populate: ['courseType', 'professor'] }
+      { populate: ["courseType", "professor"] }
     );
+  }
+
+  /**
+   * Searches for courses based on various filters.
+   * @param {SearchCoursesQuery} query - The search filters and pagination options.
+   * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
+   */
+  async searchCourses(
+    query: SearchCoursesQuery
+  ): Promise<{ courses: Course[]; total: number }> {
+    const where: FilterQuery<Course> = {};
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.isFree !== undefined) {
+      where.isFree = query.isFree;
+    }
+
+    if (query.q) {
+      // Búsqueda de texto libre (case-insensitive) en nombre y descripción
+      const searchQuery = { $ilike: `%${query.q}%` };
+      where.$or = [{ name: searchQuery }, { description: searchQuery }];
+    }
+
+    // Usamos findAndCount para obtener resultados paginados y el total en una sola query
+    const [courses, total] = await this.em.findAndCount(Course, where, {
+      populate: ["professor", "courseType"], // Precarga relaciones para evitar N+1 queries
+      orderBy: { [query.sortBy]: query.sortOrder },
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    return { courses, total };
   }
 }

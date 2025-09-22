@@ -68,11 +68,62 @@ export const CreateCourseSchema = v.object({
   ),
 })
 
+// --- ESQUEMA PARA BÚSQUEDA (AÑADIR ESTA SECCIÓN) ---
+
+// Helper: Valida un string que representa un número entero y lo transforma.
+// Es crucial para los query params como 'limit', 'offset', o IDs.
+const NumericString = v.pipe(
+  v.string('El valor debe ser un string.'),
+  v.regex(/^\d+$/, 'Debe contener solo dígitos.'),
+  v.transform(Number)
+);
+
+// Helper: Valida un string "true" o "false" y lo transforma a un booleano.
+// Perfecto para filtros como `isFree`.
+const BooleanString = v.pipe(
+    v.string('El valor debe ser un string.'),
+    v.regex(/^(true|false)$/, 'El valor debe ser "true" o "false".'),
+    v.transform(val => val === 'true')
+);
+
+/**
+ * Schema for searching/filtering courses via query parameters (for GET requests).
+ * Valida y transforma los parámetros que vienen de la URL.
+ */
+export const SearchCoursesSchema = v.object({
+  // --- Filtros ---
+  status: v.optional(v.enum_(status, 'El status proporcionado no es válido.')),
+  isFree: v.optional(BooleanString),
+  professorId: v.optional(NumericString),
+  courseTypeId: v.optional(NumericString),
+  
+  q: v.optional(v.string()),
+
+  // --- Paginación ---
+  limit: v.optional(NumericString, '10'),
+  offset: v.optional(NumericString, '0'),
+
+  // --- Ordenación ---
+  sortBy: v.optional(v.string(), 'createdAt'),
+  // replace enum array with string+regex validation
+  sortOrder: v.optional(
+    v.pipe(
+      v.string(),
+      v.regex(/^(ASC|DESC)$/, 'sortOrder debe ser "ASC" o "DESC".')
+    ),
+    'DESC'
+  ),
+});
+
+
+
+
 /**
  * Schema for updating an existing course, making all fields optional.
  */
 export const UpdateCourseSchema = v.partial(CreateCourseSchema);
 
 // Infer TypeScript types from the schemas for strong typing.
+export type SearchCoursesQuery = v.InferOutput<typeof SearchCoursesSchema>;
 export type CreateCourseType = v.InferOutput<typeof CreateCourseSchema>;
 export type UpdateCourseType = v.InferOutput<typeof UpdateCourseSchema>;
