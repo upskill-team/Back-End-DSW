@@ -3,20 +3,20 @@
  * @remarks Encapsulates the business logic for managing courses.
  */
 
-import { EntityManager, FilterQuery } from "@mikro-orm/core";
-import { Course } from "./course.entity.js";
+import { EntityManager, FilterQuery } from '@mikro-orm/core';
+import { Course } from './course.entity.js';
 import {
   CreateCourseType,
   SearchCoursesQuery,
   UpdateCourseType,
-} from "./course.schemas.js";
-import { Professor } from "../professor/professor.entity.js";
-import { CourseType } from "../courseType/courseType.entity.js";
-import { Logger } from "pino";
-import { ObjectId } from "@mikro-orm/mongodb";
-import { User } from "../user/user.entity.js";
-import { safeParse } from "valibot";
-import { UpdateCourseSchema } from "./course.schemas.js";
+} from './course.schemas.js';
+import { Professor } from '../professor/professor.entity.js';
+import { CourseType } from '../courseType/courseType.entity.js';
+import { Logger } from 'pino';
+import { ObjectId } from '@mikro-orm/mongodb';
+import { User } from '../user/user.entity.js';
+import { safeParse } from 'valibot';
+import { UpdateCourseSchema } from './course.schemas.js';
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -28,7 +28,7 @@ export class CourseService {
 
   constructor(em: EntityManager, logger: Logger) {
     this.em = em;
-    this.logger = logger.child({ context: { service: "CourseService" } });
+    this.logger = logger.child({ context: { service: 'CourseService' } });
   }
 
   /**
@@ -42,7 +42,7 @@ export class CourseService {
     professorId: string,
     imageUrl?: string
   ): Promise<Course> {
-    this.logger.info({ name: courseData.name }, "Creating new course.");
+    this.logger.info({ name: courseData.name }, 'Creating new course.');
 
     const { courseTypeId, ...topLevelData } = courseData;
 
@@ -75,7 +75,7 @@ export class CourseService {
 
     this.logger.info(
       { courseId: course.id },
-      "Course entity created successfully. Now syncing relations."
+      'Course entity created successfully. Now syncing relations.'
     );
 
     const emFork = this.em.fork();
@@ -83,12 +83,12 @@ export class CourseService {
     const professor = await emFork.findOneOrFail(
       Professor,
       { _id: new ObjectId(professorId) },
-      { populate: ["courses"] }
+      { populate: ['courses'] }
     );
     const courseType = await emFork.findOneOrFail(
       CourseType,
       { _id: new ObjectId(courseTypeId) },
-      { populate: ["courses"] }
+      { populate: ['courses'] }
     );
 
     const courseRef = emFork.getReference(Course, new ObjectId(course.id!));
@@ -100,7 +100,7 @@ export class CourseService {
 
     this.logger.info(
       { courseId: course.id },
-      "Professor and CourseType relations synced."
+      'Professor and CourseType relations synced.'
     );
 
     return course;
@@ -111,26 +111,26 @@ export class CourseService {
    * @returns {Promise<Course[]>} A promise that resolves to an array of all courses.
    */
   public async findAll(): Promise<Course[]> {
-    this.logger.info("Fetching all courses.");
+    this.logger.info('Fetching all courses.');
 
     return this.em.find(
       Course,
       {},
       {
-        populate: ["courseType", "professor"],
+        populate: ['courseType', 'professor'],
       }
     );
   }
 
   public async findOne(id: string): Promise<Course> {
-    this.logger.info({ courseId: id }, "Fetching course.");
+    this.logger.info({ courseId: id }, 'Fetching course.');
 
     const objectId = new ObjectId(id);
     return this.em.findOneOrFail(
       Course,
       { _id: objectId },
       {
-        populate: ["courseType", "professor"],
+        populate: ['courseType', 'professor'],
       }
     );
   }
@@ -150,7 +150,7 @@ export class CourseService {
     imageUrl?: string,
     materialFiles: Express.Multer.File[] = []
   ): Promise<Course> {
-    this.logger.info({ courseId: id, data: data, userId }, "Updating course.");
+    this.logger.info({ courseId: id, data: data, userId }, 'Updating course.');
 
     const objectId = new ObjectId(id);
     const userObjectId = new ObjectId(userId);
@@ -158,11 +158,11 @@ export class CourseService {
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
-      { populate: ["professorProfile"] }
+      { populate: ['professorProfile'] }
     );
 
     if (!user?.professorProfile) {
-      throw new Error("User is not a professor");
+      throw new Error('User is not a professor');
     }
 
     const course = await this.em.findOneOrFail(Course, {
@@ -170,7 +170,7 @@ export class CourseService {
       professor: new ObjectId(user.professorProfile.id),
     });
 
-    console.log("--- Archivos recibidos por Multer ---");
+    console.log('--- Archivos recibidos por Multer ---');
     console.log(materialFiles);
 
     const fileUrlMap = new Map<string, string>();
@@ -178,7 +178,7 @@ export class CourseService {
       fileUrlMap.set(file.originalname, file.path);
     }
 
-    console.log("--- Mapa de URLs generado ---");
+    console.log('--- Mapa de URLs generado ---');
     console.log(fileUrlMap);
 
     if (data.units && data.units.length > 0) {
@@ -198,10 +198,10 @@ export class CourseService {
     if (!validationResult.success) {
       this.logger.error(
         { issues: validationResult.issues },
-        "Validation failed AFTER URL replacement."
+        'Validation failed AFTER URL replacement.'
       );
       throw new Error(
-        "Validation failed: " + JSON.stringify(validationResult.issues)
+        'Validation failed: ' + JSON.stringify(validationResult.issues)
       );
     }
 
@@ -220,7 +220,7 @@ export class CourseService {
 
     await this.em.flush();
 
-    this.logger.info({ courseId: id }, "Course updated successfully.");
+    this.logger.info({ courseId: id }, 'Course updated successfully.');
 
     return course;
   }
@@ -233,7 +233,7 @@ export class CourseService {
    * @throws {Error} If the course is not found or user doesn't own the course.
    */
   public async remove(id: string, userId: string): Promise<void> {
-    this.logger.info({ courseId: id, userId }, "Deleting course.");
+    this.logger.info({ courseId: id, userId }, 'Deleting course.');
 
     const objectId = new ObjectId(id);
     const userObjectId = new ObjectId(userId);
@@ -241,11 +241,11 @@ export class CourseService {
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
-      { populate: ["professorProfile"] }
+      { populate: ['professorProfile'] }
     );
 
     if (!user?.professorProfile) {
-      throw new Error("User is not a professor");
+      throw new Error('User is not a professor');
     }
 
     const course = await this.em.findOneOrFail(Course, {
@@ -255,7 +255,7 @@ export class CourseService {
 
     await this.em.removeAndFlush(course);
 
-    this.logger.info({ courseId: id }, "Course deleted successfully.");
+    this.logger.info({ courseId: id }, 'Course deleted successfully.');
   }
 
   /**
@@ -267,7 +267,7 @@ export class CourseService {
   public async findCoursesOfProfessor(userId: string): Promise<Course[]> {
     this.logger.info(
       { userId },
-      "Fetching courses for an authenticated professor."
+      'Fetching courses for an authenticated professor.'
     );
 
     const userObjectId = new ObjectId(userId);
@@ -275,11 +275,11 @@ export class CourseService {
     const user = await this.em.findOne(
       User,
       { _id: userObjectId },
-      { populate: ["professorProfile"] }
+      { populate: ['professorProfile'] }
     );
 
     if (!user || !user.professorProfile) {
-      throw new Error("User is not a professor");
+      throw new Error('User is not a professor');
     }
 
     const professorObjectId = new ObjectId(user.professorProfile.id);
@@ -287,7 +287,7 @@ export class CourseService {
     return await this.em.find(
       Course,
       { professor: professorObjectId },
-      { populate: ["courseType", "professor"] }
+      { populate: ['courseType', 'professor'] }
     );
   }
 
@@ -317,12 +317,319 @@ export class CourseService {
 
     // Usamos findAndCount para obtener resultados paginados y el total en una sola query
     const [courses, total] = await this.em.findAndCount(Course, where, {
-      populate: ["professor", "courseType"], // Precarga relaciones para evitar N+1 queries
+      populate: ['professor', 'courseType'], // Precarga relaciones para evitar N+1 queries
       orderBy: { [query.sortBy]: query.sortOrder },
       limit: query.limit,
       offset: query.offset,
     });
 
     return { courses, total };
+  }
+
+  /**
+   * Creates a new unit in an existing course.
+   * @param {string} courseId - The ID of the course.
+   * @param {CreateUnitType} unitData - The validated data for the new unit.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The updated course with the new unit.
+   */
+  public async createUnit(
+    courseId: string,
+    unitData: any, // CreateUnitType - temporarily using any to avoid import issues
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info({ courseId, unitData }, 'Creating new unit');
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    // Check if unit number already exists
+    const existingUnit = course.units.find(
+      (u) => u.unitNumber === unitData.unitNumber
+    );
+    if (existingUnit) {
+      throw new Error(`Unit number ${unitData.unitNumber} already exists`);
+    }
+
+    // Create new unit
+    const newUnit = {
+      unitNumber: unitData.unitNumber,
+      name: unitData.name,
+      detail: unitData.detail,
+      materials: unitData.materials || [],
+      questions: [],
+    };
+
+    course.units.push(newUnit);
+    await this.em.persistAndFlush(course);
+
+    this.logger.info(
+      { courseId, unitNumber: unitData.unitNumber },
+      'Unit created successfully'
+    );
+    return course;
+  }
+
+  /**
+   * Updates an existing unit in a course.
+   * @param {string} courseId - The ID of the course.
+   * @param {number} unitNumber - The number of the unit to update.
+   * @param {UpdateUnitType} updateData - The validated data for updating the unit.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The updated course.
+   */
+  public async updateUnit(
+    courseId: string,
+    unitNumber: number,
+    updateData: any, // UpdateUnitType
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info({ courseId, unitNumber, updateData }, 'Updating unit');
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    const unitIndex = course.units.findIndex(
+      (u) => u.unitNumber === unitNumber
+    );
+    if (unitIndex === -1) {
+      throw new Error(`Unit ${unitNumber} not found in course ${courseId}`);
+    }
+
+    // Update unit fields
+    const unit = course.units[unitIndex];
+    if (updateData.name !== undefined) unit.name = updateData.name;
+    if (updateData.detail !== undefined) unit.detail = updateData.detail;
+    if (updateData.materials !== undefined)
+      unit.materials = updateData.materials;
+    if (
+      updateData.unitNumber !== undefined &&
+      updateData.unitNumber !== unitNumber
+    ) {
+      // Check if new unit number already exists
+      const existingUnit = course.units.find(
+        (u) => u.unitNumber === updateData.unitNumber
+      );
+      if (existingUnit) {
+        throw new Error(`Unit number ${updateData.unitNumber} already exists`);
+      }
+      unit.unitNumber = updateData.unitNumber;
+    }
+
+    await this.em.persistAndFlush(course);
+
+    this.logger.info({ courseId, unitNumber }, 'Unit updated successfully');
+    return course;
+  }
+
+  /**
+   * Deletes a unit from a course.
+   * @param {string} courseId - The ID of the course.
+   * @param {number} unitNumber - The number of the unit to delete.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The updated course without the deleted unit.
+   */
+  public async deleteUnit(
+    courseId: string,
+    unitNumber: number,
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info({ courseId, unitNumber }, 'Deleting unit');
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    const unitIndex = course.units.findIndex(
+      (u) => u.unitNumber === unitNumber
+    );
+    if (unitIndex === -1) {
+      throw new Error(`Unit ${unitNumber} not found in course ${courseId}`);
+    }
+
+    // Remove the unit
+    course.units.splice(unitIndex, 1);
+    await this.em.persistAndFlush(course);
+
+    this.logger.info({ courseId, unitNumber }, 'Unit deleted successfully');
+    return course;
+  }
+
+  /**
+   * Reorders units within a course.
+   * @param {string} courseId - The ID of the course.
+   * @param {ReorderUnitsType} reorderData - The reordering instructions.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The course with reordered units.
+   */
+  public async reorderUnits(
+    courseId: string,
+    reorderData: any, // ReorderUnitsType
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info({ courseId, reorderData }, 'Reordering units');
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    // Apply reordering
+    for (const reorder of reorderData.unitOrders) {
+      const unit = course.units.find(
+        (u) => u.unitNumber === reorder.currentUnitNumber
+      );
+      if (unit) {
+        unit.unitNumber = reorder.newUnitNumber;
+      }
+    }
+
+    // Sort units by new unit numbers
+    course.units.sort((a, b) => a.unitNumber - b.unitNumber);
+
+    await this.em.persistAndFlush(course);
+
+    this.logger.info({ courseId }, 'Units reordered successfully');
+    return course;
+  }
+
+  /**
+   * Adds a material to a specific unit.
+   * @param {string} courseId - The ID of the course.
+   * @param {number} unitNumber - The number of the unit.
+   * @param {CreateMaterialType} materialData - The material data.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The updated course.
+   */
+  public async addMaterial(
+    courseId: string,
+    unitNumber: number,
+    materialData: any, // CreateMaterialType
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info(
+      { courseId, unitNumber, materialData },
+      'Adding material to unit'
+    );
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    const unit = course.units.find((u) => u.unitNumber === unitNumber);
+    if (!unit) {
+      throw new Error(`Unit ${unitNumber} not found in course ${courseId}`);
+    }
+
+    unit.materials.push(materialData);
+    await this.em.persistAndFlush(course);
+
+    this.logger.info({ courseId, unitNumber }, 'Material added successfully');
+    return course;
+  }
+
+  /**
+   * Removes a material from a specific unit.
+   * @param {string} courseId - The ID of the course.
+   * @param {number} unitNumber - The number of the unit.
+   * @param {number} materialIndex - The index of the material to remove.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The updated course.
+   */
+  public async removeMaterial(
+    courseId: string,
+    unitNumber: number,
+    materialIndex: number,
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info(
+      { courseId, unitNumber, materialIndex },
+      'Removing material from unit'
+    );
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    const unit = course.units.find((u) => u.unitNumber === unitNumber);
+    if (!unit) {
+      throw new Error(`Unit ${unitNumber} not found in course ${courseId}`);
+    }
+
+    if (materialIndex < 0 || materialIndex >= unit.materials.length) {
+      throw new Error(`Material index ${materialIndex} is out of bounds`);
+    }
+
+    unit.materials.splice(materialIndex, 1);
+    await this.em.persistAndFlush(course);
+
+    this.logger.info(
+      { courseId, unitNumber, materialIndex },
+      'Material removed successfully'
+    );
+    return course;
+  }
+
+  /**
+   * Performs a quick save operation without full validation.
+   * @param {string} courseId - The ID of the course.
+   * @param {QuickSaveType} quickSaveData - The quick save data.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Course>} The updated course.
+   */
+  public async quickSave(
+    courseId: string,
+    quickSaveData: any, // QuickSaveType
+    professorId: string
+  ): Promise<Course> {
+    this.logger.info(
+      { courseId, type: quickSaveData.type },
+      'Performing quick save'
+    );
+
+    const course = await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    // Apply changes based on type
+    switch (quickSaveData.type) {
+      case 'course-config': {
+        if (quickSaveData.data.name) course.name = quickSaveData.data.name;
+        if (quickSaveData.data.description)
+          course.description = quickSaveData.data.description;
+        if (quickSaveData.data.price !== undefined) {
+          course.price = quickSaveData.data.price;
+          course.isFree = quickSaveData.data.price === 0;
+        }
+        break;
+      }
+      case 'unit-content': {
+        const unitNumber = quickSaveData.data.unitNumber;
+        const unit = course.units.find((u) => u.unitNumber === unitNumber);
+        if (unit) {
+          if (quickSaveData.data.name) unit.name = quickSaveData.data.name;
+          if (quickSaveData.data.detail)
+            unit.detail = quickSaveData.data.detail;
+        }
+        break;
+      }
+      // Add more cases as needed
+    }
+
+    await this.em.persistAndFlush(course);
+
+    this.logger.info(
+      { courseId, type: quickSaveData.type },
+      'Quick save completed'
+    );
+    return course;
   }
 }
