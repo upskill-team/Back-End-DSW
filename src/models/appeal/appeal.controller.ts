@@ -7,6 +7,8 @@ import { NextFunction, Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'
 import { AppealService } from './appeal.service.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
+import * as v from 'valibot'
+import { SearchAppealsSchema } from './appeal.schemas.js'
 
 /**
  * Handles the creation of a new appeal.
@@ -39,18 +41,32 @@ async function add(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
- * Handles the retrieval of all appeals.
- * @param {Request} req The Express request object.
+ * Handles the retrieval of all appeals with filtering, sorting, and pagination.
+ * @param {Request} req The Express request object, containing query parameters.
  * @param {Response} res The Express response object.
  * @param {NextFunction} next The next middleware function.
- * @returns {Promise<Response>} A list of all appeals.
+ * @returns {Promise<Response>} A paginated list of appeals.
  */
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
+    const validatedQuery = v.parse(SearchAppealsSchema, req.query);
+    
     const appealService = new AppealService(orm.em.fork(), req.log)
-    const appeals = await appealService.findAll()
-    return HttpResponse.Ok(res, appeals)
+    const result = await appealService.findAll(validatedQuery)
+    
+    return HttpResponse.Ok(res, result)
+
   } catch (error) {
+    if (error instanceof v.ValiError) {
+      const errorDetails = error.issues.map(issue => ({
+        field: issue.path?.map((p: { key: any; }) => p.key).join('.'),
+        message: issue.message,
+      }));
+      return HttpResponse.BadRequest(res, {
+        message: 'Parámetros de consulta inválidos.',
+        errors: errorDetails,
+      });
+    }
     next(error)
   }
 }

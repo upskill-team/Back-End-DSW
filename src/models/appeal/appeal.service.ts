@@ -3,9 +3,9 @@
  * @remarks Encapsulates the business logic for managing professor appeals.
  */
 
-import { EntityManager } from '@mikro-orm/core'
+import { EntityManager, FilterQuery } from '@mikro-orm/core'
 import { Appeal } from './appeal.entity.js'
-import { CreateAppealType, UpdateAppealSchema, UpdateAppealType } from './appeal.schemas.js'
+import { CreateAppealType, SearchAppealsQuery, UpdateAppealSchema, UpdateAppealType } from './appeal.schemas.js'
 import { User } from '../user/user.entity.js'
 import { ProfessorService } from '../professor/professor.services.js'
 import { ObjectId } from '@mikro-orm/mongodb'
@@ -58,13 +58,37 @@ export class AppealService {
   }
 
   /**
-   * Retrieves all appeals, populating the associated user information.
-   * @returns {Promise<Appeal[]>} A promise that resolves to an array of all appeals.
+   * Retrieves all appeals based on filter, sort, and pagination parameters.
+   * @param {SearchAppealsQuery} query - The validated query parameters.
+   * @returns {Promise<{appeals: Appeal[], total: number}>} An object with the list of appeals and the total count.
    */
-  public async findAll(): Promise<Appeal[]> {
-    this.logger.info('Fetching all appeals.')
+  public async findAll(query: SearchAppealsQuery): Promise<{ appeals: Appeal[], total: number }> {
+    this.logger.info({ query }, 'Fetching all appeals with filters.')
 
-    return this.em.find(Appeal, {}, { populate: ['user'] })
+    const where: FilterQuery<Appeal> = {};
+
+    if (query.status) {
+      where.state = query.status;
+    }
+
+    if (query.q) {
+      const searchQuery = { $ilike: `%${query.q}%` };
+      where.user = {
+        $or: [
+          { name: searchQuery },
+          { surname: searchQuery }
+        ]
+      };
+    }
+
+    const [appeals, total] = await this.em.findAndCount(Appeal, where, {
+      populate: ['user'],
+      orderBy: { [query.sortBy]: query.sortOrder },
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    return { appeals, total };
   }
 
   /**
@@ -74,7 +98,6 @@ export class AppealService {
    */
   public async findOne(id: string): Promise<Appeal | null> {
     this.logger.info({ appealId: id }, 'Fetching appeal.')
-
     const objectId = new ObjectId(id);
     return this.em.findOne(Appeal, { _id: objectId }, { populate: ['user'] })
   }
