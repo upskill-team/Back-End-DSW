@@ -95,16 +95,12 @@ courseRouter.get(
 courseRouter.put(
   '/:courseId/questions/:id',
   professorOnly,
-  uploadCourseData,
-  courseController.update,
   validationMiddleware(UpdateQuestionSchema),
   questionController.update
 );
 courseRouter.patch(
   '/:courseId/questions/:id',
   professorOnly,
-  uploadCourseData,
-  courseController.update,
   validationMiddleware(UpdateQuestionSchema),
   questionController.update
 );
@@ -137,8 +133,6 @@ courseRouter.get(
 courseRouter.put(
   '/:courseId/units/:unitNumber/questions/:id',
   professorOnly,
-  uploadCourseData,
-  courseController.update,
   validationMiddleware(UpdateQuestionSchema),
   questionController.updateFromUnit
 );
@@ -146,8 +140,6 @@ courseRouter.put(
 courseRouter.patch(
   '/:courseId/units/:unitNumber/questions/:id',
   professorOnly,
-  uploadCourseData,
-  courseController.update,
   validationMiddleware(UpdateQuestionSchema),
   questionController.updateFromUnit
 );
