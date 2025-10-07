@@ -73,12 +73,12 @@ export class QuestionService {
     await this.em.persistAndFlush(question);
 
     // If it's a unit question, add the reference to the unit
-    if (questionData.unitNumber !== undefined) {
+    if (questionData.unitNumber !== undefined && question._id) {
       const unit = course.units.find(
         (u) => u.unitNumber === questionData.unitNumber
       );
       if (unit) {
-        unit.questions.push(question);
+        unit.questions.push(question._id);
         await this.em.persistAndFlush(course);
       }
     }
@@ -288,9 +288,9 @@ export class QuestionService {
         const oldUnit = course.units.find(
           (u) => u.unitNumber === question.unitNumber
         );
-        if (oldUnit) {
-          const questionIndex = oldUnit.questions.findIndex((q) =>
-            q._id?.equals(question._id!)
+        if (oldUnit && question._id) {
+          const questionIndex = oldUnit.questions.findIndex((qId) =>
+            qId.equals(question._id!)
           );
           if (questionIndex > -1) {
             oldUnit.questions.splice(questionIndex, 1);
@@ -299,12 +299,12 @@ export class QuestionService {
       }
 
       // Add to new unit if specified
-      if (updateData.unitNumber !== null) {
+      if (updateData.unitNumber !== null && question._id) {
         const newUnit = course.units.find(
           (u) => u.unitNumber === updateData.unitNumber
         );
         if (newUnit) {
-          newUnit.questions.push(question);
+          newUnit.questions.push(question._id);
         }
       }
 
@@ -355,13 +355,13 @@ export class QuestionService {
     });
 
     // Remove question reference from unit if it exists
-    if (question.unitNumber !== null && question.unitNumber !== undefined) {
+    if (question.unitNumber !== null && question.unitNumber !== undefined && question._id) {
       const unit = course.units.find(
         (u) => u.unitNumber === question.unitNumber
       );
       if (unit) {
-        const questionIndex = unit.questions.findIndex((q) =>
-          q._id?.equals(question._id!)
+        const questionIndex = unit.questions.findIndex((qId) =>
+          qId.equals(question._id!)
         );
         if (questionIndex > -1) {
           unit.questions.splice(questionIndex, 1);
