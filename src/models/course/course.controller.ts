@@ -12,6 +12,7 @@ import { ObjectId } from '@mikro-orm/mongodb';
 import { SearchCoursesSchema } from './course.schemas.js';
 import { NextFunction } from 'express';
 import * as v from 'valibot';
+import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
 /**
  * Handles the retrieval of courses for the currently authenticated professor.
  * @param {Request} req The Express request object, containing the user payload from auth.
@@ -106,7 +107,6 @@ async function add(req: Request, res: Response) {
  * @returns {Promise<Response>} The updated course data.
  */
 async function update(req: Request, res: Response) {
-
   try {
     const courseService = new CourseService(orm.em.fork(), req.log);
     const { id } = req.params;
@@ -114,8 +114,11 @@ async function update(req: Request, res: Response) {
 
     const { courseData } = req.body;
     if (!courseData) {
-      console.error("ERROR: No se encontró 'courseData' en req.body.")
-      return HttpResponse.BadRequest(res, "No se proporcionaron los datos del curso (courseData).");
+      console.error("ERROR: No se encontró 'courseData' en req.body.");
+      return HttpResponse.BadRequest(
+        res,
+        'No se proporcionaron los datos del curso (courseData).'
+      );
     }
     const parsedData = JSON.parse(courseData);
     /*
@@ -125,26 +128,45 @@ async function update(req: Request, res: Response) {
     }
     const validatedData = validationResult.output;
     */
-    const files = (req.files as Express.Multer.File[]) || []
+    const files = (req.files as Express.Multer.File[]) || [];
 
-    const imageFile = files.find(f => f.fieldname === 'image');
-    const materialFiles = files.filter(f => f.fieldname.startsWith('materials'))
-    
+    const imageFile = files.find((f) => f.fieldname === 'image');
+    const materialFiles = files.filter((f) =>
+      f.fieldname.startsWith('materials')
+    );
+
     const imageUrl = imageFile?.path;
 
-    const updatedCourse = await courseService.update(id, parsedData, userId, imageUrl, materialFiles);
+    const updatedCourse = await courseService.update(
+      id,
+      parsedData,
+      userId,
+      imageUrl,
+      materialFiles
+    );
     return HttpResponse.Ok(res, updatedCourse);
-    
   } catch (error: any) {
-    console.log('Error capturado en el controlador de actualización de curso:', error);
+    console.log(
+      'Error capturado en el controlador de actualización de curso:',
+      error
+    );
     if (error instanceof SyntaxError) {
-      return HttpResponse.BadRequest(res, "El formato de courseData no es un JSON válido.");
+      return HttpResponse.BadRequest(
+        res,
+        'El formato de courseData no es un JSON válido.'
+      );
     }
     if (error.name === 'NotFoundError') {
-      return HttpResponse.NotFound(res, 'Curso no encontrado o no tienes permiso para editarlo.');
+      return HttpResponse.NotFound(
+        res,
+        'Curso no encontrado o no tienes permiso para editarlo.'
+      );
     }
     if (error.message.startsWith('Validation failed:')) {
-      return HttpResponse.BadRequest(res, JSON.parse(error.message.replace('Validation failed: ', '')));
+      return HttpResponse.BadRequest(
+        res,
+        JSON.parse(error.message.replace('Validation failed: ', ''))
+      );
     }
     throw error;
   }
@@ -165,7 +187,11 @@ async function remove(req: Request, res: Response) {
   return HttpResponse.Ok(res, { message: 'Course deleted successfully' });
 }
 
-async function findAllWithPagination(req: Request, res: Response, next: NextFunction) {
+async function findAllWithPagination(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
     // --- 1. Validar y transformar los query params usando el schema de Valibot ---
     // v.parse lanzará un ValiError si la validación falla, que será capturado por el catch.
@@ -179,17 +205,16 @@ async function findAllWithPagination(req: Request, res: Response, next: NextFunc
     // --- 3. Enviar la respuesta exitosa ---
     // Usamos tu helper HttpResponse para devolver un 200 OK con los datos.
     return HttpResponse.Ok(res, result);
-
   } catch (error) {
     // --- 4. Manejar errores de forma centralizada ---
     if (error instanceof v.ValiError) {
       // Si el error es de validación, es un error del cliente (400 Bad Request).
-      const errorDetails = error.issues.map(issue => ({
-        field: issue.path?.map((p: { key: any; }) => p.key).join('.'),
+      const errorDetails = error.issues.map((issue) => ({
+        field: issue.path?.map((p: { key: any }) => p.key).join('.'),
         message: issue.message,
         receivedValue: issue.input,
       }));
-      
+
       // Devolvemos una respuesta clara y estructurada.
       return HttpResponse.BadRequest(res, {
         message: 'Los parámetros de consulta son inválidos.',
@@ -203,5 +228,255 @@ async function findAllWithPagination(req: Request, res: Response, next: NextFunc
   }
 }
 
+/**
+ * Handles the creation of a new unit in a course.
+ * @param {Request} req The Express request object, with unit data in the body.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The updated course with the new unit.
+ */
+async function createUnit(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId } = req.params;
+    const userId = req.user!.id;
+    const unitData = req.body;
 
-export { findAll, findOne, add, update, remove, findMyCourses,findAllWithPagination };
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const updatedCourse = await courseService.createUnit(
+      courseId,
+      unitData,
+      professorId
+    );
+    return HttpResponse.Created(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    if (error.message.includes('already exists')) {
+      return HttpResponse.BadRequest(res, error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handles updating a specific unit in a course.
+ * @param {Request} req The Express request object, with unit data in the body.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The updated course.
+ */
+async function updateUnit(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId, unitNumber } = req.params;
+    const userId = req.user!.id;
+    const updateData = req.body;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const updatedCourse = await courseService.updateUnit(
+      courseId,
+      parseInt(unitNumber),
+      updateData,
+      professorId
+    );
+    return HttpResponse.Ok(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    if (
+      error.message.includes('not found') ||
+      error.message.includes('already exists')
+    ) {
+      return HttpResponse.BadRequest(res, error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handles deleting a specific unit from a course.
+ * @param {Request} req The Express request object.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The updated course without the deleted unit.
+ */
+async function deleteUnit(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId, unitNumber } = req.params;
+    const userId = req.user!.id;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const updatedCourse = await courseService.deleteUnit(
+      courseId,
+      parseInt(unitNumber),
+      professorId
+    );
+    return HttpResponse.Ok(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    if (error.message.includes('not found')) {
+      return HttpResponse.NotFound(res, error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handles reordering units within a course.
+ * @param {Request} req The Express request object, with reorder data in the body.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The course with reordered units.
+ */
+async function reorderUnits(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId } = req.params;
+    const userId = req.user!.id;
+    const reorderData = req.body;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const updatedCourse = await courseService.reorderUnits(
+      courseId,
+      reorderData,
+      professorId
+    );
+    return HttpResponse.Ok(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handles uploading a material to a specific unit.
+ * @param {Request} req The Express request object, with material data.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The updated course.
+ */
+async function uploadMaterial(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId, unitNumber } = req.params;
+    const userId = req.user!.id;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    // Handle uploaded file
+    const files = req.files as Express.Multer.File[];
+    if (!files || files.length === 0) {
+      return HttpResponse.BadRequest(res, 'No file uploaded');
+    }
+
+    const file = files[0];
+    const materialData = {
+      title: req.body.title || file.originalname,
+      url: file.path,
+    };
+
+    const updatedCourse = await courseService.addMaterial(
+      courseId,
+      parseInt(unitNumber),
+      materialData,
+      professorId
+    );
+    return HttpResponse.Created(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    if (error.message.includes('not found')) {
+      return HttpResponse.NotFound(res, error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handles deleting a material from a specific unit.
+ * @param {Request} req The Express request object.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The updated course.
+ */
+async function deleteMaterial(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId, unitNumber, materialIndex } = req.params;
+    const userId = req.user!.id;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const updatedCourse = await courseService.removeMaterial(
+      courseId,
+      parseInt(unitNumber),
+      parseInt(materialIndex),
+      professorId
+    );
+    return HttpResponse.Ok(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    if (
+      error.message.includes('not found') ||
+      error.message.includes('out of bounds')
+    ) {
+      return HttpResponse.BadRequest(res, error.message);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handles quick save operations.
+ * @param {Request} req The Express request object, with quick save data in the body.
+ * @param {Response} res The Express response object.
+ * @returns {Promise<Response>} The updated course.
+ */
+async function quickSave(req: Request, res: Response) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const { courseId } = req.params;
+    const userId = req.user!.id;
+    const quickSaveData = req.body;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const updatedCourse = await courseService.quickSave(
+      courseId,
+      quickSaveData,
+      professorId
+    );
+    return HttpResponse.Ok(res, updatedCourse);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Course not found or access denied.');
+    }
+    throw error;
+  }
+}
+
+export {
+  findAll,
+  findOne,
+  add,
+  update,
+  remove,
+  findMyCourses,
+  findAllWithPagination,
+  createUnit,
+  updateUnit,
+  deleteUnit,
+  reorderUnits,
+  uploadMaterial,
+  deleteMaterial,
+  quickSave,
+};
