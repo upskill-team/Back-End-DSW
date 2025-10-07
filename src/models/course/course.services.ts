@@ -328,6 +328,7 @@ export class CourseService {
 
   /**
    * Creates a new unit in an existing course.
+   * Automatically assigns the next available unitNumber.
    * @param {string} courseId - The ID of the course.
    * @param {CreateUnitType} unitData - The validated data for the new unit.
    * @param {string} professorId - The ID of the professor (for access control).
@@ -345,17 +346,17 @@ export class CourseService {
       professor: new ObjectId(professorId),
     });
 
-    // Check if unit number already exists
-    const existingUnit = course.units.find(
-      (u) => u.unitNumber === unitData.unitNumber
-    );
-    if (existingUnit) {
-      throw new Error(`Unit number ${unitData.unitNumber} already exists`);
-    }
+    // Calculate the next available unitNumber automatically
+    // Find the highest unitNumber and add 1, or start with 1 if no units exist
+    const maxUnitNumber =
+      course.units.length > 0
+        ? Math.max(...course.units.map((u) => u.unitNumber))
+        : 0;
+    const nextUnitNumber = maxUnitNumber + 1;
 
-    // Create new unit
+    // Create new unit with auto-assigned unitNumber
     const newUnit = {
-      unitNumber: unitData.unitNumber,
+      unitNumber: nextUnitNumber,
       name: unitData.name,
       detail: unitData.detail,
       materials: unitData.materials || [],
@@ -366,8 +367,8 @@ export class CourseService {
     await this.em.persistAndFlush(course);
 
     this.logger.info(
-      { courseId, unitNumber: unitData.unitNumber },
-      'Unit created successfully'
+      { courseId, unitNumber: nextUnitNumber },
+      'Unit created successfully with auto-assigned unitNumber'
     );
     return course;
   }
@@ -462,6 +463,7 @@ export class CourseService {
 
   /**
    * Reorders units within a course.
+   * Frontend sends: { units: [{ unitNumber: 3, newOrder: 1 }, { unitNumber: 1, newOrder: 2 }, ...] }
    * @param {string} courseId - The ID of the course.
    * @param {ReorderUnitsType} reorderData - The reordering instructions.
    * @param {string} professorId - The ID of the professor (for access control).
@@ -479,17 +481,29 @@ export class CourseService {
       professor: new ObjectId(professorId),
     });
 
-    // Apply reordering
-    for (const reorder of reorderData.unitOrders) {
+    // Validate that all unitNumbers exist in the course
+    for (const reorderItem of reorderData.units) {
       const unit = course.units.find(
-        (u) => u.unitNumber === reorder.currentUnitNumber
+        (u) => u.unitNumber === reorderItem.unitNumber
       );
-      if (unit) {
-        unit.unitNumber = reorder.newUnitNumber;
+      if (!unit) {
+        throw new Error(
+          `Unit ${reorderItem.unitNumber} not found in course ${courseId}`
+        );
       }
     }
 
-    // Sort units by new unit numbers
+    // Apply reordering - update each unit with its new unitNumber based on newOrder
+    for (const reorderItem of reorderData.units) {
+      const unit = course.units.find(
+        (u) => u.unitNumber === reorderItem.unitNumber
+      );
+      if (unit) {
+        unit.unitNumber = reorderItem.newOrder;
+      }
+    }
+
+    // Sort units by new unit numbers to maintain order
     course.units.sort((a, b) => a.unitNumber - b.unitNumber);
 
     await this.em.persistAndFlush(course);

@@ -119,9 +119,9 @@ export const UpdateCourseSchema = v.partial(CreateCourseSchema);
 
 /**
  * Schema for creating a single unit within a course.
+ * unitNumber is optional as it will be auto-assigned by the backend.
  */
 export const CreateUnitSchema = v.object({
-  unitNumber: v.pipe(v.number(), v.integer('Unit number must be an integer.')),
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
   materials: v.optional(v.array(MaterialSchema), []),
@@ -134,12 +134,13 @@ export const UpdateUnitSchema = v.partial(CreateUnitSchema);
 
 /**
  * Schema for reordering units within a course.
+ * Expected format from frontend: { units: [{ unitNumber: 3, newOrder: 1 }, ...] }
  */
 export const ReorderUnitsSchema = v.object({
-  unitOrders: v.array(
+  units: v.array(
     v.object({
-      currentUnitNumber: v.pipe(v.number(), v.integer()),
-      newUnitNumber: v.pipe(v.number(), v.integer()),
+      unitNumber: v.pipe(v.number(), v.integer(), v.minValue(1)),
+      newOrder: v.pipe(v.number(), v.integer(), v.minValue(1)),
     })
   ),
 });
