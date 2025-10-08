@@ -3,9 +3,9 @@
  * @remarks Defines validation schemas for the Course module and its embeddable components.
  */
 
-import * as v from 'valibot'
-import { status } from './course.entity.js'
-import { QuestionType } from '../question/question.entity.js'
+import * as v from 'valibot';
+import { status } from './course.entity.js';
+import { QuestionType } from '../question/question.entity.js';
 
 const QuestionUpdateSchema = v.object({
   questionText: v.pipe(v.string(), v.minLength(1)),
@@ -14,7 +14,7 @@ const QuestionUpdateSchema = v.object({
     options: v.pipe(v.array(v.string()), v.minLength(2)),
     correctAnswer: v.union([v.number(), v.string()]),
   }),
-})
+});
 
 /**
  * Schema for a single learning material resource within a course unit.
@@ -32,7 +32,7 @@ const UnitSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
   materials: v.optional(v.array(MaterialSchema), []),
-  questions: v.optional(v.array(QuestionUpdateSchema), []) 
+  questions: v.optional(v.array(QuestionUpdateSchema), []),
 });
 
 /**
@@ -61,12 +61,9 @@ export const CreateCourseSchema = v.object({
   units: v.optional(v.array(UnitSchema)),
 
   status: v.optional(
-    v.picklist(
-      Object.values(status),
-      'The provided status is not valid.'
-    )
+    v.picklist(Object.values(status), 'The provided status is not valid.')
   ),
-})
+});
 
 // --- ESQUEMA PARA BÚSQUEDA (AÑADIR ESTA SECCIÓN) ---
 
@@ -81,9 +78,9 @@ const NumericString = v.pipe(
 // Helper: Valida un string "true" o "false" y lo transforma a un booleano.
 // Perfecto para filtros como `isFree`.
 const BooleanString = v.pipe(
-    v.string('El valor debe ser un string.'),
-    v.regex(/^(true|false)$/, 'El valor debe ser "true" o "false".'),
-    v.transform(val => val === 'true')
+  v.string('El valor debe ser un string.'),
+  v.regex(/^(true|false)$/, 'El valor debe ser "true" o "false".'),
+  v.transform((val) => val === 'true')
 );
 
 /**
@@ -96,7 +93,7 @@ export const SearchCoursesSchema = v.object({
   isFree: v.optional(BooleanString),
   professorId: v.optional(NumericString),
   courseTypeId: v.optional(NumericString),
-  
+
   q: v.optional(v.string()),
 
   // --- Paginación ---
@@ -115,15 +112,63 @@ export const SearchCoursesSchema = v.object({
   ),
 });
 
-
-
-
 /**
  * Schema for updating an existing course, making all fields optional.
  */
 export const UpdateCourseSchema = v.partial(CreateCourseSchema);
 
+/**
+ * Schema for creating a single unit within a course.
+ * unitNumber is optional as it will be auto-assigned by the backend.
+ */
+export const CreateUnitSchema = v.object({
+  name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
+  detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
+  materials: v.optional(v.array(MaterialSchema), []),
+});
+
+/**
+ * Schema for updating a single unit within a course.
+ */
+export const UpdateUnitSchema = v.partial(CreateUnitSchema);
+
+/**
+ * Schema for reordering units within a course.
+ * Expected format from frontend: { units: [{ unitNumber: 3, newOrder: 1 }, ...] }
+ */
+export const ReorderUnitsSchema = v.object({
+  units: v.array(
+    v.object({
+      unitNumber: v.pipe(v.number(), v.integer(), v.minValue(1)),
+      newOrder: v.pipe(v.number(), v.integer(), v.minValue(1)),
+    })
+  ),
+});
+
+/**
+ * Schema for creating a single material within a unit.
+ */
+export const CreateMaterialSchema = MaterialSchema;
+
+/**
+ * Schema for quick save operations without full validation.
+ */
+export const QuickSaveSchema = v.object({
+  type: v.picklist([
+    'course-config',
+    'unit-content',
+    'unit-materials',
+    'unit-questions',
+  ]),
+  data: v.any(), // Validation will be specific per type
+});
+
 // Infer TypeScript types from the schemas for strong typing.
 export type SearchCoursesQuery = v.InferOutput<typeof SearchCoursesSchema>;
 export type CreateCourseType = v.InferOutput<typeof CreateCourseSchema>;
 export type UpdateCourseType = v.InferOutput<typeof UpdateCourseSchema>;
+export type CreateUnitType = v.InferOutput<typeof CreateUnitSchema>;
+export type UpdateUnitType = v.InferOutput<typeof UpdateUnitSchema>;
+export type ReorderUnitsType = v.InferOutput<typeof ReorderUnitsSchema>;
+export type CreateMaterialType = v.InferOutput<typeof CreateMaterialSchema>;
+export type QuickSaveType = v.InferOutput<typeof QuickSaveSchema>;

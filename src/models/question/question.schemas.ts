@@ -33,6 +33,13 @@ export const CreateQuestionSchema = v.object({
     'Invalid question type.'
   ),
   payload: QuestionPayloadSchema,
+  unitNumber: v.optional(
+    v.pipe(
+      v.number(),
+      v.integer('Unit number must be an integer.'),
+      v.minValue(1, 'Unit number must be positive.')
+    )
+  ),
 });
 
 /**

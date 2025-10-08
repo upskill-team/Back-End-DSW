@@ -28,15 +28,12 @@ export abstract class BaseEntity {
   id?: string;
 
   /*
-
-  @Property({ type: DateTimeType })
-  createdAt? = new Date()
-
-  @Property({
-    type: DateTimeType,
-    onUpdate: () => new Date(),
-  })
-  updatedAt? = new Date()
-
-  */
+   * TODO: Uncomment these fields after migrating all entity creation calls
+   *
+   * @Property({ type: 'date' })
+   * createdAt: Date = new Date();
+   *
+   * @Property({ type: 'date', onUpdate: () => new Date() })
+   * updatedAt: Date = new Date();
+   */
 }
