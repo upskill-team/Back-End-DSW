@@ -71,4 +71,12 @@ export class Question extends BaseEntity {
    */
   @ManyToOne(() => Course, { nullable: false })
   course!: Course;
+
+  /**
+   * Optional unit number within the course. If specified, this question belongs to a specific unit.
+   * If null, the question belongs to the course's general question bank.
+   * @type {number | null}
+   */
+  @Property({ nullable: true })
+  unitNumber?: number;
 }
