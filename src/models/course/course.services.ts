@@ -130,7 +130,7 @@ export class CourseService {
       Course,
       { _id: objectId },
       {
-        populate: ["courseType", "professor"],
+        populate: ["courseType", "professor.user"],
       }
     );
   }
