@@ -14,6 +14,7 @@ import { professorRouter } from './models/professor/professor.routes.js'
 import { courseRouter } from './models/course/course.routes.js'
 import { materialRouter } from './models/course/embeddables/material.routes.js'
 import { appealRouter } from './models/appeal/appeal.routes.js'
+import { joinRequestRouter } from './models/joinRequest/joinRequest.routes.js'
 import { authRouter } from './auth/auth.routes.js'
 import { userRouter } from './models/user/user.routes.js'
 import { orm } from './shared/db/orm.js'
@@ -159,6 +160,7 @@ async function startApp() {
   app.use('/api/courses', apiLimiter, courseRouter)
   app.use('/api/materials', apiLimiter, materialRouter)
   app.use('/api/appeals', apiLimiter, appealRouter)
+  app.use('/api/join-requests', apiLimiter, joinRequestRouter)
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {

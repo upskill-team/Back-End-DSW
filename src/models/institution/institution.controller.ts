@@ -1,18 +1,27 @@
 /**
  * @module Models/Institution/Controller
  * @remarks Handles the HTTP request/response logic for the institution module.
- * It uses the InstitutionService to perform business logic and responds with standardized HTTP responses.
- * @see {@link InstitutionService}
  */
 import { NextFunction, Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'
 import { InstitutionService } from './institution.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
+import { getProfessorFromUserId } from '../../shared/utils/professor.helper.js'
 
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
     const service = new InstitutionService(orm.em.fork(), req.log)
     const institutions = await service.findAll()
+    return HttpResponse.Ok(res, institutions)
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function findAllAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const service = new InstitutionService(orm.em.fork(), req.log)
+    const institutions = await service.findAllAdmin()
     return HttpResponse.Ok(res, institutions)
   } catch (error) {
     next(error)
@@ -30,13 +39,22 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-async function add(req: Request, res: Response, next: NextFunction) {
+async function createByProfessor(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new InstitutionService(orm.em.fork(), req.log)
-    const newInstitution = await service.create(req.body)
-    return HttpResponse.Created(res, newInstitution)
-  } catch (error) {
-    next(error)
+    const em = orm.em.fork();
+    const institutionService = new InstitutionService(em, req.log);
+    const userId = req.user?.id;
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, { message: 'Debes estar autenticado.' });
+    }
+    const professor = await getProfessorFromUserId(em, userId);
+    const newInstitution = await institutionService.createByProfessor(professor.id!, req.body);
+    return HttpResponse.Created(res, newInstitution);
+  } catch (error: any) {
+    if (error.message.startsWith('Ya existe una institución')) {
+      return HttpResponse.BadRequest(res, error.message);
+    }
+    next(error);
   }
 }
 
@@ -62,4 +80,128 @@ async function remove(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export { findAll, findOne, add, remove, update }
+async function removeProfessor(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const em = orm.em.fork()
+    const institutionService = new InstitutionService(em, req.log)
+    
+    const { id, professorId } = req.params
+    const userId = req.user?.id
+
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, {
+        message: 'Debes estar autenticado.',
+      })
+    }
+
+    // Get the requester's professor profile using the helper
+    const requester = await getProfessorFromUserId(em, userId)
+    const requesterId = requester.id!
+
+    await institutionService.removeProfessor(id, professorId, requesterId)
+    return HttpResponse.Ok(res, {
+      message: 'Profesor removido de la institución exitosamente.',
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function getManagedInstitution(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const em = orm.em.fork()
+    const institutionService = new InstitutionService(em, req.log)
+    
+    const userId = req.user?.id
+
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, {
+        message: 'Debes estar autenticado.',
+      })
+    }
+
+    // Get the professor profile using the helper
+    const professor = await getProfessorFromUserId(em, userId)
+    const professorId = professor.id!
+
+    const institution = await institutionService.getManagedInstitution(
+      professorId
+    )
+    return HttpResponse.Ok(res, institution)
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function leaveInstitution(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const em = orm.em.fork()
+    const institutionService = new InstitutionService(em, req.log)
+    
+    const userId = req.user?.id
+
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, {
+        message: 'Debes estar autenticado.',
+      })
+    }
+
+    // Get the professor profile using the helper
+    const professor = await getProfessorFromUserId(em, userId)
+    const professorId = professor.id!
+
+    const { institutionId } = req.params
+
+    await institutionService.removeProfessor(
+      institutionId,
+      professorId,
+      professorId
+    )
+    return HttpResponse.Ok(res, {
+      message: 'Has abandonado la institución exitosamente.',
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+async function updateManagedInstitution(req: Request, res: Response, next: NextFunction) {
+  try {
+    const em = orm.em.fork();
+    const institutionService = new InstitutionService(em, req.log);
+    const userId = req.user?.id;
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, { message: 'Debes estar autenticado.' });
+    }
+    const professor = await getProfessorFromUserId(em, userId);
+    const updatedInstitution = await institutionService.updateManagedInstitution(professor.id!, req.body);
+    return HttpResponse.Ok(res, updatedInstitution);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export {
+  findAll,
+  findAllAdmin,
+  findOne,
+  createByProfessor,
+  update,
+  remove,
+  removeProfessor,
+  getManagedInstitution,
+  leaveInstitution,
+  updateManagedInstitution,
+}
