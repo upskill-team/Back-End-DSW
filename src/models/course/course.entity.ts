@@ -12,12 +12,14 @@ import {
   Collection,
   Embedded,
   Enum,
+  OneToMany,
 } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { CourseType } from '../courseType/courseType.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { Unit } from './embeddables/unit.entity.js';
 import { Student } from '../student/student.entity.js';
+import { Enrollement } from '../Enrollement/enrollement.entity.js';
 
 /**
  * Defines the possible lifecycle states of a course.
@@ -102,6 +104,13 @@ export class Course extends BaseEntity {
    */
   @ManyToOne(() => Professor)
   professor!: Rel<Professor>;
+
+  /**
+   * A collection of enrollements associated with this course.
+   * @type {Collection<Rel<Enrollement>>}
+   */
+  @OneToMany(() => Enrollement, (enrollement) => enrollement.course)
+  enrollements = new Collection<Rel<Enrollement>>(this);
 
   /**
    * A collection of students enrolled in the course.
