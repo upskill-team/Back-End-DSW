@@ -5,28 +5,29 @@
  * It serves as the central hub for assembling all parts of the application.
  */
 
-import './shared/config/env.validator.js'
-import express, { Response } from 'express'
-import { courseTypeRouter } from './models/courseType/courseType.routes.js'
-import { institutionRouter } from './models/institution/institution.routes.js'
-import { studentRouter } from './models/student/student.routes.js'
-import { professorRouter } from './models/professor/professor.routes.js'
-import { courseRouter } from './models/course/course.routes.js'
-import { materialRouter } from './models/course/embeddables/material.routes.js'
-import { appealRouter } from './models/appeal/appeal.routes.js'
-import { authRouter } from './auth/auth.routes.js'
-import { userRouter } from './models/user/user.routes.js'
-import { orm } from './shared/db/orm.js'
-import { RequestContext } from '@mikro-orm/core'
-import cors from 'cors'
-import { errorHandler } from './shared/middlewares/error.middleware.js'
-import helmet from 'helmet'
-import rateLimit from 'express-rate-limit'
-import swaggerUi from 'swagger-ui-express'
-import { logger } from './shared/utils/logger.js'
-import pinoHttp from 'pino-http'
-import { randomUUID } from 'crypto'
-import { swaggerSpec } from './docs/swagger.config.js'
+import './shared/config/env.validator.js';
+import express, { Response } from 'express';
+import { courseTypeRouter } from './models/courseType/courseType.routes.js';
+import { institutionRouter } from './models/institution/institution.routes.js';
+import { studentRouter } from './models/student/student.routes.js';
+import { professorRouter } from './models/professor/professor.routes.js';
+import { courseRouter } from './models/course/course.routes.js';
+import { materialRouter } from './models/course/embeddables/material.routes.js';
+import { appealRouter } from './models/appeal/appeal.routes.js';
+import { authRouter } from './auth/auth.routes.js';
+import { userRouter } from './models/user/user.routes.js';
+import { assessmentRouter } from './models/assessment/assessment.routes.js';
+import { orm } from './shared/db/orm.js';
+import { RequestContext } from '@mikro-orm/core';
+import cors from 'cors';
+import { errorHandler } from './shared/middlewares/error.middleware.js';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
+import { logger } from './shared/utils/logger.js';
+import pinoHttp from 'pino-http';
+import { randomUUID } from 'crypto';
+import { swaggerSpec } from './docs/swagger.config.js';
 
 const app = express();
 
@@ -85,11 +86,13 @@ app.use(
 app.use(helmet());
 
 // Configure CORS
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Middlewares for parsing request bodies
 app.use(express.json());
@@ -150,15 +153,16 @@ async function startApp() {
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // Register API routes with their respective rate limiters
-  app.use('/api/auth', authLimiter, authRouter)
-  app.use('/api/users', apiLimiter, userRouter)
-  app.use('/api/courseTypes', apiLimiter, courseTypeRouter)
-  app.use('/api/institutions', apiLimiter, institutionRouter)
-  app.use('/api/students', apiLimiter, studentRouter)
-  app.use('/api/professors', apiLimiter, professorRouter)
-  app.use('/api/courses', apiLimiter, courseRouter)
-  app.use('/api/materials', apiLimiter, materialRouter)
-  app.use('/api/appeals', apiLimiter, appealRouter)
+  app.use('/api/auth', authLimiter, authRouter);
+  app.use('/api/users', apiLimiter, userRouter);
+  app.use('/api/courseTypes', apiLimiter, courseTypeRouter);
+  app.use('/api/institutions', apiLimiter, institutionRouter);
+  app.use('/api/students', apiLimiter, studentRouter);
+  app.use('/api/professors', apiLimiter, professorRouter);
+  app.use('/api/courses', apiLimiter, courseRouter);
+  app.use('/api/materials', apiLimiter, materialRouter);
+  app.use('/api/appeals', apiLimiter, appealRouter);
+  app.use('/api/assessments', apiLimiter, assessmentRouter);
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {
