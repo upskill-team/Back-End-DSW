@@ -39,22 +39,37 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-async function createByProfessor(req: Request, res: Response, next: NextFunction) {
+async function createByProfessor(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
   try {
-    const em = orm.em.fork();
-    const institutionService = new InstitutionService(em, req.log);
-    const userId = req.user?.id;
+    const em = orm.em.fork()
+    const institutionService = new InstitutionService(em, req.log)
+    
+    const userId = req.user?.id
+
     if (!userId) {
-      return HttpResponse.Unauthorized(res, { message: 'Debes estar autenticado.' });
+      return HttpResponse.Unauthorized(res, {
+        message: 'Debes estar autenticado.',
+      })
     }
-    const professor = await getProfessorFromUserId(em, userId);
-    const newInstitution = await institutionService.createByProfessor(professor.id!, req.body);
-    return HttpResponse.Created(res, newInstitution);
-  } catch (error: any) {
-    if (error.message.startsWith('Ya existe una institución')) {
-      return HttpResponse.BadRequest(res, error.message);
-    }
-    next(error);
+
+    // Use the helper to get the professor
+    // The helper throws if professor doesn't exist
+    const professor = await getProfessorFromUserId(em, userId)
+    
+    // After fetching from DB, id is always defined, we use non-null assertion
+    const professorId = professor.id!
+
+    const newInstitution = await institutionService.createByProfessor(
+      professorId,
+      req.body
+    )
+    return HttpResponse.Created(res, newInstitution)
+  } catch (error) {
+    next(error)
   }
 }
 
