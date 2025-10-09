@@ -8,6 +8,8 @@ import {
   Property,
   Cascade,
   Collection,
+  OneToOne,
+  Rel,
 } from '@mikro-orm/core'
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js'
 import { Professor } from '../professor/professor.entity.js'
@@ -32,12 +34,35 @@ export class Institution extends BaseEntity {
   description!: string
 
   /**
+   * Normalized name for validation and preventing duplicates.
+   * This is automatically generated from the name field.
+   */
+  @Property({ nullable: false, unique: true })
+  normalizedName!: string
+
+  /**
+   * Alternative names or acronyms for the institution.
+   * Used to prevent duplicate entries with different naming conventions.
+   */
+  @Property({ type: 'array', nullable: true })
+  aliases?: string[]
+
+  /**
+   * The professor who is the manager/owner of this institution.
+   * This is a one-to-one relationship since a professor can only manage one institution
+   * and an institution can only have one manager.
+   */
+  @OneToOne(() => Professor, (professor) => professor.managedInstitution, {
+    nullable: false,
+    owner: true,
+  })
+  manager!: Rel<Professor>
+
+  /**
    * A collection of all professors associated with this institution.
-   * This is a one-to-many relationship, managed by the `institution` property on the Professor entity.
-   * Cascade.ALL ensures that operations (like deletion) on an institution can propagate to its associated professors if needed.
    */
   @OneToMany(() => Professor, (professor) => professor.institution, {
-    cascade: [Cascade.ALL],
+    cascade: [Cascade.PERSIST],
   })
   professors = new Collection<Professor>(this)
 }
