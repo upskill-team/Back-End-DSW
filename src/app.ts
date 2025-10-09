@@ -4,7 +4,6 @@
  * including middleware setup, route registration, MikroORM integration, and error handling.
  * It serves as the central hub for assembling all parts of the application.
  */
-
 import './shared/config/env.validator.js'
 import express, { Response } from 'express'
 import { courseTypeRouter } from './models/courseType/courseType.routes.js'
@@ -17,6 +16,7 @@ import { appealRouter } from './models/appeal/appeal.routes.js'
 import { joinRequestRouter } from './models/joinRequest/joinRequest.routes.js'
 import { authRouter } from './auth/auth.routes.js'
 import { userRouter } from './models/user/user.routes.js'
+import { assessmentRouter } from './models/assessment/assessment.routes.js';
 import { orm } from './shared/db/orm.js'
 import { RequestContext } from '@mikro-orm/core'
 import cors from 'cors'
@@ -86,11 +86,13 @@ app.use(
 app.use(helmet());
 
 // Configure CORS
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+app.use(
+  cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Middlewares for parsing request bodies
 app.use(express.json());
@@ -161,6 +163,7 @@ async function startApp() {
   app.use('/api/materials', apiLimiter, materialRouter)
   app.use('/api/appeals', apiLimiter, appealRouter)
   app.use('/api/join-requests', apiLimiter, joinRequestRouter)
+  app.use('/api/assessments', apiLimiter, assessmentRouter);
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {

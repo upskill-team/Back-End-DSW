@@ -80,6 +80,12 @@ courseRouter.get(
   questionController.findByCourse
 );
 
+courseRouter.get(
+  '/:courseId/questions/general',
+  professorOnly,
+  questionController.findGeneralQuestions
+);
+
 courseRouter.post(
   '/:courseId/questions',
   professorOnly,
