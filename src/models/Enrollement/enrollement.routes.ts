@@ -26,6 +26,9 @@ enrollementRouter.post('/', validationMiddleware(CreateEnrollementSchema), enrol
 // Get by id
 enrollementRouter.get('/:id', enrolController.getEnrollementById);
 
+// Get by id
+enrollementRouter.get('/student/:studentId/course/:courseId', enrolController.getEnrollmentByStudentAndCourse);
+
 // Get by student
 enrollementRouter.get('/student/:studentId', enrolController.getEnrollementsByStudent);
 

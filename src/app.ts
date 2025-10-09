@@ -27,6 +27,7 @@ import { logger } from './shared/utils/logger.js'
 import pinoHttp from 'pino-http'
 import { randomUUID } from 'crypto'
 import { swaggerSpec } from './docs/swagger.config.js'
+import { enrollementRouter } from './models/Enrollement/enrollement.routes.js'
 
 const app = express();
 
@@ -159,6 +160,7 @@ async function startApp() {
   app.use('/api/courses', apiLimiter, courseRouter)
   app.use('/api/materials', apiLimiter, materialRouter)
   app.use('/api/appeals', apiLimiter, appealRouter)
+  app.use('/api/enrollments', apiLimiter, enrollementRouter)
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {

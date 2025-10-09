@@ -33,10 +33,6 @@ const DateLike = v.pipe(
 export const CreateEnrollementSchema = v.object({
   studentId: v.pipe(v.string(), v.minLength(1, 'studentId es requerido.')),
   courseId: v.pipe(v.string(), v.minLength(1, 'courseId es requerido.')),
-  state: v.optional(v.picklist(EnrollmentStates, 'Estado inválido.')),
-  grade: v.optional(PercentOrNumber),
-  progress: v.optional(PercentOrNumber),
-  enrolledAt: v.optional(DateLike),
 });
 
 /**
