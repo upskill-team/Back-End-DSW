@@ -3,7 +3,7 @@
  * @remarks Defines the database schema for the Enrollement entity.
  */
 
-import { Entity, Property, ManyToOne, Enum, Rel } from "@mikro-orm/core";
+import { Entity, Property, ManyToOne, Enum, Rel, Unique } from "@mikro-orm/core";
 import { BaseEntity } from "../../shared/db/baseEntity.entity.js";
 import { Course } from "../course/course.entity.js";
 import { Student } from "../student/student.entity.js";
@@ -24,6 +24,7 @@ export enum EnrollmentState {
  * @extends BaseEntity
  */
 @Entity()
+@Unique({ properties: ['student', 'course'] })
 export class Enrollement extends BaseEntity {
   /**
    * Course linked to the enrollement.

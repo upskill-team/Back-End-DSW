@@ -8,10 +8,12 @@ import { EntityManager } from '@mikro-orm/core';
 import EnrollementService from './enrollement.service.js';
 import { EnrollmentState } from './enrollement.entity.js';
 
-function getEmFromReq(req: Request): EntityManager {
-  // try common locations used in projects: (req as any).em, app.locals.em, app.get('em')
-  // adjust if your application exposes the EntityManager elsewhere
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Default extractor for EntityManager from request/app.
+ * Tests can replace this with setGetEmFromReq.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let getEmFromReq: (req: Request) => EntityManager = (req: Request) => {
   const anyReq = req as any;
   return (
     anyReq.em ||
@@ -22,6 +24,14 @@ function getEmFromReq(req: Request): EntityManager {
       throw new Error('EntityManager not found on request/app. Adjust getEmFromReq.');
     })()
   );
+};
+
+/**
+ * Replace the function used to obtain the EntityManager.
+ * Useful in tests to inject a mock EntityManager.
+ */
+export function setGetEmFromReq(fn: (req: Request) => EntityManager) {
+  getEmFromReq = fn;
 }
 
 export async function createEnrollement(req: Request, res: Response) {
@@ -35,7 +45,6 @@ export async function createEnrollement(req: Request, res: Response) {
       return res.status(400).json({ message: 'studentId and courseId are required' });
     }
 
-    // optional: validate state
     if (state && !['enrolled', 'completed', 'dropped'].includes(state)) {
       return res.status(400).json({ message: 'invalid state' });
     }
