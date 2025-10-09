@@ -299,26 +299,29 @@ export class CourseService {
   async searchCourses(
     query: SearchCoursesQuery
   ): Promise<{ courses: Course[]; total: number }> {
+    this.logger.info({ query }, 'Searching courses with filters.');
+
     const where: FilterQuery<Course> = {};
+
+    if (query.q) {
+      where.name = new RegExp(query.q, 'i')
+    }
+    
+    if (query.courseTypeId) {
+      where.courseType = new ObjectId(query.courseTypeId);
+    }
+    
+    if (query.isFree !== undefined) {
+      where.isFree = query.isFree;
+    }
 
     if (query.status) {
       where.status = query.status;
     }
 
-    if (query.isFree !== undefined) {
-      where.isFree = query.isFree;
-    }
-
-    if (query.q) {
-      // Búsqueda de texto libre (case-insensitive) en nombre y descripción
-      const searchQuery = { $ilike: `%${query.q}%` };
-      where.$or = [{ name: searchQuery }, { description: searchQuery }];
-    }
-
-    // Usamos findAndCount para obtener resultados paginados y el total en una sola query
     const [courses, total] = await this.em.findAndCount(Course, where, {
-      populate: ['professor', 'courseType'], // Precarga relaciones para evitar N+1 queries
-      orderBy: { [query.sortBy]: query.sortOrder },
+      populate: ['courseType', 'professor.user'],
+      orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
       limit: query.limit,
       offset: query.offset,
     });
