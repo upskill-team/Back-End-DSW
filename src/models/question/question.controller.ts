@@ -282,6 +282,42 @@ async function addToUnit(req: Request, res: Response) {
 }
 
 /**
+ * Handles the retrieval of general questions for a course (not assigned to any unit).
+ * These are questions created for assessments or general course use.
+ * @param {Request} req - The Express request object, containing the courseId in params.
+ * @param {Response} res - The Express response object.
+ * @returns {Promise<Response>} A list of general questions for the course.
+ */
+async function findGeneralQuestions(req: Request, res: Response) {
+  try {
+    const questionService = new QuestionService(orm.em.fork(), req.log);
+    const { courseId } = req.params;
+    const userId = req.user!.id;
+
+    // Get the professor ID from the user ID
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const questions = await questionService.findGeneralQuestions(
+      courseId,
+      professorId
+    );
+
+    return HttpResponse.Ok(res, questions);
+  } catch (error: any) {
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(
+        res,
+        'Access denied. User is not a professor.'
+      );
+    }
+    if (error.message.includes('User not found')) {
+      return HttpResponse.NotFound(res, 'User not found.');
+    }
+    throw error;
+  }
+}
+
+/**
  * Handles the retrieval of questions for a specific unit within a course.
  * @param {Request} req - The Express request object, containing the courseId and unitNumber in params.
  * @param {Response} res - The Express response object.
@@ -459,6 +495,7 @@ async function removeFromUnit(req: Request, res: Response) {
 export {
   add,
   findByCourse,
+  findGeneralQuestions,
   findMyQuestions,
   findOne,
   update,

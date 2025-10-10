@@ -51,7 +51,7 @@ export class ProfessorService {
 
   /**
    * Retrieves all professor profiles from the database.
-   * Populates related courses and institution data.
+   * Populates related courses, institution, and managed institution data.
    * @returns {Promise<Professor[]>} A promise resolving to an array of professors.
    */
   public async findAll(): Promise<Professor[]> {
@@ -60,7 +60,7 @@ export class ProfessorService {
     return this.em.find(
       Professor,
       {},
-      { populate: ['courses', 'institution'] }
+      { populate: ['courses', 'institution', 'managedInstitution'] }
     );
   }
 
@@ -77,12 +77,14 @@ export class ProfessorService {
     return this.em.findOneOrFail(
       Professor,
       { _id: objectId },
-      { populate: ['courses', 'institution'] }
+      { populate: ['courses', 'institution', 'managedInstitution'] }
     );
   }
 
   /**
    * Updates an existing professor's profile.
+   * Note: Institution membership cannot be updated here.
+   * Use Institution endpoints to join/leave institutions.
    * @param {string} id - The ID of the professor to update.
    * @param {UpdateProfessorType} data - The data to update.
    * @returns {Promise<Professor>} A promise resolving to the updated professor profile.
@@ -126,5 +128,31 @@ export class ProfessorService {
     await this.em.removeAndFlush(professor);
 
     this.logger.info({ professorId: id }, 'Professor deleted successfully.');
+  }
+
+  /**
+   * Gets the current professor's profile from the request user.
+   * This includes their institution and managed institution data.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<Professor | null>} The professor profile or null.
+   */
+  public async getByUserId(userId: string): Promise<Professor | null> {
+    this.logger.info({ userId }, 'Fetching professor by user ID.');
+
+    const userObjectId = new ObjectId(userId);
+    const user = await this.em.findOne(User, { _id: userObjectId });
+
+    if (!user || !user.professorProfile) {
+      this.logger.warn({ userId }, 'User not found or has no professor profile linked.');
+      return null;
+    }
+
+    const professorProfileId = new ObjectId(user.professorProfile.id);
+
+    return this.em.findOne(
+      Professor,
+      { _id: professorProfileId },
+      { populate: ['institution', 'managedInstitution', 'courses'] }
+    );
   }
 }

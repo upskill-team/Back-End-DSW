@@ -1,0 +1,88 @@
+###
+# ====================================================================
+# Join Requests API Test File
+# ====================================================================
+#
+# INSTRUCTIONS:
+# 1. You will need TWO different professor accounts for these tests.
+#    - Professor A: The one who WANTS TO JOIN. Must NOT be in any institution.
+#    - Professor B: The MANAGER of the institution.
+#
+# 2. Log in with both accounts via your API (e.g., using Postman or another .http file)
+#    to get their JWTs.
+#
+# 3. Get the ID of an existing institution from your database that is managed by Professor B.
+#
+# 4. Fill in the variables below with the correct values.
+#
+# ====================================================================
+
+# --- Variables ---
+@baseUrl = http://localhost:3000/api
+
+# Token for the professor who is NOT in an institution and wants to join.
+@token_professor_requester = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YjBiYWExZjM2MTZkODIyODc2MWU5ZCIsInJvbGUiOiJwcm9mZXNzb3IiLCJpYXQiOjE3NTk5NDc1MjMsImV4cCI6MTc2MDAzMzkyM30.y_zlQ-5rV6w1l2mTB9DaupcZCCoiTOQmID6alfWayis
+
+# Token for the professor who IS THE MANAGER of the institution.
+@token_manager = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YWU2YjIwNTZiOThjYjgwMDZmMDc2MyIsInJvbGUiOiJwcm9mZXNzb3IiLCJpYXQiOjE3NTk5NDc0NzgsImV4cCI6MTc2MDAzMzg3OH0.W3-k1TwY2tpykytaVluySuwDgD0DTNE4X04R3XC4DSs
+
+# The ID of the institution to join.
+@institutionId = 68e5c389fca32248bcbddf2a
+
+# This variable will be captured automatically from the "Create Request" response.
+@requestId = 
+
+###
+# ====================================================================
+# 1. A PROFESSOR CREATES A REQUEST TO JOIN
+# ====================================================================
+#
+# This gives a name to the request so we can reference its response later.
+# @name createRequest
+POST {{baseUrl}}/join-requests
+Content-Type: application/json
+Authorization: Bearer {{token_professor_requester}}
+
+{
+  "institutionId": "{{institutionId}}"
+}
+
+###
+# This is a special block JUST for capturing the variable from the PREVIOUS request.
+# It is NOT part of the request body. The '###' separator above is crucial.
+@requestId = {{createRequest.response.body.data.id}}
+
+
+###
+# ====================================================================
+# 2. THE MANAGER LISTS PENDING REQUESTS
+# ====================================================================
+GET {{baseUrl}}/join-requests/institution/{{institutionId}}/pending
+Content-Type: application/json
+Authorization: Bearer {{token_manager}}
+
+
+###
+# ====================================================================
+# 3. THE MANAGER ACCEPTS THE REQUEST
+# ====================================================================
+PATCH {{baseUrl}}/join-requests/{{requestId}}/process
+Content-Type: application/json
+Authorization: Bearer {{token_manager}}
+
+{
+  "action": "accept"
+}
+
+
+###
+# ====================================================================
+# 4. (ALTERNATIVE) THE MANAGER REJECTS THE REQUEST
+# ====================================================================
+PATCH {{baseUrl}}/join-requests/{{requestId}}/process
+Content-Type: application/json
+Authorization: Bearer {{token_manager}}
+
+{
+  "action": "reject"
+}

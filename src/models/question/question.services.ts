@@ -91,10 +91,13 @@ export class QuestionService {
   }
 
   /**
-   * Retrieves all questions for a specific course (general questions only, not unit-specific).
+   * Retrieves all questions for a specific course.
+   * This includes:
+   * - Questions assigned to specific units (with unitNumber)
+   * - General questions not assigned to any unit (unitNumber is null/undefined)
    * @param {string} courseId - The ID of the course.
    * @param {string} professorId - The ID of the professor (for access control).
-   * @returns {Promise<Question[]>} A promise that resolves to an array of questions.
+   * @returns {Promise<Question[]>} A promise that resolves to an array of all questions for the course.
    */
   async findByCourse(
     courseId: string,
@@ -102,7 +105,7 @@ export class QuestionService {
   ): Promise<Question[]> {
     this.logger.info(
       { courseId, professorId },
-      'Finding general questions by course'
+      'Finding all questions for course'
     );
 
     await this.em.findOneOrFail(Course, {
@@ -120,7 +123,7 @@ export class QuestionService {
 
     this.logger.info(
       { courseId, count: questions.length },
-      'General questions retrieved for course'
+      'All questions retrieved for course'
     );
     return questions;
   }
@@ -168,6 +171,43 @@ export class QuestionService {
     this.logger.info(
       { courseId, unitNumber, count: questions.length },
       'Unit questions retrieved successfully'
+    );
+    return questions;
+  }
+
+  /**
+   * Retrieves general questions for a course (not assigned to any specific unit).
+   * These are questions created for assessments or general course use.
+   * @param {string} courseId - The ID of the course.
+   * @param {string} professorId - The ID of the professor (for access control).
+   * @returns {Promise<Question[]>} A promise that resolves to an array of general questions.
+   */
+  async findGeneralQuestions(
+    courseId: string,
+    professorId: string
+  ): Promise<Question[]> {
+    this.logger.info(
+      { courseId, professorId },
+      'Finding general questions (no unit assigned)'
+    );
+
+    await this.em.findOneOrFail(Course, {
+      _id: new ObjectId(courseId),
+      professor: new ObjectId(professorId),
+    });
+
+    const questions = await this.em.find(
+      Question,
+      {
+        course: new ObjectId(courseId),
+        unitNumber: null,
+      },
+      { populate: ['course'] }
+    );
+
+    this.logger.info(
+      { courseId, count: questions.length },
+      'General questions retrieved successfully'
     );
     return questions;
   }
@@ -355,7 +395,11 @@ export class QuestionService {
     });
 
     // Remove question reference from unit if it exists
-    if (question.unitNumber !== null && question.unitNumber !== undefined && question._id) {
+    if (
+      question.unitNumber !== null &&
+      question.unitNumber !== undefined &&
+      question._id
+    ) {
       const unit = course.units.find(
         (u) => u.unitNumber === question.unitNumber
       );

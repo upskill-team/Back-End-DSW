@@ -5,7 +5,7 @@
  * @see {@link ProfessorController}
  */
 import { Router } from 'express'
-import { findAll, findOne, update, remove } from './professor.controller.js'
+import { findAll, findOne, getMe, update, remove } from './professor.controller.js'
 import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js'
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'
 import { UpdateProfessorSchema } from './professor.schema.js'
@@ -17,8 +17,10 @@ export const professorRouter = Router()
 professorRouter.use(authMiddleware)
 
 const adminOnly = roleAuthMiddleware([UserRole.ADMIN])
+const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR])
 
 professorRouter.get('/', findAll)
+professorRouter.get('/me', professorOnly, getMe)
 professorRouter.get('/:id', findOne)
 
 // The POST route for direct creation has been removed as it's architecturally incorrect.
