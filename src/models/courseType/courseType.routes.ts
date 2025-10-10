@@ -12,11 +12,12 @@ import { UserRole } from '../user/user.entity.js'
 
 export const courseTypeRouter = Router()
 
+courseTypeRouter.get('/', findAll)
+
 courseTypeRouter.use(authMiddleware)
 
 const adminOnly = roleAuthMiddleware([UserRole.ADMIN])
 
-courseTypeRouter.get('/', findAll)
 courseTypeRouter.get('/:id', findOne)
 courseTypeRouter.post('/', adminOnly,validationMiddleware(CreateCourseTypeSchema), add)
 courseTypeRouter.put('/:id', adminOnly, validationMiddleware(UpdateCourseTypeSchema), update)
