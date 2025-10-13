@@ -29,6 +29,31 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+async function getMe(req: Request, res: Response, next: NextFunction) {
+  try {
+    const service = new ProfessorService(orm.em.fork(), req.log)
+    const userId = req.user?.id
+
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, {
+        message: 'You are not authenticated.',
+      })
+    }
+
+    const professor = await service.getByUserId(userId)
+
+    if (!professor) {
+      return HttpResponse.NotFound(res, {
+        message: 'You dont have a teacher profile.',
+      })
+    }
+
+    return HttpResponse.Ok(res, professor)
+  } catch (error) {
+    next(error)
+  }
+}
+
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
     const service = new ProfessorService(orm.em.fork(), req.log)
@@ -51,4 +76,4 @@ async function remove(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export { findAll, findOne, update, remove }
+export { findAll, findOne, getMe, update, remove }

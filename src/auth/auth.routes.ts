@@ -11,8 +11,8 @@ import { ForgotPasswordSchema, ResetPasswordSchema } from './auth.schemas.js';
 
 export const authRouter = Router();
 
-authRouter.post('/register', register); // TODO: Add validation
-authRouter.post('/login', login);       // TODO: Add validation
+authRouter.post('/register', register);
+authRouter.post('/login', login);
 
 // Routes for password recovery with validation
 authRouter.post('/forgot-password', validationMiddleware(ForgotPasswordSchema), forgotPassword);

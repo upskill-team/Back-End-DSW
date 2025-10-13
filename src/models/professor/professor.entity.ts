@@ -19,6 +19,7 @@ import { User } from '../user/user.entity.js'
 /**
  * Represents a Professor's profile, which extends a base User entity.
  * This entity holds professor-specific information and relationships.
+ * A professor can only belong to ONE institution at a time.
  * @see {@link User}
  * @see {@link Institution}
  * @see {@link Course}
@@ -26,8 +27,7 @@ import { User } from '../user/user.entity.js'
 @Entity()
 export class Professor extends BaseEntity {
   /**
-   * A one-to-one relationship with the User entity. This is the core link
-   * that grants a user professor privileges and data.
+   * A one-to-one relationship with the User entity.
    */
   @OneToOne(() => User, (user) => user.professorProfile, { nullable: false })
   user!: Rel<User>
@@ -46,7 +46,20 @@ export class Professor extends BaseEntity {
 
   /**
    * The institution to which the professor is affiliated (optional).
+   * A professor can only belong to ONE institution.
    */
   @ManyToOne(() => Institution, { nullable: true })
   institution?: Rel<Institution>
+
+  /**
+   * The institution this professor manages (if any).
+   * This is a one-to-one relationship - a professor can only manage ONE institution,
+   * and that institution can only have ONE manager.
+   * If this field is set, it means this professor is the manager of that institution
+   * and also belongs to it (institution field should point to the same institution).
+   */
+  @OneToOne(() => Institution, (institution) => institution.manager, {
+    nullable: true,
+  })
+  managedInstitution?: Rel<Institution>
 }

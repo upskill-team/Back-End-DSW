@@ -32,6 +32,8 @@ import {
 
 export const courseRouter = Router();
 
+courseRouter.get('/', courseController.findAllWithPagination);
+
 courseRouter.use(authMiddleware);
 
 const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR]);
@@ -40,7 +42,6 @@ const professorOrAdmin = roleAuthMiddleware([
   UserRole.ADMIN,
 ]);
 
-courseRouter.get('/', courseController.findAllWithPagination);
 courseRouter.get('/my-courses', professorOnly, courseController.findMyCourses);
 courseRouter.get('/:id', courseController.findOne);
 
@@ -78,6 +79,12 @@ courseRouter.get(
   '/:courseId/questions',
   professorOnly,
   questionController.findByCourse
+);
+
+courseRouter.get(
+  '/:courseId/questions/general',
+  professorOnly,
+  questionController.findGeneralQuestions
 );
 
 courseRouter.post(
