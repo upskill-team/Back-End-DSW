@@ -10,7 +10,7 @@
     "build": "tsc -p ./tsconfig.json",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "audit": "pnpm audit",
+    "audit": "pnpm audit --audit-level=high",
     "test:node": "pnpm run lint && pnpm run type-check && pnpm run audit",
     "test:jest": "jest",
     "tdocs": "typedoc",
