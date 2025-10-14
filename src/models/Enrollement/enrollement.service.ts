@@ -3,6 +3,7 @@
  * @remarks Encapsulates the business logic for managing enrollements.
  */
 import { EntityManager } from '@mikro-orm/core';
+import { ObjectId } from '@mikro-orm/mongodb';
 import { Enrollement, EnrollmentState } from './enrollement.entity.js';
 import { Course } from '../course/course.entity.js';
 import { Logger } from 'pino';
@@ -148,6 +149,179 @@ export class EnrollementService {
     const enrol = await this.em.findOneOrFail(Enrollement, { _id: new ObjectId(id) }, { populate: ['student', 'course'] });
     enrol.student.courses.remove(enrol.course as Course);
     await this.em.removeAndFlush(enrol);
+  }
+
+  /**
+   * Marks a unit as completed for a specific enrollment.
+   * Updates the completedUnits array and recalculates progress automatically.
+   * @param enrollmentId The ID of the enrollment.
+   * @param unitNumber The unit number to mark as completed.
+   * @returns The updated enrollment.
+   */
+  async completeUnit(
+    enrollmentId: string,
+    unitNumber: number
+  ): Promise<Enrollement> {
+    this.logger.info(
+      { enrollmentId, unitNumber },
+      'EnrollementService.completeUnit - start'
+    );
+
+    try {
+      const result = await this.em.transactional(async (em) => {
+        // 1. Find the enrollment with the course to know the total units
+        const enrollment = await em.findOne(
+          Enrollement,
+          { _id: new ObjectId(enrollmentId) },
+          { populate: ['course', 'student'] }
+        );
+
+        if (!enrollment) {
+          this.logger.warn({ enrollmentId }, 'Enrollment not found');
+          throw new Error('Enrollment not found');
+        }
+
+        // 2. Validate that the unitNumber exists in the course
+        const course = enrollment.course as Course;
+        const unitExists = course.units.some(
+          (u) => u.unitNumber === unitNumber
+        );
+
+        if (!unitExists) {
+          this.logger.warn(
+            { enrollmentId, unitNumber },
+            'Invalid unit number for this course'
+          );
+          throw new Error(`Unit ${unitNumber} does not exist in this course`);
+        }
+
+        // 3. Add unitNumber to completedUnits if not already present (avoid duplicates)
+        if (!enrollment.completedUnits.includes(unitNumber)) {
+          enrollment.completedUnits.push(unitNumber);
+
+          // 4. Recalculate progress automatically
+          const totalUnits = course.units.length;
+          const completedCount = enrollment.completedUnits.length;
+          enrollment.progress =
+            totalUnits > 0
+              ? Math.round((completedCount / totalUnits) * 100)
+              : 0;
+
+          // 5. If progress reaches 100%, change state to COMPLETED (optional)
+          if (
+            enrollment.progress === 100 &&
+            enrollment.state === EnrollmentState.ENROLLED
+          ) {
+            enrollment.state = EnrollmentState.COMPLETED;
+            this.logger.info(
+              { enrollmentId },
+              'Course completed - state updated to COMPLETED'
+            );
+          }
+
+          await em.persistAndFlush(enrollment);
+          this.logger.info(
+            { enrollmentId, unitNumber, progress: enrollment.progress },
+            'Unit marked as completed'
+          );
+        } else {
+          this.logger.info(
+            { enrollmentId, unitNumber },
+            'Unit already completed - no changes'
+          );
+        }
+
+        return enrollment;
+      });
+
+      return result;
+    } catch (err: any) {
+      this.logger.error(
+        { err, enrollmentId, unitNumber },
+        'EnrollementService.completeUnit - error'
+      );
+      throw err;
+    }
+  }
+
+  /**
+   * Unmarks a unit as completed for a specific enrollment.
+   * Updates the completedUnits array and recalculates progress automatically.
+   * @param enrollmentId The ID of the enrollment.
+   * @param unitNumber The unit number to unmark as completed.
+   * @returns The updated enrollment.
+   */
+  async uncompleteUnit(
+    enrollmentId: string,
+    unitNumber: number
+  ): Promise<Enrollement> {
+    this.logger.info(
+      { enrollmentId, unitNumber },
+      'EnrollementService.uncompleteUnit - start'
+    );
+
+    try {
+      const result = await this.em.transactional(async (em) => {
+        const enrollment = await em.findOne(
+          Enrollement,
+          { _id: new ObjectId(enrollmentId) },
+          { populate: ['course', 'student'] }
+        );
+
+        if (!enrollment) {
+          this.logger.warn({ enrollmentId }, 'Enrollment not found');
+          throw new Error('Enrollment not found');
+        }
+
+        // Remove unitNumber from the array
+        const index = enrollment.completedUnits.indexOf(unitNumber);
+        if (index > -1) {
+          enrollment.completedUnits.splice(index, 1);
+
+          // Recalculate progress
+          const course = enrollment.course as Course;
+          const totalUnits = course.units.length;
+          const completedCount = enrollment.completedUnits.length;
+          enrollment.progress =
+            totalUnits > 0
+              ? Math.round((completedCount / totalUnits) * 100)
+              : 0;
+
+          // If progress drops below 100% and state is COMPLETED, revert to ENROLLED
+          if (
+            enrollment.progress < 100 &&
+            enrollment.state === EnrollmentState.COMPLETED
+          ) {
+            enrollment.state = EnrollmentState.ENROLLED;
+            this.logger.info(
+              { enrollmentId },
+              'Progress below 100% - state reverted to ENROLLED'
+            );
+          }
+
+          await em.persistAndFlush(enrollment);
+          this.logger.info(
+            { enrollmentId, unitNumber, progress: enrollment.progress },
+            'Unit unmarked as completed'
+          );
+        } else {
+          this.logger.info(
+            { enrollmentId, unitNumber },
+            'Unit was not completed - no changes'
+          );
+        }
+
+        return enrollment;
+      });
+
+      return result;
+    } catch (err: any) {
+      this.logger.error(
+        { err, enrollmentId, unitNumber },
+        'EnrollementService.uncompleteUnit - error'
+      );
+      throw err;
+    }
   }
 }
 

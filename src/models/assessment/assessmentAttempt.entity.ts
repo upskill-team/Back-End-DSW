@@ -94,4 +94,31 @@ export class AssessmentAttempt extends BaseEntity {
    */
   @Property({ type: 'text', nullable: true })
   notes?: string;
+
+  /**
+   * Calculates time spent on the attempt in minutes.
+   * @returns {number}
+   */
+  getTimeSpent(): number {
+    if (!this.submittedAt) {
+      // If not submitted yet, calculate from current time
+      const now = new Date();
+      const diffMs = now.getTime() - this.startedAt.getTime();
+      return Math.floor(diffMs / 60000); // Convert to minutes
+    }
+    const diffMs = this.submittedAt.getTime() - this.startedAt.getTime();
+    return Math.floor(diffMs / 60000); // Convert to minutes
+  }
+
+  /**
+   * Virtual property for timeSpent (for serialization).
+   * @returns {number}
+   */
+  @Property({ persist: false })
+  get timeSpent(): number {
+    return this.getTimeSpent();
+  }
+  set timeSpent(_value: number) {
+    // Setter needed for MikroORM, but it's a computed value
+  }
 }

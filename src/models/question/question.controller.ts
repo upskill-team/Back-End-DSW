@@ -123,6 +123,7 @@ async function findMyQuestions(req: Request, res: Response) {
 
 /**
  * Handles the retrieval of a single question by its ID.
+ * Accessible by both students (enrolled in the course) and professors.
  * @param {Request} req - The Express request object, containing the question ID and course ID in params.
  * @param {Response} res - The Express response object.
  * @returns {Promise<Response>} The requested question data.
@@ -133,8 +134,14 @@ async function findOne(req: Request, res: Response) {
     const { id, courseId } = req.params;
     const userId = req.user!.id;
 
-    // Get the professor ID from the user ID
-    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+    // Try to get professor ID, but allow students to access too
+    let professorId: string | null = null;
+    try {
+      professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+    } catch {
+      // User is not a professor, that's okay for this endpoint
+      // Students can also access questions
+    }
 
     const question = await questionService.findOne(id, courseId, professorId);
 
@@ -142,15 +149,6 @@ async function findOne(req: Request, res: Response) {
   } catch (error: any) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Question not found.');
-    }
-    if (error.message.includes('User does not have a professor profile')) {
-      return HttpResponse.Unauthorized(
-        res,
-        'Access denied. User is not a professor.'
-      );
-    }
-    if (error.message.includes('User not found')) {
-      return HttpResponse.NotFound(res, 'User not found.');
     }
     throw error;
   }

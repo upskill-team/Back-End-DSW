@@ -23,7 +23,7 @@ const PercentOrNumber = v.pipe(
  */
 const DateLike = v.pipe(
   v.union([v.string(), v.number()]),
-  v.transform((input) => new Date(input)),
+  v.transform((input) => new Date(input))
   // optional: you can validate date validity afterwards if required
 );
 
@@ -64,11 +64,33 @@ export const SearchEnrollementsSchema = v.object({
   offset: v.optional(NumericString, '0'),
   sortBy: v.optional(v.string(), 'createdAt'),
   sortOrder: v.optional(
-    v.pipe(v.string(), v.regex(/^(ASC|DESC)$/, 'sortOrder debe ser ASC o DESC')),
+    v.pipe(
+      v.string(),
+      v.regex(/^(ASC|DESC)$/, 'sortOrder debe ser ASC o DESC')
+    ),
     'DESC'
   ),
 });
 
-export type CreateEnrollementType = v.InferOutput<typeof CreateEnrollementSchema>;
-export type UpdateEnrollementType = v.InferOutput<typeof UpdateEnrollementSchema>;
-export type SearchEnrollementsQuery = v.InferOutput<typeof SearchEnrollementsSchema>;
+/**
+ * Schema for marking a unit as completed or uncompleted.
+ * Validates that unitNumber is a positive integer.
+ */
+export const UnitProgressSchema = v.object({
+  unitNumber: v.pipe(
+    v.number('unitNumber debe ser un número.'),
+    v.integer('unitNumber debe ser un entero.'),
+    v.minValue(1, 'unitNumber debe ser un número positivo.')
+  ),
+});
+
+export type CreateEnrollementType = v.InferOutput<
+  typeof CreateEnrollementSchema
+>;
+export type UpdateEnrollementType = v.InferOutput<
+  typeof UpdateEnrollementSchema
+>;
+export type SearchEnrollementsQuery = v.InferOutput<
+  typeof SearchEnrollementsSchema
+>;
+export type UnitProgressType = v.InferOutput<typeof UnitProgressSchema>;

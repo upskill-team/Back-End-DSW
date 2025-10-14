@@ -5,7 +5,6 @@ import { Request, Response } from 'express';
 import { EntityManager, RequestContext } from '@mikro-orm/core';
 import {
   createEnrollement,
-  getEnrollements,
   getEnrollementById,
   updateEnrollement,
   deleteEnrollement,

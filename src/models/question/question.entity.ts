@@ -27,6 +27,19 @@ export interface QuestionPayload {
 }
 
 /**
+ * Interface for formatted options with id, text, and correctness.
+ * @interface
+ */
+export interface QuestionOption {
+  /** Unique identifier for the option */
+  id: string;
+  /** Text content of the option */
+  text: string;
+  /** Whether this option is correct */
+  isCorrect: boolean;
+}
+
+/**
  * Represents a Question entity, which holds information about a specific question.
  * This entity is linked to courses and can have multiple answers.
  * @see {@link Course}
@@ -79,4 +92,62 @@ export class Question extends BaseEntity {
    */
   @Property({ nullable: true })
   unitNumber?: number;
+
+  /**
+   * Points awarded for this question.
+   * Default is 10 points per question.
+   * @type {number}
+   */
+  @Property({ default: 10 })
+  points: number = 10;
+
+  // Virtual properties for frontend compatibility
+
+  /**
+   * Alias for questionText to match frontend expectations.
+   * @returns {string}
+   */
+  @Property({ persist: false })
+  get text(): string {
+    return this.questionText;
+  }
+  set text(_value: string) {
+    // Setter for MikroORM compatibility
+  }
+
+  /**
+   * Alias for questionType to match frontend expectations.
+   * Returns 'multiple_choice' or 'open_ended'.
+   * @returns {string}
+   */
+  @Property({ persist: false })
+  get type(): 'multiple_choice' | 'open_ended' {
+    if (this.questionType === QuestionType.MultipleChoiceOption) {
+      return 'multiple_choice';
+    }
+    return 'open_ended';
+  }
+  set type(_value: 'multiple_choice' | 'open_ended') {
+    // Setter for MikroORM compatibility
+  }
+
+  /**
+   * Formatted options array with id, text, and isCorrect properties.
+   * @returns {QuestionOption[]}
+   */
+  @Property({ persist: false })
+  get options(): QuestionOption[] {
+    if (!this.payload?.options) {
+      return [];
+    }
+
+    return this.payload.options.map((option, index) => ({
+      id: `opt${index}`,
+      text: option,
+      isCorrect: this.payload.correctAnswer === index,
+    }));
+  }
+  set options(_value: QuestionOption[]) {
+    // Setter for MikroORM compatibility
+  }
 }
