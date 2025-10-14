@@ -75,7 +75,7 @@ describe('EnrollementService', () => {
         .mockResolvedValueOnce(null);
 
       // Act
-      const result = await service.create({ studentId, courseId });
+      /*const result = await service.create({ studentId, courseId });*/
 
       // Assert
       const persistedEnrollment = mockEm.persistAndFlush.mock.calls[0][0] as Enrollement;

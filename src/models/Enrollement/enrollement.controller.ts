@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from "express";
-import { EntityManager, RequestContext } from "@mikro-orm/core";
+import { RequestContext } from "@mikro-orm/core";
 import EnrollementService from "./enrollement.service.js";
 import { EnrollmentState } from "./enrollement.entity.js";
 import { logger } from "../../shared/utils/logger.js";
@@ -18,7 +18,7 @@ export async function createEnrollement(req: Request, res: Response) {
     }
     const svc = new EnrollementService(em, (req as any).log || logger);
 
-    const { studentId, courseId, state, grade, progress } = req.body;
+    const { studentId, courseId, state } = req.body;
 
     if (!studentId || !courseId) {
       return HttpResponse.BadRequest(res, "studentId and courseId are required");
