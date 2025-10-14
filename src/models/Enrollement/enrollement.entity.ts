@@ -16,7 +16,7 @@ import { Course } from '../course/course.entity.js';
 import { Student } from '../student/student.entity.js';
 
 /**
- * Estados posibles de una inscripción.
+ * Possible states of an inscription.
  */
 export enum EnrollmentState {
   ENROLLED = 'enrolled',
