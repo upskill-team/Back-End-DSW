@@ -121,13 +121,7 @@ async function update(req: Request, res: Response) {
       );
     }
     const parsedData = JSON.parse(courseData);
-    /*
-    const validationResult = safeParse(UpdateCourseSchema, parsedData);
-    if (!validationResult.success) {
-      return HttpResponse.BadRequest(res, validationResult.issues);
-    }
-    const validatedData = validationResult.output;
-    */
+
     const files = (req.files as Express.Multer.File[]) || [];
 
     const imageFile = files.find((f) => f.fieldname === 'image');
@@ -193,37 +187,32 @@ async function findAllWithPagination(
   next: NextFunction
 ) {
   try {
-    // --- 1. Validar y transformar los query params usando el schema de Valibot ---
-    // v.parse lanzará un ValiError si la validación falla, que será capturado por el catch.
+    // Validate and transform query parameters using the Valibot schema
     const validatedQuery = v.parse(SearchCoursesSchema, req.query);
 
-    // --- 2. Instanciar el servicio y ejecutar la lógica de negocio ---
-    // Se pasa el objeto de consulta ya limpio y seguro al servicio.
     const courseService = new CourseService(orm.em.fork(), req.log);
-    const result = await courseService.searchCourses(validatedQuery); // Asumiendo que el método se llama `search`
+    const result = await courseService.searchCourses(validatedQuery); 
 
-    // --- 3. Enviar la respuesta exitosa ---
-    // Usamos tu helper HttpResponse para devolver un 200 OK con los datos.
     return HttpResponse.Ok(res, result);
   } catch (error) {
-    // --- 4. Manejar errores de forma centralizada ---
+    // Handle errors centrally 
     if (error instanceof v.ValiError) {
-      // Si el error es de validación, es un error del cliente (400 Bad Request).
+  
       const errorDetails = error.issues.map((issue) => ({
         field: issue.path?.map((p: { key: any }) => p.key).join('.'),
         message: issue.message,
         receivedValue: issue.input,
       }));
 
-      // Devolvemos una respuesta clara y estructurada.
+   
       return HttpResponse.BadRequest(res, {
         message: 'Los parámetros de consulta son inválidos.',
         errors: errorDetails,
       });
     }
 
-    // Para cualquier otro error (ej. de la base de datos), lo pasamos al
-    // siguiente middleware de manejo de errores de Express.
+    // For any other errors (e.g., database errors), we pass them to the
+    // next Express error handling middleware.
     next(error);
   }
 }

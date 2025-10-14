@@ -38,9 +38,6 @@ export class CourseType extends BaseEntity {
    * A collection of all courses belonging to this type.
    * @type {Collection<Course>}
    */
-  //Indica que es una relación uno a muchos con la entidad Course
-  //Especificamos como debe interpretar la relación
-  //Cascade.ALL indica que todas las operaciones de cascada se aplicarán a los cursos relacionados
   @OneToMany(() => Course, (course) => course.courseType, {
     cascade: [Cascade.ALL],
   })

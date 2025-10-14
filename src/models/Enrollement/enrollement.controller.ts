@@ -72,20 +72,16 @@ export async function getEnrollmentByStudentAndCourse(req: Request, res: Respons
 
     const { studentId, courseId } = req.params;
 
-    // Validación básica de los parámetros de la URL
     if (!studentId || !courseId) {
       return HttpResponse.BadRequest(res, "studentId and courseId are required in the URL path.");
     }
 
-    const enrollment = await svc.findByStudentAndCourse(studentId, courseId);
+    const enrollment = await svc.findByStudentAndCourse(studentId, courseId);   
 
-    // Lógica clave: Si no se encuentra, devolvemos un 404.
-    // Esto es lo que el frontend interpretará como "no existe inscripción".
     if (!enrollment) {
       return HttpResponse.NotFound(res, "Enrollment not found for this student and course combination.");
     }
 
-    // Si se encuentra, devolvemos los datos con un 200 OK.
     return HttpResponse.Ok(res, enrollment);
 
   } catch (err: any) {

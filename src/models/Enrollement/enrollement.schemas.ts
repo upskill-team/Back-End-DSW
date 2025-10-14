@@ -8,7 +8,7 @@ import * as v from 'valibot';
 const EnrollmentStates = ['enrolled', 'completed', 'dropped'] as const;
 
 /**
- * Helper: acepta string|number and transforma a número, valida rango 0-100.
+ * Helper: accepts string|number and converts to number, validates range 0-100.
  */
 const PercentOrNumber = v.pipe(
   v.union([v.string(), v.number()]),
@@ -19,7 +19,7 @@ const PercentOrNumber = v.pipe(
 );
 
 /**
- * Helper: acepta string (ISO) o timestamp number y transforma a Date.
+ * Helper: accepts string (ISO) or timestamp number and converts to Date.
  */
 const DateLike = v.pipe(
   v.union([v.string(), v.number()]),
@@ -28,7 +28,7 @@ const DateLike = v.pipe(
 );
 
 /**
- * Schema para crear una inscripción (body).
+ * Schema for creating an inscription (body).
  */
 export const CreateEnrollementSchema = v.object({
   studentId: v.pipe(v.string(), v.minLength(1, 'studentId es requerido.')),
@@ -36,7 +36,7 @@ export const CreateEnrollementSchema = v.object({
 });
 
 /**
- * Schema para actualización parcial de una inscripción.
+ * Schema for partial update of an enrollment.
  */
 export const UpdateEnrollementSchema = v.partial(
   v.object({
@@ -48,7 +48,7 @@ export const UpdateEnrollementSchema = v.partial(
 );
 
 /**
- * Schema para consultas / filtros (query params).
+ * Schema for queries/filters (query params)
  */
 const NumericString = v.pipe(
   v.string('El valor debe ser string.'),
