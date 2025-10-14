@@ -62,15 +62,15 @@ export const uploadCourseImage = multer({
 const courseDataStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
-    // Esta función se ejecuta para CADA archivo
-    let folder = 'upskill/course_data/other'; // Carpeta por defecto
-    const allowed_formats = ['pdf', 'docx', 'xlsx', 'pptx', 'zip', 'jpg', 'jpeg', 'png', 'webp']; // Formatos combinados
+    // This function is executed for EVERY file
+    let folder = 'upskill/course_data/other'; // Default folder
+    const allowed_formats = ['pdf', 'docx', 'xlsx', 'pptx', 'zip', 'jpg', 'jpeg', 'png', 'webp']; // Combined formats
 
-    // Si el archivo viene del campo 'image', lo mandamos a la carpeta de imágenes
+    // If the file comes from the ‘image’ field, we send it to the images folder.
     if (file.fieldname === 'image') {
       folder = 'upskill/course_images';
     } 
-    // Si el archivo viene del campo 'materials', lo mandamos a la de materiales
+    // If the file comes from the ‘materials’ field, we send it to the materials field.
     else if (file.fieldname === 'materials') { 
       folder = 'upskill/course_materials';
     }
@@ -98,9 +98,9 @@ export const uploadMaterialToCloudinary = multer({
 })
 
 /**
- * Multer middleware para manejar la subida de datos completos del curso:
- * - Un único archivo de imagen para el curso (campo 'image').
- * - Múltiples archivos de materiales del curso (campo 'materials').
+ * Multer middleware to handle the upload of complete course data:
+ * - A single image file for the course (field ‘image’).
+ * - Multiple course material files (field ‘materials’).
  * @const {multer.Instance} uploadCourseData
  */
 export const uploadCourseData = multer({
@@ -111,15 +111,15 @@ export const uploadCourseData = multer({
 }).any()
 
 /**
- * Un wrapper de middleware que maneja los errores comunes de Multer.
- * @param uploadMiddleware El middleware de Multer a ejecutar (ej. uploadCourseData).
- * @returns Un nuevo middleware de Express con manejo de errores incorporado.
+ * A middleware wrapper that handles common Multer errors.
+ * @param uploadMiddleware The Multer middleware to execute (e.g., uploadCourseData).
+ * @returns A new Express middleware with built-in error handling.
  */
 export const handleMulterUpload = (
   uploadMiddleware: (req: Request, res: Response, callback: (err?: any) => void) => void
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    // Ejecutamos el middleware de Multer pasándole el callback de manejo de errores.
+    // We execute the Multer middleware, passing it the error handling callback.
     uploadMiddleware(req, res, (err: any) => {
       if (err instanceof multer.MulterError) {
         console.error("Error de Multer:", err);
@@ -128,7 +128,7 @@ export const handleMulterUpload = (
         console.error("Error desconocido en la subida:", err);
         return res.status(500).json({ status: 500, message: "Error interno en la subida de archivos", errors: err.message });
       }
-      // Si no hay errores, pasamos al siguiente middleware en la cadena (el controlador).
+      // If there are no errors, we move on to the next middleware in the chain (the controller).
       next();
     });
   };
@@ -137,15 +137,15 @@ export const handleMulterUpload = (
 const profilePictureStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'upskill/profile_pictures', // Carpeta dedicada para avatares
+    folder: 'upskill/profile_pictures', // Dedicated folder for avatars
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 500, height: 500, crop: 'fill' }], // Opcional: redimensiona las imágenes
+    transformation: [{ width: 500, height: 500, crop: 'fill' }], // Optional: resize images
   } as any,
 });
 
 /**
- * Middleware de Multer para manejar la subida de una única foto de perfil.
- * Acepta un archivo en el campo 'profilePicture' con un límite de 5MB.
+ * Multer middleware to handle the upload of a single profile photo.
+ * Accepts a file in the ‘profilePicture’ field with a limit of 5MB.
  * @const {multer.Instance} uploadProfilePicture
  */
 export const uploadProfilePicture = multer({
