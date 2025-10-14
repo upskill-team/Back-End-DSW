@@ -7,7 +7,6 @@ import { ObjectId } from '@mikro-orm/mongodb';
 import { Enrollement, EnrollmentState } from './enrollement.entity.js';
 import { Course } from '../course/course.entity.js';
 import { Logger } from 'pino';
-import { ObjectId } from '@mikro-orm/mongodb';
 import { User } from '../user/user.entity.js';
 
 export class EnrollementService {
