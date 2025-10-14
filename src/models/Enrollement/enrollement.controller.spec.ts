@@ -1,12 +1,14 @@
+// src/enrollement/enrollement.controller.spec.ts
+
 import { Request, Response } from 'express';
-// We import RequestContext so we can spy on it.
+// ¡Importante! Importamos RequestContext para poder espiarlo.
 import { EntityManager, RequestContext } from '@mikro-orm/core';
 import {
   createEnrollement,
   getEnrollementById,
   updateEnrollement,
   deleteEnrollement,
-
+  // Ya no importamos 'setGetEmFromReq'
 } from './enrollement.controller';
 import EnrollementService from './enrollement.service';
 import { Enrollement } from './enrollement.entity';
@@ -15,17 +17,18 @@ describe('Enrollement Controller', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
   let mockEm: jest.Mocked<EntityManager>;
-  let requestContextSpy: jest.SpyInstance; // Variable for our “spy”
+  let requestContextSpy: jest.SpyInstance; // Variable para nuestro "espía"
 
   beforeEach(() => {
-    // We create our fake EntityManager, which is for “injection.”
+    // Creamos nuestro EntityManager falso, que es lo que queremos "inyectar"
     mockEm = {} as jest.Mocked<EntityManager>;
 
-    // We intercept the call to RequestContext.getEntityManager()
-    // and force it to return our fake EntityManager.
+    // --- ¡LA CLAVE DE LA SOLUCIÓN! ---
+    // Interceptamos la llamada a RequestContext.getEntityManager()
+    // y forzamos a que devuelva nuestro EntityManager falso.
     requestContextSpy = jest.spyOn(RequestContext, 'getEntityManager').mockReturnValue(mockEm);
 
-    // We configure the req and res mocks
+    // Configuramos los mocks de req y res
     mockReq = {
       body: {},
       params: {},
@@ -36,16 +39,16 @@ describe('Enrollement Controller', () => {
       send: jest.fn(),
     };
 
-    // We clean all mocks (except the spy)
+    // Limpiamos todos los mocks (excepto el espía)
     jest.clearAllMocks();
   });
 
   afterEach(() => {
-    // It is vital to reset the spy after each test so as not to affect other tests.
+    // Es VITAL restaurar el espía después de cada prueba para no afectar a otros tests.
     requestContextSpy.mockRestore();
   });
 
-  // Tests for createEnrollment 
+  // --- Pruebas para createEnrollement ---
   describe('createEnrollement', () => {
     it('should create an enrollment and return 201', async () => {
       // Arrange
@@ -59,7 +62,7 @@ describe('Enrollement Controller', () => {
       await createEnrollement(mockReq as Request, mockRes as Response);
 
       // Assert
-      expect(RequestContext.getEntityManager).toHaveBeenCalled(); // We verified that the EM was requested.
+      expect(RequestContext.getEntityManager).toHaveBeenCalled(); // Verificamos que se pidió el EM
       expect(createServiceSpy).toHaveBeenCalledWith(newEnrolmentData);
       expect(mockRes.status).toHaveBeenCalledWith(201);
       expect(mockRes.json).toHaveBeenCalledWith(createdEnrolment);
@@ -101,7 +104,7 @@ describe('Enrollement Controller', () => {
     });
   });
 
-  // Tests for getEnrollmentById 
+  // --- Pruebas para getEnrollementById ---
   describe('getEnrollementById', () => {
     it('should return an enrollment and 200 if found', async () => {
       // Arrange
@@ -139,7 +142,7 @@ describe('Enrollement Controller', () => {
     });
   });
 
-  // Tests for updateEnrollment 
+  // --- Pruebas para updateEnrollement ---
   describe('updateEnrollement', () => {
     it('should update an enrollment and return 200', async () => {
       // Arrange
@@ -182,7 +185,7 @@ describe('Enrollement Controller', () => {
     });
   });
 
-  // Tests for deleteEnrollment 
+  // --- Pruebas para deleteEnrollement ---
   describe('deleteEnrollement', () => {
     it('should delete an enrollment and return 204', async () => {
       // Arrange

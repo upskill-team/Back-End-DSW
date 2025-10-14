@@ -10,7 +10,7 @@
     "build": "tsc -p ./tsconfig.json",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "audit": "pnpm audit",
+    "audit": "pnpm audit --audit-level=high",
     "test:node": "pnpm run lint && pnpm run type-check && pnpm run audit",
     "test:jest": "jest",
     "tdocs": "typedoc",
@@ -55,6 +55,7 @@
     "react": "19.1.1",
     "react-dom": "^19.2.0",
     "reflect-metadata": "0.2.2",
+    "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "valibot": "^1.1.0"
   },

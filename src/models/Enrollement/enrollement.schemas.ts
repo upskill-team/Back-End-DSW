@@ -8,7 +8,7 @@ import * as v from 'valibot';
 const EnrollmentStates = ['enrolled', 'completed', 'dropped'] as const;
 
 /**
- * Helper: accepts string|number and converts to number, validates range 0-100.
+ * Helper: acepta string|number and transforma a número, valida rango 0-100.
  */
 const PercentOrNumber = v.pipe(
   v.union([v.string(), v.number()]),
@@ -19,16 +19,16 @@ const PercentOrNumber = v.pipe(
 );
 
 /**
- * Helper: accepts string (ISO) or timestamp number and converts to Date.
+ * Helper: acepta string (ISO) o timestamp number y transforma a Date.
  */
 const DateLike = v.pipe(
   v.union([v.string(), v.number()]),
-  v.transform((input) => new Date(input)),
+  v.transform((input) => new Date(input))
   // optional: you can validate date validity afterwards if required
 );
 
 /**
- * Schema for creating an inscription (body).
+ * Schema para crear una inscripción (body).
  */
 export const CreateEnrollementSchema = v.object({
   studentId: v.pipe(v.string(), v.minLength(1, 'studentId es requerido.')),
@@ -36,7 +36,7 @@ export const CreateEnrollementSchema = v.object({
 });
 
 /**
- * Schema for partial update of an enrollment.
+ * Schema para actualización parcial de una inscripción.
  */
 export const UpdateEnrollementSchema = v.partial(
   v.object({
@@ -48,7 +48,7 @@ export const UpdateEnrollementSchema = v.partial(
 );
 
 /**
- * Schema for queries/filters (query params)
+ * Schema para consultas / filtros (query params).
  */
 const NumericString = v.pipe(
   v.string('El valor debe ser string.'),
@@ -64,11 +64,33 @@ export const SearchEnrollementsSchema = v.object({
   offset: v.optional(NumericString, '0'),
   sortBy: v.optional(v.string(), 'createdAt'),
   sortOrder: v.optional(
-    v.pipe(v.string(), v.regex(/^(ASC|DESC)$/, 'sortOrder debe ser ASC o DESC')),
+    v.pipe(
+      v.string(),
+      v.regex(/^(ASC|DESC)$/, 'sortOrder debe ser ASC o DESC')
+    ),
     'DESC'
   ),
 });
 
-export type CreateEnrollementType = v.InferOutput<typeof CreateEnrollementSchema>;
-export type UpdateEnrollementType = v.InferOutput<typeof UpdateEnrollementSchema>;
-export type SearchEnrollementsQuery = v.InferOutput<typeof SearchEnrollementsSchema>;
+/**
+ * Schema for marking a unit as completed or uncompleted.
+ * Validates that unitNumber is a positive integer.
+ */
+export const UnitProgressSchema = v.object({
+  unitNumber: v.pipe(
+    v.number('unitNumber debe ser un número.'),
+    v.integer('unitNumber debe ser un entero.'),
+    v.minValue(1, 'unitNumber debe ser un número positivo.')
+  ),
+});
+
+export type CreateEnrollementType = v.InferOutput<
+  typeof CreateEnrollementSchema
+>;
+export type UpdateEnrollementType = v.InferOutput<
+  typeof UpdateEnrollementSchema
+>;
+export type SearchEnrollementsQuery = v.InferOutput<
+  typeof SearchEnrollementsSchema
+>;
+export type UnitProgressType = v.InferOutput<typeof UnitProgressSchema>;

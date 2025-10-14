@@ -3,18 +3,25 @@
  * @remarks Defines the database schema for the Enrollement entity.
  */
 
-import { Entity, Property, ManyToOne, Enum, Rel, Unique } from "@mikro-orm/core";
-import { BaseEntity } from "../../shared/db/baseEntity.entity.js";
-import { Course } from "../course/course.entity.js";
-import { Student } from "../student/student.entity.js";
+import {
+  Entity,
+  Property,
+  ManyToOne,
+  Enum,
+  Rel,
+  Unique,
+} from '@mikro-orm/core';
+import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
+import { Course } from '../course/course.entity.js';
+import { Student } from '../student/student.entity.js';
 
 /**
  * Possible states of an inscription.
  */
 export enum EnrollmentState {
-  ENROLLED = "enrolled",
-  COMPLETED = "completed",
-  DROPPED = "dropped",
+  ENROLLED = 'enrolled',
+  COMPLETED = 'completed',
+  DROPPED = 'dropped',
 }
 
 /**
@@ -42,9 +49,9 @@ export class Enrollement extends BaseEntity {
 
   /**
    * Incription date.
-   * @param {Date} enrolledAt 
+   * @param {Date} enrolledAt
    */
-  @Property({ type: "date" })
+  @Property({ type: 'date' })
   enrolledAt: Date = new Date();
 
   /**
@@ -59,13 +66,21 @@ export class Enrollement extends BaseEntity {
    * Score obtained in the course (opcional).
    * @param {number} grade
    */
-  @Property({ type: "number", nullable: true })
+  @Property({ type: 'number', nullable: true })
   grade?: number;
 
   /**
    * Progress percentage in the course (0-100).
    * @param {number} progress
    */
-  @Property({ type: "number", nullable: true, default: 0 })
+  @Property({ type: 'number', nullable: true, default: 0 })
   progress?: number;
+
+  /**
+   * Array of unit numbers completed by the student.
+   * Used to track which units have been finished.
+   * @param {number[]} completedUnits
+   */
+  @Property({ type: 'array', default: [] })
+  completedUnits: number[] = [];
 }
