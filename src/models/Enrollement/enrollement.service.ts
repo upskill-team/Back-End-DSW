@@ -7,7 +7,6 @@ import { EntityManager } from '@mikro-orm/core';
 import { Enrollement, EnrollmentState } from './enrollement.entity.js';
 import { Student } from '../student/student.entity.js';
 import { Course } from '../course/course.entity.js';
-import { logger } from '../../shared/utils/logger.js';
 import { Logger } from 'pino';
 import { ObjectId } from '@mikro-orm/mongodb';
 

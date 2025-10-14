@@ -40,6 +40,17 @@ export class AppealService {
     this.logger.info({ userId }, 'User is creating a new appeal.')
 
     const userObjectId = new ObjectId(userId)
+    const existingAppeal = await this.em.findOne(Appeal, { user: userObjectId, state: 'pending' });
+    const aceptedAppeal = await this.em.findOne(Appeal, { user: userObjectId, state: 'accepted' });
+    if (aceptedAppeal) {
+      this.logger.warn({ userId }, 'Attempted to create a new appeal but user is already a professor.');
+      throw new Error('User is already a professor.');
+    }
+
+    if (existingAppeal) {
+      this.logger.warn({ userId }, 'Attempted to create a new appeal while another is active.');
+      throw new Error('User already has an active appeal.');
+    }
     const userReference = this.em.getReference(User, userObjectId)
 
     const appeal = this.em.create(Appeal, {
