@@ -29,6 +29,8 @@ import pinoHttp from 'pino-http'
 import { randomUUID } from 'crypto'
 import { swaggerSpec } from './docs/swagger.config.js'
 import { enrollementRouter } from './models/Enrollement/enrollement.routes.js'
+import { paymentRouter } from './models/payment/payment.routes.js'
+
 
 const app = express();
 
@@ -87,13 +89,24 @@ app.use(
 app.use(helmet());
 
 // Configure CORS
-app.use(
-  cors({
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+const whitelist = [
+  'http://localhost:5173',
+  process.env.NGROK_FRONTEND_URL,
+];
+const corsOptions: cors.CorsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      logger.error({ origin }, 'CORS error: origin not allowed');
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+app.use(cors(corsOptions));
 
 // Middlewares for parsing request bodies
 app.use(express.json());
@@ -166,6 +179,8 @@ async function startApp() {
   app.use('/api/join-requests', apiLimiter, joinRequestRouter)
   app.use('/api/assessments', apiLimiter, assessmentRouter);
   app.use('/api/enrollments', apiLimiter, enrollementRouter)
+  app.use('/api/payments', apiLimiter, paymentRouter)
+
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {
