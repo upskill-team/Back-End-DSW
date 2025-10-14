@@ -7,6 +7,7 @@ import { Router } from 'express';
 import {
   findAll,
   findOne,
+  countAll,
   update,
   remove,
 } from './student.controller.js';
@@ -18,6 +19,8 @@ import { UpdateStudentSchema } from './student.schemas.js';
 import { UserRole } from '../user/user.entity.js';
 
 export const studentRouter = Router();
+
+studentRouter.get('/count', countAll)
 
 studentRouter.use(authMiddleware);
 

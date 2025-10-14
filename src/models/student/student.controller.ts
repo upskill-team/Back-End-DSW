@@ -49,6 +49,23 @@ async function findOne(req: Request, res: Response, next: NextFunction) {
 }
 
 /**
+ * Handles the retrieval of the total count of students.
+ * @param {Request} req The Express request object.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} An object containing the total count of students.
+ */
+async function countAll(req: Request, res: Response, next: NextFunction) {
+  try {
+    const studentService = new StudentService(orm.em.fork(), req.log);
+    const count = await studentService.countAll();
+    return HttpResponse.Ok(res, { total: count });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Handles updating an existing student's profile.
  * @param {Request} req The Express request object, with student ID in params and update data in body.
  * @param {Response} res The Express response object.
@@ -84,4 +101,4 @@ async function remove(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export { findAll, findOne, update, remove }
+export { findAll, findOne, countAll, update, remove }

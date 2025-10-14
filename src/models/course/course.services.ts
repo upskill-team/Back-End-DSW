@@ -4,7 +4,7 @@
  */
 
 import { EntityManager, FilterQuery } from '@mikro-orm/core';
-import { Course } from './course.entity.js';
+import { Course, status } from './course.entity.js';
 import {
   CreateCourseType,
   SearchCoursesQuery,
@@ -134,6 +134,26 @@ export class CourseService {
       }
     );
   }
+
+  /**
+   * Finds the top 4 most popular courses based on the number of enrolled students.
+   * @returns {Promise<Course[]>} A promise that resolves to an array of the top 4 courses.
+   */
+  public async findTrendingCourses(): Promise<Course[]> {
+      this.logger.info('Fetching trending courses.');
+  
+      const courses = await this.em.find(
+        Course,
+        { status: status.PUBLISHED },
+        {
+          populate: ['courseType', 'professor.user', 'students'],
+          orderBy: { students: 'DESC' },
+          limit: 6,
+        }
+      );
+  
+      return courses;
+    }
 
   /**
    * Updates an existing course.

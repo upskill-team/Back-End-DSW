@@ -47,6 +47,15 @@ export class StudentService {
   }
 
   /**
+   * Counts the total number of student profiles in the database.
+   * @returns {Promise<number>} A promise that resolves to the total count of students.
+   */
+  public async countAll(): Promise<number> {
+    this.logger.info('Counting all students.');
+    return this.em.count(Student, {});
+  }
+
+  /**
    * Updates an existing student's profile data.
    * @param {string} id - The ID of the student to update.
    * @param {UpdateStudentType} data - An object containing the fields to update.
