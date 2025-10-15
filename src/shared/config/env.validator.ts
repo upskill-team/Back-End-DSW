@@ -53,6 +53,11 @@ const EnvSchema = v.object({
   EMAIL_PORT: v.pipe(v.string(), v.minLength(1, 'EMAIL_PORT is required.')),
   EMAIL_USER: v.pipe(v.string(), v.minLength(1, 'EMAIL_USER is required.')),
   EMAIL_PASS: v.pipe(v.string(), v.minLength(1, 'EMAIL_PASS is required.')),
+
+  MP_ACCESS_TOKEN: v.pipe(
+    v.string(),
+    v.minLength(1, 'MP_ACCESS_TOKEN is required.')
+  ),
 });
 
 try {
