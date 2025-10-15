@@ -84,7 +84,24 @@ export class PaymentService {
             unit_price: course.price!,
           },
         ],
-        payer: {},
+        payer: {
+        name: "Test",
+        surname: "User",
+        email: "TESTUSER546421634057@testuser.com",
+        phone: {
+            area_code: "11",
+            string: 22223333
+        },
+        identification: {
+            type: "DNI",
+            number: "12345678"
+        },
+        address: {
+            street_name: "Falsa",
+            string: "123",
+            zip_code: "1111"
+        }
+      },
         back_urls: {
           success: `${frontendUrl}/payment/success?course_id=${course.id}`,
           failure: `${frontendUrl}/payment/failure?course_id=${course.id}`,
