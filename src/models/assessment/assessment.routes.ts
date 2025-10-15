@@ -24,7 +24,10 @@ export const assessmentRouter = Router();
 assessmentRouter.use(authMiddleware);
 
 const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR]);
-const studentOnly = roleAuthMiddleware([UserRole.STUDENT]);
+const studentOrProfessor = roleAuthMiddleware([
+  UserRole.STUDENT,
+  UserRole.PROFESSOR,
+]);
 const professorOrAdmin = roleAuthMiddleware([
   UserRole.PROFESSOR,
   UserRole.ADMIN,
@@ -50,43 +53,81 @@ assessmentRouter.put(
 
 assessmentRouter.delete('/:id', professorOrAdmin, assessmentController.remove);
 
-// Attempt routes (Students)
+// Attempt routes (Students & Professors)
+// POST /api/assessments/:assessmentId/attempts - Start new attempt
+assessmentRouter.post(
+  '/:assessmentId/attempts',
+  studentOrProfessor,
+  validationMiddleware(StartAttemptSchema),
+  assessmentController.startAttempt
+);
+
+// PATCH /api/assessments/attempts/:attemptId/answers - Auto-save answers
+assessmentRouter.patch(
+  '/attempts/:attemptId/answers',
+  studentOrProfessor,
+  assessmentController.saveAnswers
+);
+
+// POST /api/assessments/attempts/:attemptId/submit - Submit attempt
+assessmentRouter.post(
+  '/attempts/:attemptId/submit',
+  studentOrProfessor,
+  validationMiddleware(SubmitAttemptSchema),
+  assessmentController.submitAttempt
+);
+
+// GET /api/assessments/attempts/:attemptId - Get attempt result
+assessmentRouter.get(
+  '/attempts/:attemptId',
+  assessmentController.getAttemptWithAnswers
+);
+
+// GET /api/assessments/:assessmentId/attempts - List attempts for an assessment
+assessmentRouter.get(
+  '/:assessmentId/attempts',
+  assessmentController.getAttemptsByAssessment
+);
+
+// GET /api/assessments/:assessmentId/statistics - Get assessment statistics (professors only)
+assessmentRouter.get(
+  '/:assessmentId/statistics',
+  professorOrAdmin,
+  assessmentController.getAssessmentStatistics
+);
+
+// GET /api/assessments/:assessmentId/all-attempts - Get all attempts for professors
+assessmentRouter.get(
+  '/:assessmentId/all-attempts',
+  professorOrAdmin,
+  assessmentController.getAllAttemptsForProfessor
+);
+
+// Legacy routes (for backwards compatibility)
 assessmentRouter.post(
   '/attempts/start',
-  studentOnly,
+  studentOrProfessor,
   validationMiddleware(StartAttemptSchema),
   assessmentController.startAttempt
 );
 
 assessmentRouter.post(
   '/attempts/answer',
-  studentOnly,
+  studentOrProfessor,
   validationMiddleware(SubmitAnswerSchema),
   assessmentController.submitAnswer
 );
 
 assessmentRouter.post(
   '/attempts/submit',
-  studentOnly,
+  studentOrProfessor,
   validationMiddleware(SubmitAttemptSchema),
   assessmentController.submitAttempt
-);
-
-// Viewing attempts (Professor can see all attempts for their assessments)
-assessmentRouter.get(
-  '/:assessmentId/attempts',
-  professorOnly,
-  assessmentController.getAttemptsByAssessment
 );
 
 assessmentRouter.get(
   '/attempts/student/:studentId',
   assessmentController.getAttemptsByStudent
-);
-
-assessmentRouter.get(
-  '/attempts/:attemptId',
-  assessmentController.getAttemptWithAnswers
 );
 
 export default assessmentRouter;

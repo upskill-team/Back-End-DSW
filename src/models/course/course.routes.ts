@@ -97,11 +97,8 @@ courseRouter.post(
   questionController.add
 );
 
-courseRouter.get(
-  '/:courseId/questions/:id',
-  professorOnly,
-  questionController.findOne
-);
+// Allow both students and professors to view a question
+courseRouter.get('/:courseId/questions/:id', questionController.findOne);
 courseRouter.put(
   '/:courseId/questions/:id',
   professorOnly,
@@ -208,4 +205,23 @@ courseRouter.patch(
   professorOnly,
   validationMiddleware(QuickSaveSchema),
   courseController.quickSave
+);
+
+// Assessment routes for a specific course
+// Import assessment controller
+import * as assessmentController from '../assessment/assessment.controller.js';
+
+courseRouter.get(
+  '/:courseId/assessments',
+  assessmentController.getAssessmentsByCourse
+);
+
+// Enrollment routes - Alias for frontend compatibility
+import * as enrollmentController from '../Enrollement/enrollement.controller.js';
+
+// GET /api/courses/:courseId/enrollments (for professors)
+courseRouter.get(
+  '/:courseId/enrollments',
+  professorOnly,
+  enrollmentController.getEnrollementsByCourse
 );

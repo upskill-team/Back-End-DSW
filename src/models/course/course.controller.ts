@@ -121,13 +121,7 @@ async function update(req: Request, res: Response) {
       );
     }
     const parsedData = JSON.parse(courseData);
-    /*
-    const validationResult = safeParse(UpdateCourseSchema, parsedData);
-    if (!validationResult.success) {
-      return HttpResponse.BadRequest(res, validationResult.issues);
-    }
-    const validatedData = validationResult.output;
-    */
+
     const files = (req.files as Express.Multer.File[]) || [];
 
     const imageFile = files.find((f) => f.fieldname === 'image');
@@ -226,6 +220,7 @@ async function findAllWithPagination(
         receivedValue: issue.input,
       }));
 
+   
       return HttpResponse.BadRequest(res, {
         message: 'Los parámetros de consulta son inválidos.',
         errors: errorDetails,

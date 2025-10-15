@@ -466,4 +466,466 @@ export class AssessmentService {
     // Mixed types comparison
     return String(answer) === String(correctAnswer);
   }
+
+  /**
+   * Finds all pending assessments for a student across all enrolled courses.
+   * @param {string} studentId - The student ID.
+   * @returns {Promise<any[]>} Array of pending assessments with metadata.
+   */
+  public async findPendingAssessments(studentId: string): Promise<any[]> {
+    this.logger.info({ studentId }, 'Finding pending assessments for student.');
+
+    // Import here to avoid circular dependency
+    const { Enrollement, EnrollmentState } = await import(
+      '../Enrollement/enrollement.entity.js'
+    );
+
+    // Find all active enrollments for the student
+    const enrollments = await this.em.find(
+      Enrollement,
+      {
+        student: new ObjectId(studentId),
+        state: EnrollmentState.ENROLLED,
+      },
+      { populate: ['course'] }
+    );
+
+    const pendingAssessments = [];
+    const now = new Date();
+
+    for (const enrollment of enrollments) {
+      const course = enrollment.course;
+
+      // Find all active assessments for this course
+      const assessments = await this.em.find(
+        Assessment,
+        {
+          course: course._id,
+          isActive: true,
+        },
+        { populate: ['questions'] }
+      );
+
+      for (const assessment of assessments) {
+        // Check if assessment is within available dates
+        if (assessment.availableFrom && now < assessment.availableFrom) {
+          continue; // Not available yet
+        }
+        if (assessment.availableUntil && now > assessment.availableUntil) {
+          continue; // Expired
+        }
+
+        // Count attempts
+        const attemptsCount = await this.em.count(AssessmentAttempt, {
+          student: new ObjectId(studentId),
+          assessment: assessment._id,
+        });
+
+        // Check if has attempts remaining
+        const hasAttemptsRemaining =
+          !assessment.maxAttempts || attemptsCount < assessment.maxAttempts;
+        if (!hasAttemptsRemaining) {
+          continue; // No attempts left
+        }
+
+        // Find best attempt
+        const bestAttempts = await this.em.find(
+          AssessmentAttempt,
+          {
+            student: new ObjectId(studentId),
+            assessment: assessment._id,
+            status: AttemptStatus.SUBMITTED,
+          },
+          { orderBy: { score: 'DESC' }, limit: 1 }
+        );
+
+        const bestAttempt = bestAttempts[0];
+        const hasPassed = bestAttempt && bestAttempt.passed;
+
+        // Skip if already passed
+        if (hasPassed) {
+          continue;
+        }
+
+        // Add to pending list
+        pendingAssessments.push({
+          assessment,
+          course,
+          attemptsCount,
+          attemptsRemaining: assessment.maxAttempts
+            ? assessment.maxAttempts - attemptsCount
+            : null,
+          bestScore: bestAttempt?.score,
+          lastAttemptDate: bestAttempt?.submittedAt,
+        });
+      }
+    }
+
+    // Sort by availableUntil (most urgent first)
+    pendingAssessments.sort((a, b) => {
+      if (!a.assessment.availableUntil) return 1;
+      if (!b.assessment.availableUntil) return -1;
+      return (
+        a.assessment.availableUntil.getTime() -
+        b.assessment.availableUntil.getTime()
+      );
+    });
+
+    this.logger.info(
+      { count: pendingAssessments.length },
+      'Found pending assessments.'
+    );
+    return pendingAssessments;
+  }
+
+  /**
+   * Saves multiple answers for an attempt (auto-save functionality).
+   * @param {string} attemptId - The attempt ID.
+   * @param {Array} answers - Array of answers to save.
+   * @returns {Promise<void>}
+   */
+  public async saveMultipleAnswers(
+    attemptId: string,
+    answers: Array<{ questionId: string; answer: string | number }>
+  ): Promise<void> {
+    this.logger.info(
+      { attemptId, answersCount: answers.length },
+      'Saving multiple answers.'
+    );
+
+    const attempt = await this.em.findOneOrFail(AssessmentAttempt, {
+      _id: new ObjectId(attemptId),
+    });
+
+    if (attempt.status !== AttemptStatus.IN_PROGRESS) {
+      throw new Error('Attempt is not in progress.');
+    }
+
+    // Save each answer
+    for (const answerData of answers) {
+      await this.submitAnswer({
+        attemptId,
+        questionId: answerData.questionId,
+        answer: answerData.answer,
+      });
+    }
+
+    this.logger.info({ attemptId }, 'Multiple answers saved successfully.');
+  }
+
+  /**
+   * Gets detailed assessment info for a student including their progress.
+   * @param {string} assessmentId - The assessment ID.
+   * @param {string} studentId - The student ID.
+   * @returns {Promise<any>} Assessment with student metadata.
+   */
+  public async getAssessmentWithStudentMetadata(
+    assessmentId: string,
+    studentId: string
+  ): Promise<any> {
+    this.logger.info(
+      { assessmentId, studentId },
+      'Getting assessment with student metadata.'
+    );
+
+    const assessment = await this.findOne(assessmentId);
+
+    // Count attempts
+    const attemptsCount = await this.em.count(AssessmentAttempt, {
+      student: new ObjectId(studentId),
+      assessment: new ObjectId(assessmentId),
+    });
+
+    // Find best attempt
+    const bestAttempts = await this.em.find(
+      AssessmentAttempt,
+      {
+        student: new ObjectId(studentId),
+        assessment: new ObjectId(assessmentId),
+        status: AttemptStatus.SUBMITTED,
+      },
+      { orderBy: { score: 'DESC' }, limit: 1 }
+    );
+
+    const bestAttempt = bestAttempts[0];
+    const now = new Date();
+
+    // Determine status
+    let status = 'available';
+    if (assessment.availableUntil && now > assessment.availableUntil) {
+      status = 'expired';
+    } else if (bestAttempt && bestAttempt.passed) {
+      status = 'completed';
+    } else if (
+      assessment.maxAttempts &&
+      attemptsCount >= assessment.maxAttempts
+    ) {
+      status = 'no_attempts_left';
+    }
+
+    return {
+      ...assessment,
+      attemptsCount,
+      attemptsRemaining: assessment.maxAttempts
+        ? assessment.maxAttempts - attemptsCount
+        : null,
+      bestScore: bestAttempt?.score,
+      lastAttemptDate: bestAttempt?.submittedAt,
+      status,
+    };
+  }
+
+  /**
+   * Get comprehensive statistics for an assessment.
+   * Includes overall statistics and per-student breakdown.
+   * @param {string} assessmentId - The ID of the assessment.
+   * @returns {Promise<any>} Statistics object with aggregated data.
+   */
+  public async getAssessmentStatistics(assessmentId: string): Promise<any> {
+    this.logger.info({ assessmentId }, 'Getting assessment statistics');
+
+    const assessment = await this.em.findOne(
+      Assessment,
+      { _id: new ObjectId(assessmentId) },
+      { populate: ['course', 'questions'] }
+    );
+
+    if (!assessment) {
+      throw new Error('Assessment not found');
+    }
+
+    // Get all attempts for this assessment
+    const attempts = await this.em.find(
+      AssessmentAttempt,
+      {
+        assessment: new ObjectId(assessmentId),
+        status: AttemptStatus.SUBMITTED,
+      },
+      { populate: ['student', 'student.user'] }
+    );
+
+    const totalAttempts = attempts.length;
+
+    // Get unique students
+    const uniqueStudentIds = new Set(
+      attempts.map((a) => (a.student as Student).id)
+    );
+    const uniqueStudents = uniqueStudentIds.size;
+
+    // Calculate score statistics
+    const scores = attempts.map((a) => a.score || 0);
+    const averageScore =
+      scores.length > 0
+        ? scores.reduce((sum, score) => sum + score, 0) / scores.length
+        : 0;
+    const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
+    const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
+
+    // Calculate pass rate
+    const passedAttempts = attempts.filter((a) => a.passed).length;
+    const passRate =
+      totalAttempts > 0 ? (passedAttempts / totalAttempts) * 100 : 0;
+
+    // Group attempts by student
+    const studentMap = new Map<
+      string,
+      {
+        student: any;
+        attempts: AssessmentAttempt[];
+      }
+    >();
+
+    attempts.forEach((attempt) => {
+      const student = attempt.student as Student;
+      const studentId = student.id!;
+
+      if (!studentMap.has(studentId)) {
+        studentMap.set(studentId, {
+          student,
+          attempts: [],
+        });
+      }
+      studentMap.get(studentId)!.attempts.push(attempt);
+    });
+
+    // Build per-student statistics
+    const attemptsByStudent = Array.from(studentMap.values()).map(
+      ({ student, attempts: studentAttempts }) => {
+        const sortedAttempts = studentAttempts.sort(
+          (a, b) => (b.score || 0) - (a.score || 0)
+        );
+        const bestAttempt = sortedAttempts[0];
+        const lastAttempt = studentAttempts.sort(
+          (a, b) => b.submittedAt!.getTime() - a.submittedAt!.getTime()
+        )[0];
+
+        return {
+          studentId: student.id,
+          studentName: `${student.user.name} ${student.user.surname}`,
+          attempts: studentAttempts.length,
+          bestScore: bestAttempt?.score || 0,
+          passed: bestAttempt?.passed || false,
+          lastAttemptDate: lastAttempt?.submittedAt,
+        };
+      }
+    );
+
+    // Get all answers for question statistics
+    const allAnswers = await this.em.find(
+      AttemptAnswer,
+      {
+        attempt: {
+          $in: attempts.map((a) => new ObjectId(a.id!)),
+        },
+      },
+      { populate: ['question'] }
+    );
+
+    // Calculate per-question statistics
+    const questionStatsMap = new Map<
+      string,
+      {
+        question: Question;
+        correctAnswers: number;
+        totalAnswers: number;
+      }
+    >();
+
+    allAnswers.forEach((answer) => {
+      const question = answer.question as Question;
+      const questionId = question.id!;
+
+      if (!questionStatsMap.has(questionId)) {
+        questionStatsMap.set(questionId, {
+          question,
+          correctAnswers: 0,
+          totalAnswers: 0,
+        });
+      }
+
+      const stats = questionStatsMap.get(questionId)!;
+      stats.totalAnswers++;
+      if (answer.isCorrect) {
+        stats.correctAnswers++;
+      }
+    });
+
+    const questionStatistics = Array.from(questionStatsMap.values()).map(
+      ({ question, correctAnswers, totalAnswers }) => ({
+        questionId: question.id,
+        questionText: question.questionText,
+        correctAnswers,
+        totalAnswers,
+        successRate:
+          totalAnswers > 0 ? (correctAnswers / totalAnswers) * 100 : 0,
+      })
+    );
+
+    return {
+      assessmentId: assessment.id,
+      title: assessment.title,
+      totalAttempts,
+      uniqueStudents,
+      averageScore: Math.round(averageScore * 100) / 100,
+      highestScore,
+      lowestScore,
+      passRate: Math.round(passRate * 100) / 100,
+      attemptsByStudent,
+      questionStatistics,
+    };
+  }
+
+  /**
+   * Get all attempts for an assessment with optional filters (for professors).
+   * @param {string} assessmentId - The ID of the assessment.
+   * @param {object} filters - Optional filters for studentId, passed, sortBy, order.
+   * @returns {Promise<any[]>} Array of attempts with student information.
+   */
+  public async getAllAttemptsForProfessor(
+    assessmentId: string,
+    filters?: {
+      studentId?: string;
+      passed?: boolean;
+      sortBy?: string;
+      order?: 'asc' | 'desc';
+    }
+  ): Promise<any[]> {
+    this.logger.info(
+      { assessmentId, filters },
+      'Getting all attempts for professor'
+    );
+
+    // Build query
+    const query: any = {
+      assessment: new ObjectId(assessmentId),
+      status: AttemptStatus.SUBMITTED,
+    };
+
+    if (filters?.studentId) {
+      query.student = new ObjectId(filters.studentId);
+    }
+
+    if (filters?.passed !== undefined) {
+      query.passed = filters.passed;
+    }
+
+    // Fetch attempts
+    const attempts = await this.em.find(AssessmentAttempt, query, {
+      populate: ['student', 'student.user', 'assessment'],
+    });
+
+    // Format results
+    const results = attempts.map((attempt) => {
+      const student = attempt.student as Student;
+      const assessment = attempt.assessment as Assessment;
+
+      return {
+        id: attempt.id,
+        student: {
+          id: student.id,
+          name: student.user.name,
+          surname: student.user.surname,
+        },
+        assessment: {
+          id: assessment.id,
+          title: assessment.title,
+        },
+        startedAt: attempt.startedAt,
+        submittedAt: attempt.submittedAt,
+        score: attempt.score,
+        passed: attempt.passed,
+        status: attempt.status,
+        timeSpent: attempt.timeSpent,
+        attemptNumber: attempt.attemptNumber,
+      };
+    });
+
+    // Sort results
+    if (filters?.sortBy) {
+      const sortBy = filters.sortBy as keyof (typeof results)[0];
+      const order = filters.order || 'desc';
+
+      results.sort((a, b) => {
+        const aVal = a[sortBy];
+        const bVal = b[sortBy];
+
+        if (aVal === undefined || bVal === undefined) return 0;
+
+        if (order === 'asc') {
+          return aVal > bVal ? 1 : -1;
+        } else {
+          return aVal < bVal ? 1 : -1;
+        }
+      });
+    } else {
+      // Default sort by submittedAt desc
+      results.sort((a, b) => {
+        const aTime = a.submittedAt?.getTime() || 0;
+        const bTime = b.submittedAt?.getTime() || 0;
+        return bTime - aTime;
+      });
+    }
+
+    return results;
+  }
 }

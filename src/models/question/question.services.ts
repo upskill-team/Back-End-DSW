@@ -249,23 +249,31 @@ export class QuestionService {
    * Retrieves a single question by its ID.
    * @param {string} questionId - The ID of the question to retrieve.
    * @param {string} courseId - The ID of the course (for access control).
-   * @param {string} professorId - The ID of the professor (for access control).
+   * @param {string | null} professorId - The ID of the professor (for access control). If null, only validates course exists.
    * @returns {Promise<Question>} A promise that resolves to the question.
    */
   async findOne(
     questionId: string,
     courseId: string,
-    professorId: string
+    professorId: string | null
   ): Promise<Question> {
     this.logger.info(
       { questionId, courseId, professorId },
       'Finding single question'
     );
 
-    await this.em.findOneOrFail(Course, {
-      _id: new ObjectId(courseId),
-      professor: new ObjectId(professorId),
-    });
+    // If professorId is provided, validate course ownership
+    if (professorId) {
+      await this.em.findOneOrFail(Course, {
+        _id: new ObjectId(courseId),
+        professor: new ObjectId(professorId),
+      });
+    } else {
+      // If no professorId (student access), just verify course exists
+      await this.em.findOneOrFail(Course, {
+        _id: new ObjectId(courseId),
+      });
+    }
 
     const question = await this.em.findOneOrFail(
       Question,

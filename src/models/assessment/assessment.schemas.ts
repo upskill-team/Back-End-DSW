@@ -27,8 +27,8 @@ export const CreateAssessmentSchema = v.object({
   ),
   maxAttempts: v.optional(v.nullable(v.pipe(v.number(), v.minValue(1)))),
   isActive: v.optional(v.boolean(), true),
-  availableFrom: v.optional(v.nullable(v.pipe(v.string(), v.isoDate()))),
-  availableUntil: v.optional(v.nullable(v.pipe(v.string(), v.isoDate()))),
+  availableFrom: v.optional(v.nullable(v.pipe(v.string(), v.isoTimestamp()))),
+  availableUntil: v.optional(v.nullable(v.pipe(v.string(), v.isoTimestamp()))),
 });
 
 /**
