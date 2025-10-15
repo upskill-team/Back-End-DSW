@@ -181,23 +181,39 @@ async function remove(req: Request, res: Response) {
   return HttpResponse.Ok(res, { message: 'Course deleted successfully' });
 }
 
+/**
+ * Handles the retrieval of the top 4 trending courses.
+ * @param {Request} req The Express request object.
+ * @param {Response} res The Express response object.
+ * @param {NextFunction} next The next middleware function.
+ * @returns {Promise<Response>} A list of the top 4 courses.
+ */
+async function findTrending(req: Request, res: Response, next: NextFunction) {
+  try {
+    const courseService = new CourseService(orm.em.fork(), req.log);
+    const courses = await courseService.findTrendingCourses();
+    return HttpResponse.Ok(res, courses);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function findAllWithPagination(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    // Validate and transform query parameters using the Valibot schema
+
     const validatedQuery = v.parse(SearchCoursesSchema, req.query);
 
     const courseService = new CourseService(orm.em.fork(), req.log);
-    const result = await courseService.searchCourses(validatedQuery); 
+    const result = await courseService.searchCourses(validatedQuery);
 
     return HttpResponse.Ok(res, result);
+
   } catch (error) {
-    // Handle errors centrally 
     if (error instanceof v.ValiError) {
-  
       const errorDetails = error.issues.map((issue) => ({
         field: issue.path?.map((p: { key: any }) => p.key).join('.'),
         message: issue.message,
@@ -211,8 +227,6 @@ async function findAllWithPagination(
       });
     }
 
-    // For any other errors (e.g., database errors), we pass them to the
-    // next Express error handling middleware.
     next(error);
   }
 }
@@ -460,6 +474,7 @@ export {
   update,
   remove,
   findMyCourses,
+  findTrending,
   findAllWithPagination,
   createUnit,
   updateUnit,

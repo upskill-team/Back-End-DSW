@@ -34,6 +34,8 @@ export const courseRouter = Router();
 
 courseRouter.get('/', courseController.findAllWithPagination);
 
+courseRouter.get('/trending', courseController.findTrending)
+
 courseRouter.use(authMiddleware);
 
 const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR]);
@@ -41,6 +43,7 @@ const professorOrAdmin = roleAuthMiddleware([
   UserRole.PROFESSOR,
   UserRole.ADMIN,
 ]);
+
 
 courseRouter.get('/my-courses', professorOnly, courseController.findMyCourses);
 courseRouter.get('/:id', courseController.findOne);
