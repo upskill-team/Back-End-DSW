@@ -17,6 +17,7 @@ import { ObjectId } from '@mikro-orm/mongodb';
 import { User } from '../user/user.entity.js';
 import { safeParse } from 'valibot';
 import { UpdateCourseSchema } from './course.schemas.js';
+import { Institution } from '../institution/institution.entity.js';
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -44,7 +45,7 @@ export class CourseService {
   ): Promise<Course> {
     this.logger.info({ name: courseData.name }, 'Creating new course.');
 
-    const { courseTypeId, ...topLevelData } = courseData;
+    const { courseTypeId,useInstitution ,...topLevelData } = courseData;
 
     await this.em.findOneOrFail(Professor, { _id: new ObjectId(professorId) });
     await this.em.findOneOrFail(CourseType, {
@@ -60,6 +61,12 @@ export class CourseService {
       new ObjectId(courseTypeId)
     );
 
+    let institutionRef: Institution | undefined = undefined;
+    if (useInstitution){
+
+      institutionRef = await this.em.findOneOrFail(Institution, { manager: professorRef });
+    }
+
     const course = new Course();
 
     this.em.assign(course, {
@@ -69,6 +76,10 @@ export class CourseService {
       imageUrl: imageUrl,
       courseType: courseTypeRef,
       professor: professorRef,
+      institution:{
+        name: institutionRef?.name || '',
+        aliases: institutionRef?.aliases || []
+      }
     });
 
     await this.em.persistAndFlush(course);
@@ -381,6 +392,7 @@ export class CourseService {
     const newUnit = {
       unitNumber: nextUnitNumber,
       name: unitData.name,
+      description: unitData.description || '',
       detail: unitData.detail,
       materials: unitData.materials || [],
       questions: [],
@@ -428,6 +440,7 @@ export class CourseService {
     const unit = course.units[unitIndex];
     if (updateData.name !== undefined) unit.name = updateData.name;
     if (updateData.detail !== undefined) unit.detail = updateData.detail;
+    if (updateData.description !== undefined) unit.description = updateData.description;
     if (updateData.materials !== undefined)
       unit.materials = updateData.materials;
     if (
