@@ -233,16 +233,17 @@ export class CourseService {
 
     const validatedData: UpdateCourseType = validationResult.output;
 
-    const updateData: Partial<Course> = { ...(validatedData as any) };
-    if (validatedData.priceInCents !== undefined) {
-      (updateData as any).isFree = validatedData.priceInCents === 0;
-    }
+    const updateData: Partial<Course> = { ...validatedData as any };
 
     if (imageUrl) {
       updateData.imageUrl = imageUrl;
     }
 
-    this.em.assign(course, updateData);
+    if (validatedData.status) {
+      updateData.status = validatedData.status;
+    }
+    
+    this.em.assign(course, updateData)
 
     await this.em.flush();
 
