@@ -82,12 +82,26 @@ export const CreateCourseSchema = v.object({
 
 
 /**
- * Schema for searching/filtering courses via query parameters (for GET requests).
- * Valida y transforma los parámetros que vienen de la URL.
+ * Schema for searching and filtering courses via query parameters.
+ * Validates and transforms URL parameters for the course search endpoint.
+ * @remarks Supports text search across course name, professor name, institution name, and course type.
+ * @remarks All filters can be combined and applied with AND logic.
+ * @property {string} [q] - Text search term (searches in name, professor, institution, course type).
+ * @property {string} [courseTypeId] - Filter by specific course type ID.
+ * @property {string} [institutionId] - Filter by professor's institution ID.
+ * @property {string} [professorId] - Filter by specific professor ID.
+ * @property {boolean} [isFree] - Filter by free or paid courses.
+ * @property {status} [status] - Filter by course status.
+ * @property {number} [limit=10] - Number of results per page.
+ * @property {number} [offset=0] - Pagination offset.
+ * @property {string} [sortBy=createdAt] - Field to sort by (name, priceInCents, createdAt).
+ * @property {string} [sortOrder=DESC] - Sort direction (ASC or DESC).
  */
 export const SearchCoursesSchema = v.object({
   q: v.optional(v.string()),
   courseTypeId: v.optional(v.string()),
+  institutionId: v.optional(v.string()),
+  professorId: v.optional(v.string()),
   isFree: v.optional(BooleanString),
   status: v.optional(v.enum_(status, 'El status proporcionado no es válido.')),
   
