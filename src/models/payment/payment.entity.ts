@@ -96,6 +96,13 @@ export class Payment extends BaseEntity {
   earnings = new Collection<any>(this);
 
   /**
+   * Date and time when the payment entity was created.
+   * @type {Date}
+   */
+  @Property({ type: 'date', nullable: true })
+  createdAt?: Date = new Date();
+
+  /**
    * Date and time when the payment was approved.
    * @type {Date}
    */
