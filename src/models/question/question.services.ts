@@ -255,25 +255,12 @@ export class QuestionService {
   async findOne(
     questionId: string,
     courseId: string,
-    professorId: string | null
+    professorId: string | null 
   ): Promise<Question> {
     this.logger.info(
       { questionId, courseId, professorId },
       'Finding single question'
     );
-
-    // If professorId is provided, validate course ownership
-    if (professorId) {
-      await this.em.findOneOrFail(Course, {
-        _id: new ObjectId(courseId),
-        professor: new ObjectId(professorId),
-      });
-    } else {
-      // If no professorId (student access), just verify course exists
-      await this.em.findOneOrFail(Course, {
-        _id: new ObjectId(courseId),
-      });
-    }
 
     const question = await this.em.findOneOrFail(
       Question,
@@ -287,6 +274,7 @@ export class QuestionService {
     this.logger.info({ questionId }, 'Question found');
     return question;
   }
+
 
   /**
    * Updates an existing question.

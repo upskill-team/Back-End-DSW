@@ -24,10 +24,10 @@ export class EnrollementService {
    * @returns {Promise<Enrollement>} The newly created or existing enrollment entity.
    */
   async create({
-    studentId,
+    studentId, // This is actually the USER ID from the frontend
     courseId,
   }: {
-    studentId: string;
+    studentId: string; 
     courseId: string;
   }): Promise<Enrollement> {
     this.logger.info({ userId: studentId, courseId }, 'EnrollementService.create - start');
@@ -83,7 +83,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement[]>} An array of all enrollment entities.
    */
   async findAll(): Promise<Enrollement[]> {
-    return this.em.find(Enrollement, {}, { populate: ['student', 'course'] });
+    return this.em.find(Enrollement, {}, { populate: ['student.user', 'course.professor.user', 'course.units'] });
   }
 
   /**
@@ -92,7 +92,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement | null>} The enrollment entity if found, otherwise null.
    */
   async findById(id: string): Promise<Enrollement | null> {
-    return this.em.findOne(Enrollement, { _id: new ObjectId(id) }, { populate: ['student', 'course'] });
+    return this.em.findOne(Enrollement, { _id: new ObjectId(id) }, { populate: ['student.user', 'course.professor.user', 'course.units'] });
   }
 
   /**
@@ -105,6 +105,8 @@ export class EnrollementService {
     return this.em.findOne(Enrollement, {
       student: new ObjectId(studentId),
       course: new ObjectId(courseId),
+    }, { 
+        populate: ['student.user', 'course.professor.user', 'course.units'] 
     });
   }
 
@@ -114,7 +116,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement[]>} An array of enrollment entities for the specified student.
    */
   async findByStudent(studentId: string): Promise<Enrollement[]> {
-    return this.em.find(Enrollement, { student: new ObjectId(studentId) }, { populate: ['student', 'course'] });
+    return this.em.find(Enrollement, { student: new ObjectId(studentId) }, { populate: ['student.user', 'course.professor.user', 'course.units'] });
   }
 
   /**
@@ -123,7 +125,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement[]>} An array of enrollment entities for the specified course.
    */
   async findByCourse(courseId: string): Promise<Enrollement[]> {
-    return this.em.find(Enrollement, { course: new ObjectId(courseId) }, { populate: ['student', 'course'] });
+    return this.em.find(Enrollement, { course: new ObjectId(courseId) }, { populate: ['student.user', 'course.professor.user', 'course.units'] });
   }
 
   /**
@@ -133,10 +135,10 @@ export class EnrollementService {
    * @returns {Promise<Enrollement>} The updated enrollment entity.
    */
   async update(id: string, data: Partial<{ state: EnrollmentState; grade?: number; progress?: number }>): Promise<Enrollement> {
-    const enrol = await this.em.findOneOrFail(Enrollement, { _id: new ObjectId(id) }, { populate: ['student', 'course'] });
+    const enrol = await this.em.findOneOrFail(Enrollement, { _id: new ObjectId(id) });
     Object.assign(enrol, data);
     await this.em.flush();
-    return enrol;
+    return this.findById(id) as Promise<Enrollement>;
   }
 
   /**
