@@ -57,13 +57,14 @@ export const CreateCourseSchema = v.object({
     v.string(),
     v.minLength(1, 'Course description is required.')
   ),
-  price: v.optional(
+  priceInCents: v.optional(
     v.pipe(
       v.union([v.string(), v.number()]),
       v.transform((input) =>
         typeof input === 'string' ? Number(input) : input
       ),
       v.number('Price must be a number.'),
+      v.integer('Price in cents must be an integer.'),
       v.minValue(0, 'Price cannot be negative.')
     )
   ),
@@ -93,7 +94,7 @@ export const SearchCoursesSchema = v.object({
   limit: v.optional(NumericString, '10'),
   offset: v.optional(NumericString, '0'),
 
-  sortBy: v.optional(v.picklist(['name', 'price', 'createdAt']), 'createdAt'),
+  sortBy: v.optional(v.picklist(['name', 'priceInCents', 'createdAt']), 'createdAt'),
   sortOrder: v.optional(
     v.pipe(
       v.string(),

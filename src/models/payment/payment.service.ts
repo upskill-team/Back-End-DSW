@@ -4,10 +4,20 @@
  */
 import { EntityManager } from '@mikro-orm/core';
 import { Logger } from 'pino';
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment as MPPayment } from 'mercadopago';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { Course } from '../course/course.entity.js';
 import EnrollementService from '../Enrollement/enrollement.service.js';
+import { Payment, PaymentStatus } from './payment.entity.js';
+import { Earning, EarningType, EarningStatus } from './earning.entity.js';
+import { Student } from '../student/student.entity.js';
+import { Professor } from '../professor/professor.entity.js';
+import { User } from '../user/user.entity.js';
+import { 
+  toAmount, 
+  calculateProfessorShare, 
+  calculatePlatformFee 
+} from '../../shared/utils/currency.js';
 
 interface PreferenceResponse {
   preferenceId: string;
@@ -81,27 +91,9 @@ export class PaymentService {
             category_id: 'education',
             quantity: 1,
             currency_id: 'ARS',
-            unit_price: course.price!,
+            unit_price: toAmount(course.priceInCents!),
           },
         ],
-        payer: {
-        name: "Test",
-        surname: "User",
-        email: "TESTUSER546421634057@testuser.com",
-        phone: {
-            area_code: "11",
-            string: 22223333
-        },
-        identification: {
-            type: "DNI",
-            number: "12345678"
-        },
-        address: {
-            street_name: "Falsa",
-            string: "123",
-            zip_code: "1111"
-        }
-      },
         back_urls: {
           success: `${frontendUrl}/payment/success?course_id=${course.id}`,
           failure: `${frontendUrl}/payment/failure?course_id=${course.id}`,
@@ -134,7 +126,8 @@ export class PaymentService {
 
   /**
    * Handles incoming webhook notifications from Mercado Pago.
-   * If the payment is approved, it triggers the enrollment creation process.
+   * If the payment is approved, it triggers the enrollment creation process
+   * and generates payment and earning records.
    * @param {string} paymentId - The ID of the payment being notified.
    * @returns {Promise<void>}
    */
@@ -142,31 +135,156 @@ export class PaymentService {
     this.logger.info({ paymentId }, 'PaymentService.handleWebhook - start');
     
     try {
-      const paymentController = new Payment(this.client);
-      const payment = await paymentController.get({ id: paymentId });
+      const paymentController = new MPPayment(this.client);
+      const mpPayment = await paymentController.get({ id: paymentId });
       
-      this.logger.info({ paymentStatus: payment.status }, 'Payment status received');
+      this.logger.info({ paymentStatus: mpPayment.status }, 'Payment status received');
       
-      if (payment.status === 'approved' && payment.external_reference) {
-        const { userId, courseId } = JSON.parse(payment.external_reference);
+      if (mpPayment.status === 'approved' && mpPayment.external_reference) {
+        const { userId, courseId } = JSON.parse(mpPayment.external_reference);
 
         if (!userId || !courseId) {
-          this.logger.error({ ref: payment.external_reference }, 'Webhook error: external_reference is missing userId or courseId.');
+          this.logger.error({ ref: mpPayment.external_reference }, 'Webhook error: external_reference is missing userId or courseId.');
           return;
         }
 
-        const enrollmentService = new EnrollementService(this.em.fork(), this.logger);
-        const existingEnrollment = await enrollmentService.findByStudentAndCourse(userId, courseId);
+        // Check if payment already exists to ensure idempotency
+        const existingPayment = await this.em.findOne(Payment, { 
+          mercadoPagoId: paymentId 
+        });
 
-        if (!existingEnrollment) {
-          await enrollmentService.create({ studentId: userId, courseId: courseId });
-          this.logger.info({ userId, courseId }, 'Enrollment created successfully from webhook.');
-        } else {
-          this.logger.warn({ userId, courseId }, 'Webhook received for an already existing enrollment. Ignoring.');
+        if (existingPayment) {
+          this.logger.warn({ paymentId }, 'Payment already processed. Ignoring webhook.');
+          return;
         }
+
+        // Use a transaction to ensure atomicity
+        await this.em.transactional(async (em) => {
+          // Fetch required entities
+          const course = await em.findOne(Course, { _id: new ObjectId(courseId) }, {
+            populate: ['professor']
+          });
+
+          // Resolve student profile: external_reference may contain either
+          // the User id (most common) or the Student profile id. Try User first.
+          let student: Student | null = null;
+
+          const maybeUser = await em.findOne(User, { _id: new ObjectId(userId) }, { populate: ['studentProfile'] });
+          if (maybeUser && (maybeUser as any).studentProfile) {
+            student = (maybeUser as any).studentProfile as Student;
+          } else {
+            // Fallback: maybe the provided id was already a Student id
+            student = await em.findOne(Student, { _id: new ObjectId(userId) });
+          }
+
+          if (!course || !student) {
+            this.logger.error({ courseId, userId }, 'Course or Student not found');
+            throw new Error('Course or Student not found');
+          }
+
+          if (!course.priceInCents) {
+            this.logger.error({ courseId }, 'Course price is not set');
+            throw new Error('Course price is not set');
+          }
+
+          const totalAmountInCents = course.priceInCents;
+
+          // Create Payment entity
+          const payment = em.create(Payment, {
+            mercadoPagoId: paymentId,
+            amountInCents: totalAmountInCents,
+            status: PaymentStatus.APPROVED,
+            course: course,
+            student: student,
+            paidAt: new Date(),
+            metadata: {
+              status: mpPayment.status,
+              status_detail: mpPayment.status_detail,
+              payment_type_id: mpPayment.payment_type_id,
+              payment_method_id: mpPayment.payment_method_id,
+              transaction_amount: mpPayment.transaction_amount,
+              date_approved: mpPayment.date_approved,
+            },
+          });
+
+          await em.persistAndFlush(payment);
+
+          // Calculate earnings
+          const professorShareCents = calculateProfessorShare(totalAmountInCents);
+          const platformFeeCents = calculatePlatformFee(totalAmountInCents);
+
+          this.logger.info(
+            { 
+              totalAmountInCents, 
+              professorShareCents, 
+              platformFeeCents,
+              sum: professorShareCents + platformFeeCents 
+            }, 
+            'Earnings calculation'
+          );
+
+          // Create Professor Earning
+          const professorEarning = em.create(Earning, {
+            type: EarningType.PROFESSOR_SHARE,
+            amountInCents: professorShareCents,
+            payment: payment,
+            professor: course.professor as Professor,
+            status: EarningStatus.PENDING,
+            createdAt: new Date(),
+          });
+
+          // Create Platform Earning
+          const platformEarning = em.create(Earning, {
+            type: EarningType.PLATFORM_FEE,
+            amountInCents: platformFeeCents,
+            payment: payment,
+            status: EarningStatus.PENDING,
+            createdAt: new Date(),
+          });
+
+          await em.persistAndFlush([professorEarning, platformEarning]);
+
+          // Create or verify enrollment directly in this transaction to avoid
+          // nested transactions and race conditions between webhook and frontend.
+          // Try to find existing enrollment (accepts user id or student id)
+          const enrollmentService = new EnrollementService(em, this.logger);
+          const existingEnrollment = await enrollmentService.findByStudentAndCourse(userId, courseId);
+
+          if (!existingEnrollment) {
+            // Resolve student profile (user -> student) was already done above and stored in `student`.
+            // Create enrollement entity directly using the transaction-scoped EntityManager `em`.
+            const EnrollementClass = (await import('../Enrollement/enrollement.entity.js')).Enrollement;
+            const enrol = em.create(EnrollementClass, {
+              student: student,
+              course: course,
+              enrolledAt: new Date(),
+              state: (await import('../Enrollement/enrollement.entity.js')).EnrollmentState.ENROLLED,
+              completedUnits: [],
+            });
+
+            await em.persistAndFlush(enrol);
+
+            // Ensure student's courses collection is updated
+            try {
+              (student as any).courses.add(course);
+              await em.persistAndFlush(student);
+            } catch {
+              // ignore if student.courses isn't a collection in this context
+            }
+
+            // Link enrollment to payment
+            payment.enrollement = enrol;
+            await em.persistAndFlush(payment);
+
+            this.logger.info({ userId, courseId, paymentId }, 'Payment, Earnings, and Enrollment created successfully from webhook.');
+          } else {
+            this.logger.warn({ userId, courseId }, 'Webhook received for an already existing enrollment. Payment and Earnings created.');
+          }
+        });
       }
     } catch (err: any) {
       this.logger.error({ err: err.cause ?? err, paymentId }, 'PaymentService.handleWebhook - error');
+      throw err;
     }
   }
 }
