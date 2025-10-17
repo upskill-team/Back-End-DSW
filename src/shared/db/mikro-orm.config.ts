@@ -31,18 +31,6 @@ export default defineConfig({
   clientUrl: connectionString,
   highlighter: new MongoHighlighter(),
   loggerFactory: (options) => new PinoLogger(options),
-  // FIX: Temporarily disabled migrations configuration due to issues
-  // migrations: {
-  //   path: 'dist/migrations',
-  //   pathTs: 'src/migrations',
-  //   glob: '!(*.d).{js,ts}',
-  //   transactional: true,
-  //   disableForeignKeys: false,
-  //   allOrNothing: true,
-  //   dropTables: true,
-  //   safe: false,
-  //   emit: 'ts',
-  // },
   schemaGenerator: {
     disableForeignKeys: true,
     createForeignKeyConstraints: true,

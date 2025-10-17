@@ -8,6 +8,7 @@ import { Enrollement, EnrollmentState } from './enrollement.entity.js';
 import { Course } from '../course/course.entity.js';
 import { Logger } from 'pino';
 import { User } from '../user/user.entity.js';
+import { Student } from '../student/student.entity.js';
 
 export class EnrollementService {
   constructor(
@@ -102,6 +103,21 @@ export class EnrollementService {
    * @returns {Promise<Enrollement | null>} The enrollment entity if found, otherwise null.
    */
   async findByStudentAndCourse(studentId: string, courseId: string): Promise<Enrollement | null> {
+    // The input studentId may be either a Student profile id or a User id.
+    // Try to resolve as User -> Student first, otherwise treat as Student id.
+    try {
+      const user = await this.em.findOne(User, { _id: new ObjectId(studentId) }, { populate: ['studentProfile'] });
+      if (user && (user as any).studentProfile) {
+        const studentProfile = (user as any).studentProfile as Student;
+        return this.em.findOne(Enrollement, {
+          student: new ObjectId(studentProfile.id!),
+          course: new ObjectId(courseId),
+        });
+      }
+    } catch {
+      // not a User id, continue to try as Student id
+    }
+
     return this.em.findOne(Enrollement, {
       student: new ObjectId(studentId),
       course: new ObjectId(courseId),

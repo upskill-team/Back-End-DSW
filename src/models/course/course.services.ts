@@ -64,7 +64,7 @@ export class CourseService {
 
     this.em.assign(course, {
       ...topLevelData,
-      isFree: topLevelData.price === 0 || topLevelData.price === undefined,
+      isFree: topLevelData.priceInCents === 0 || topLevelData.priceInCents === undefined,
       units: [],
       imageUrl: imageUrl,
       courseType: courseTypeRef,
@@ -228,8 +228,8 @@ export class CourseService {
     const validatedData: UpdateCourseType = validationResult.output;
 
     const updateData: Partial<Course> = { ...(validatedData as any) };
-    if (validatedData.price !== undefined) {
-      (updateData as any).isFree = validatedData.price === 0;
+    if (validatedData.priceInCents !== undefined) {
+      (updateData as any).isFree = validatedData.priceInCents === 0;
     }
 
     if (imageUrl) {
@@ -642,9 +642,9 @@ export class CourseService {
         if (quickSaveData.data.name) course.name = quickSaveData.data.name;
         if (quickSaveData.data.description)
           course.description = quickSaveData.data.description;
-        if (quickSaveData.data.price !== undefined) {
-          course.price = quickSaveData.data.price;
-          course.isFree = quickSaveData.data.price === 0;
+        if (quickSaveData.data.priceInCents !== undefined) {
+          course.priceInCents = quickSaveData.data.priceInCents;
+          course.isFree = quickSaveData.data.priceInCents === 0;
         }
         break;
       }
