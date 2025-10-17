@@ -3,11 +3,11 @@
  * @remarks Encapsulates the business logic for managing course types.
  */
 
-import { EntityManager } from '@mikro-orm/core';
+import { EntityManager, FilterQuery } from '@mikro-orm/core';
 import { CourseType } from './courseType.entity.js';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { safeParse } from 'valibot';
-import { CreateCourseType, UpdateCourseType, UpdateCourseTypeSchema } from './courseType.schemas.js';
+import { CreateCourseType, UpdateCourseType, UpdateCourseTypeSchema, SearchCourseTypesQuery } from './courseType.schemas.js';
 import { Logger } from 'pino';
 
 /**
@@ -84,10 +84,23 @@ export class CourseTypeService {
    * Retrieves all course types from the database.
    * @returns {Promise<CourseType[]>} A promise that resolves to an array of all course types.
    */
-  public async findAll(): Promise<CourseType[]> {
-    this.logger.info('Fetching all course types.')
+  public async findAll(query: SearchCourseTypesQuery): Promise<{ courseTypes: CourseType[], total: number }> {
+    this.logger.info({ query }, 'Fetching all course types with filters.');
 
-    return this.em.find(CourseType, {}, { populate: ['courses'] })
+    const where: FilterQuery<CourseType> = {};
+
+    if (query.q) {
+      where.name = new RegExp(query.q, 'i');
+    }
+
+    const [courseTypes, total] = await this.em.findAndCount(CourseType, where, {
+      populate: ['courses'],
+      orderBy: { [query.sortBy]: query.sortOrder },
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    return { courseTypes, total };
   }
 
   /**
