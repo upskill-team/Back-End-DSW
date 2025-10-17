@@ -74,7 +74,7 @@ export class AppealService {
    * @returns {Promise<{appeals: Appeal[], total: number}>} An object with the list of appeals and the total count.
    */
   public async findAll(query: SearchAppealsQuery): Promise<{ appeals: Appeal[], total: number }> {
-    this.logger.info({ query }, 'Fetching all appeals with filters.')
+    this.logger.info({ query }, 'Fetching all appeals with filters.');
 
     const where: FilterQuery<Appeal> = {};
 
@@ -83,13 +83,21 @@ export class AppealService {
     }
 
     if (query.q) {
-      const searchQuery = { $ilike: `%${query.q}%` };
-      where.user = {
+      const searchQuery = new RegExp(query.q, 'i');
+      
+      const matchingUsers = await this.em.find(User, {
         $or: [
           { name: searchQuery },
           { surname: searchQuery }
-        ]
-      };
+        ],
+      });
+
+      if (matchingUsers.length === 0) {
+        return { appeals: [], total: 0 };
+      }
+
+      const userIds = matchingUsers.map(user => user._id!);
+      where.user = { $in: userIds };
     }
 
     const [appeals, total] = await this.em.findAndCount(Appeal, where, {

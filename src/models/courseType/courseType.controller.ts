@@ -6,6 +6,8 @@ import { NextFunction, Request, Response } from 'express'
 import { orm } from '../../shared/db/orm.js'
 import { CourseTypeService } from './courseType.services.js'
 import { HttpResponse } from '../../shared/response/http.response.js'
+import * as v from 'valibot';
+import { SearchCourseTypesSchema } from './courseType.schemas.js';
 
 async function add(req: Request, res: Response, next: NextFunction) {
   try {
@@ -25,11 +27,19 @@ async function add(req: Request, res: Response, next: NextFunction) {
 
 async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
-    const service = new CourseTypeService(orm.em.fork(), req.log)
-    const courseTypes = await service.findAll()
-    return HttpResponse.Ok(res, courseTypes)
+    const validatedQuery = v.parse(SearchCourseTypesSchema, req.query);
+    const service = new CourseTypeService(orm.em.fork(), req.log);
+    const result = await service.findAll(validatedQuery);
+    return HttpResponse.Ok(res, result);
   } catch (error) {
-    next(error)
+    if (error instanceof v.ValiError) {
+      const errorDetails = error.issues.map(issue => ({ 
+        field: issue.path?.map((p: { key: any }) => p.key).join('.'), 
+        message: issue.message 
+      }));
+      return HttpResponse.BadRequest(res, { message: 'Parámetros de consulta inválidos.', errors: errorDetails });
+    }
+    next(error);
   }
 }
 

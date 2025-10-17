@@ -54,7 +54,7 @@ export const SearchAppealsSchema = v.object({
   limit: v.optional(NumericString, '10'),
   offset: v.optional(NumericString, '0'), 
 
-  sortBy: v.optional(v.string(), 'date'),
+  sortBy: v.optional(v.picklist(['date', 'expertise']), 'date'),
   sortOrder: v.optional(
     v.pipe(
       v.string(),
