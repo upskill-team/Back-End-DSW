@@ -148,7 +148,7 @@ export class CourseService {
   }
 
   /**
-   * Finds the top 4 most popular courses based on the number of enrolled students.
+   * Finds the top 6 most popular courses based on the number of enrolled students.
    * @returns {Promise<Course[]>} A promise that resolves to an array of the top 4 courses.
    */
   public async findTrendingCourses(): Promise<Course[]> {
