@@ -59,11 +59,22 @@ async function findOne(req: Request, res: Response) {
   try {
     const assessmentService = new AssessmentService(orm.em.fork(), req.log);
     const { id } = req.params;
-    const assessment = await assessmentService.findOne(id);
+    const userId = req.user!.id;
+
+    const studentId = await getStudentIdFromUserId(orm.em.fork(), userId);
+
+    const assessment = await assessmentService.getAssessmentWithStudentMetadata(
+      id,
+      studentId
+    );
+
     return HttpResponse.Ok(res, assessment);
   } catch (error: any) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Assessment not found.');
+    }
+    if (error.message.includes('User is not a student')) {
+        return HttpResponse.Unauthorized(res, 'No se encontró un perfil de estudiante para este usuario.');
     }
     throw error;
   }
@@ -172,10 +183,15 @@ async function submitAttempt(req: Request, res: Response) {
 async function getAttemptsByAssessment(req: Request, res: Response) {
   const assessmentService = new AssessmentService(orm.em.fork(), req.log);
   const { assessmentId } = req.params;
+  const userId = req.user!.id
+  
+  const studentId = await getStudentIdFromUserId(orm.em.fork(), userId)
+  
   const attempts = await assessmentService.getAttemptsByAssessment(
-    assessmentId
+    assessmentId,
+    studentId
   );
-  return HttpResponse.Ok(res, attempts);
+  return HttpResponse.Ok(res, attempts)
 }
 
 /**

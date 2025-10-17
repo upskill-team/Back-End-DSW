@@ -24,6 +24,7 @@ import {
   SubmitAnswerType,
   SubmitAttemptType,
 } from './assessment.schemas.js';
+import { EnrollementService } from '../Enrollement/enrollement.service.js'
 
 /**
  * Provides methods for CRUD operations on Assessment entities.
@@ -240,12 +241,24 @@ export class AssessmentService {
     const assessment = await this.em.findOneOrFail(
       Assessment,
       { _id: new ObjectId(assessmentId) },
-      { populate: ['questions'] }
+      { populate: ['questions', 'course'] }
     );
 
     const student = await this.em.findOneOrFail(Student, {
       _id: new ObjectId(studentId),
     });
+
+    const enrollmentService = new EnrollementService(this.em, this.logger);
+
+    const enrollment = await enrollmentService.findByStudentAndCourse(
+      student.id!,
+      (assessment.course as Course).id!
+    );
+
+    if (!enrollment) {
+      this.logger.warn({ studentId, courseId: (assessment.course as Course).id }, "Intento bloqueado: El estudiante no está inscrito en el curso.");
+      throw new Error('Debes estar inscrito en el curso para realizar esta evaluación.');
+    }
 
     // Check if assessment is available
     const now = new Date();
@@ -408,13 +421,17 @@ export class AssessmentService {
    * @returns {Promise<AssessmentAttempt[]>} Array of attempts.
    */
   public async getAttemptsByAssessment(
-    assessmentId: string
+    assessmentId: string,
+    studentId: string
   ): Promise<AssessmentAttempt[]> {
-    this.logger.info({ assessmentId }, 'Fetching attempts for assessment.');
+    this.logger.info({ assessmentId, studentId }, 'Fetching attempts for assessment.');
 
     return this.em.find(
       AssessmentAttempt,
-      { assessment: new ObjectId(assessmentId) },
+      {
+        assessment: new ObjectId(assessmentId),
+        student: new ObjectId(studentId),
+      },
       { populate: ['student', 'assessment'] }
     );
   }
