@@ -28,6 +28,12 @@ export class Unit {
   @Property()
   name!: string;
 
+   /**
+   * Description of the unit.
+   * @type {string}
+   */
+  @Property()
+  description!: string;
   /**
    * The main instructional content of the unit, typically in Markdown format.
    * @type {string}

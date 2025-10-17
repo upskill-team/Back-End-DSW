@@ -7,6 +7,8 @@ import { Request, Response } from 'express';
 import { orm } from '../../shared/db/orm.js';
 import { AssessmentService } from './assessment.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
+import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
+import { getStudentIdFromUserId } from '../../shared/utils/student.helper.js';
 
 /**
  * Handles the creation of a new assessment.
@@ -27,12 +29,24 @@ async function create(req: Request, res: Response) {
  * @returns {Promise<Response>} A list of assessments.
  */
 async function findAll(req: Request, res: Response) {
-  const assessmentService = new AssessmentService(orm.em.fork(), req.log);
-  const { courseId } = req.query;
-  const assessments = await assessmentService.findAll(
-    courseId as string | undefined
-  );
-  return HttpResponse.Ok(res, assessments);
+  try {
+    const assessmentService = new AssessmentService(orm.em.fork(), req.log);
+    const { courseId } = req.query;
+    const userId = req.user!.id;
+
+    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+
+    const assessments = await assessmentService.findAllForProfessor(
+      professorId,
+      courseId as string | undefined
+    );
+    return HttpResponse.Ok(res, assessments);
+  } catch(error: any) {
+    if (error.message.includes('User does not have a professor profile')) {
+      return HttpResponse.Unauthorized(res, 'Acceso denegado. No eres un profesor.');
+    }
+    return HttpResponse.Ok(res, []);
+  }
 }
 
 /**
@@ -45,11 +59,22 @@ async function findOne(req: Request, res: Response) {
   try {
     const assessmentService = new AssessmentService(orm.em.fork(), req.log);
     const { id } = req.params;
-    const assessment = await assessmentService.findOne(id);
+    const userId = req.user!.id;
+
+    const studentId = await getStudentIdFromUserId(orm.em.fork(), userId);
+
+    const assessment = await assessmentService.getAssessmentWithStudentMetadata(
+      id,
+      studentId
+    );
+
     return HttpResponse.Ok(res, assessment);
   } catch (error: any) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Assessment not found.');
+    }
+    if (error.message.includes('User is not a student')) {
+        return HttpResponse.Unauthorized(res, 'No se encontró un perfil de estudiante para este usuario.');
     }
     throw error;
   }
@@ -90,52 +115,41 @@ async function remove(req: Request, res: Response) {
 async function startAttempt(req: Request, res: Response) {
   try {
     const assessmentService = new AssessmentService(orm.em.fork(), req.log);
-    const userId = req.user!.id;
+    const requestingUserId = req.user!.id;
+    
+    const { assessmentId } = req.params;
+    const { studentId } = req.body;
 
-    // Get student ID from user ID
-    const { getStudentIdFromUserId } = await import(
-      '../../shared/utils/student.helper.js'
-    );
-    const studentId = await getStudentIdFromUserId(orm.em.fork(), userId);
-
-    // Get assessmentId from params (if using new route) or body (legacy)
-    const assessmentId = req.params.assessmentId || req.body.assessmentId;
+    const authenticatedStudentId = await getStudentIdFromUserId(orm.em.fork(), requestingUserId);
+    if (authenticatedStudentId !== studentId) {
+      return HttpResponse.Unauthorized(res, 'You can only start an attempt for your own profile.');
+    }
 
     if (!assessmentId) {
-      return HttpResponse.BadRequest(res, 'assessmentId is required');
+      return HttpResponse.BadRequest(res, 'Assessment ID is required in the URL.');
     }
 
     const attempt = await assessmentService.startAttempt({
       assessmentId,
-      studentId,
+      studentId, 
     });
 
-    return HttpResponse.Created(res, {
-      id: attempt.id,
-      assessment: assessmentId,
-      student: studentId,
-      startedAt: attempt.startedAt,
-      submittedAt: attempt.submittedAt,
-      score: attempt.score,
-      passed: attempt.passed,
-      answers: [],
-      status: attempt.status,
-      timeSpent: 0,
-    });
+    return HttpResponse.Created(res, attempt);
+
   } catch (error: any) {
     req.log.error({ error }, 'Error starting attempt');
     if (
       error.message.includes('not yet available') ||
       error.message.includes('no longer available') ||
       error.message.includes('not active') ||
-      error.message.includes('Maximum number')
+      error.message.includes('Maximum number') ||
+      error.message === 'User is not a student'
     ) {
       return HttpResponse.BadRequest(res, error.message);
     }
     throw error;
   }
 }
-
 /**
  * Handles submitting a single answer during an attempt.
  * @param {Request} req - The Express request object, with answer data in the body.
@@ -169,10 +183,15 @@ async function submitAttempt(req: Request, res: Response) {
 async function getAttemptsByAssessment(req: Request, res: Response) {
   const assessmentService = new AssessmentService(orm.em.fork(), req.log);
   const { assessmentId } = req.params;
+  const userId = req.user!.id
+  
+  const studentId = await getStudentIdFromUserId(orm.em.fork(), userId)
+  
   const attempts = await assessmentService.getAttemptsByAssessment(
-    assessmentId
+    assessmentId,
+    studentId
   );
-  return HttpResponse.Ok(res, attempts);
+  return HttpResponse.Ok(res, attempts)
 }
 
 /**
@@ -269,72 +288,23 @@ async function getAssessmentsByCourse(req: Request, res: Response) {
     const { courseId } = req.params;
     const userId = req.user!.id;
 
-    // Get student ID from user ID
-    const { getStudentIdFromUserId } = await import(
-      '../../shared/utils/student.helper.js'
-    );
-    let studentId: string | null = null;
-    try {
-      studentId = await getStudentIdFromUserId(orm.em.fork(), userId);
-    } catch {
-      // User is not a student (e.g., professor)
-      // Return assessments with questions for professor view
-      const assessments = await assessmentService.findAll(courseId);
-      const serializedAssessments = assessments.map((assessment) => ({
-        id: assessment.id,
-        title: assessment.title,
-        description: assessment.description,
-        durationMinutes: assessment.durationMinutes,
-        passingScore: assessment.passingScore,
-        maxAttempts: assessment.maxAttempts,
-        isActive: assessment.isActive,
-        availableFrom: assessment.availableFrom,
-        availableUntil: assessment.availableUntil,
-        questionsCount: assessment.questions.length,
-        questions: assessment.questions.getItems().map((q) => ({
-          id: q.id,
-          text: q.text,
-          type: q.type,
-          points: q.points,
-          options: q.options,
-        })),
-      }));
-      return HttpResponse.Ok(res, serializedAssessments);
-    }
+    const studentId = await getStudentIdFromUserId(orm.em.fork(), userId);
 
-    // Get assessments for the course with student metadata
-    const assessments = await assessmentService.findAll(courseId);
+    const assessments = await assessmentService.findAllByCourse(courseId);
 
-    // Add student metadata to each assessment
     const assessmentsWithMetadata = await Promise.all(
-      assessments.map(async (assessment) => {
-        const metadata =
-          await assessmentService.getAssessmentWithStudentMetadata(
-            assessment.id!,
-            studentId
-          );
-
-        return {
-          id: metadata.id,
-          title: metadata.title,
-          description: metadata.description,
-          duration: metadata.durationMinutes,
-          passingScore: metadata.passingScore,
-          availableUntil: metadata.availableUntil,
-          questionsCount: metadata.questions.length,
-          attemptsCount: metadata.attemptsCount,
-          maxAttempts: metadata.maxAttempts,
-          attemptsRemaining: metadata.attemptsRemaining,
-          bestScore: metadata.bestScore,
-          lastAttemptDate: metadata.lastAttemptDate,
-          status: metadata.status,
-        };
-      })
+      assessments.map(assessment => 
+        assessmentService.getAssessmentWithStudentMetadata(assessment.id!, studentId)
+      )
     );
-
+    
     return HttpResponse.Ok(res, assessmentsWithMetadata);
+
   } catch (error: any) {
     req.log.error({ error }, 'Error getting assessments by course');
+    if (error.message === 'User is not a student') {
+        return HttpResponse.Unauthorized(res, 'No se encontró un perfil de estudiante para este usuario.');
+    }
     throw error;
   }
 }

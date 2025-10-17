@@ -17,6 +17,8 @@ import { ObjectId } from '@mikro-orm/mongodb';
 import { User } from '../user/user.entity.js';
 import { safeParse } from 'valibot';
 import { UpdateCourseSchema } from './course.schemas.js';
+import { Institution } from '../institution/institution.entity.js';
+import { Enrollement } from '../Enrollement/enrollement.entity.js';
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -44,7 +46,7 @@ export class CourseService {
   ): Promise<Course> {
     this.logger.info({ name: courseData.name }, 'Creating new course.');
 
-    const { courseTypeId, ...topLevelData } = courseData;
+    const { courseTypeId,useInstitution ,...topLevelData } = courseData;
 
     await this.em.findOneOrFail(Professor, { _id: new ObjectId(professorId) });
     await this.em.findOneOrFail(CourseType, {
@@ -60,6 +62,12 @@ export class CourseService {
       new ObjectId(courseTypeId)
     );
 
+    let institutionRef: Institution | undefined = undefined;
+    if (useInstitution){
+
+      institutionRef = await this.em.findOneOrFail(Institution, { manager: professorRef });
+    }
+
     const course = new Course();
 
     this.em.assign(course, {
@@ -69,6 +77,10 @@ export class CourseService {
       imageUrl: imageUrl,
       courseType: courseTypeRef,
       professor: professorRef,
+      institution:{
+        name: institutionRef?.name || '',
+        aliases: institutionRef?.aliases || []
+      }
     });
 
     await this.em.persistAndFlush(course);
@@ -136,7 +148,7 @@ export class CourseService {
   }
 
   /**
-   * Finds the top 4 most popular courses based on the number of enrolled students.
+   * Finds the top 6 most popular courses based on the number of enrolled students.
    * @returns {Promise<Course[]>} A promise that resolves to an array of the top 4 courses.
    */
   public async findTrendingCourses(): Promise<Course[]> {
@@ -190,16 +202,10 @@ export class CourseService {
       professor: new ObjectId(user.professorProfile.id),
     });
 
-    console.log('--- Archivos recibidos por Multer ---');
-    console.log(materialFiles);
-
     const fileUrlMap = new Map<string, string>();
     for (const file of materialFiles) {
       fileUrlMap.set(file.originalname, file.path);
     }
-
-    console.log('--- Mapa de URLs generado ---');
-    console.log(fileUrlMap);
 
     if (data.units && data.units.length > 0) {
       for (const unit of data.units) {
@@ -236,7 +242,11 @@ export class CourseService {
       updateData.imageUrl = imageUrl;
     }
 
-    this.em.assign(course, updateData);
+    if (validatedData.status) {
+      updateData.status = validatedData.status;
+    }
+    
+    this.em.assign(course, updateData)
 
     await this.em.flush();
 
@@ -285,10 +295,10 @@ export class CourseService {
    * @throws {Error} If the user is not found or is not a professor.
    */
   public async findCoursesOfProfessor(userId: string): Promise<Course[]> {
-    this.logger.info(
-      { userId },
-      'Fetching courses for an authenticated professor.'
-    );
+  this.logger.info(
+    { userId },
+    'Fetching courses for an authenticated professor.'
+  );
 
     const userObjectId = new ObjectId(userId);
 
@@ -304,50 +314,102 @@ export class CourseService {
 
     const professorObjectId = new ObjectId(user.professorProfile.id);
 
-    return await this.em.find(
+    const courses = await this.em.find(
       Course,
       { professor: professorObjectId },
       { populate: ['courseType', 'professor'] }
     );
+
+    const coursesWithCount = await Promise.all(
+      courses.map(async (course) => {
+        const studentCount = await this.em.count(Enrollement, { 
+          course: new ObjectId(course.id) 
+        });
+        
+        return {
+          id: course.id,
+          name: course.name,
+          description: course.description,
+          imageUrl: course.imageUrl,
+          isFree: course.isFree,
+          priceInCents: course.priceInCents,
+          status: course.status,
+          units: course.units,
+          courseType: course.courseType,
+          professor: course.professor,
+          studentsCount: studentCount
+        };
+      })
+    );
+
+    return coursesWithCount as any;
   }
 
-  /**
-   * Searches for courses based on various filters.
-   * @param {SearchCoursesQuery} query - The search filters and pagination options.
-   * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
-   */
-  async searchCourses(
-    query: SearchCoursesQuery
-  ): Promise<{ courses: Course[]; total: number }> {
-    this.logger.info({ query }, 'Searching courses with filters.');
+/**
+ * Searches for courses based on various filters.
+ * @param {SearchCoursesQuery} query - The search filters and pagination options.
+ * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
+ */
+async searchCourses(
+  query: SearchCoursesQuery
+): Promise<{ courses: Course[]; total: number }> {
+  this.logger.info({ query }, 'Searching courses with filters.');
 
-    const where: FilterQuery<Course> = {};
+  const where: FilterQuery<Course> = {};
 
-    if (query.q) {
-      where.name = new RegExp(query.q, 'i')
-    }
-    
-    if (query.courseTypeId) {
-      where.courseType = new ObjectId(query.courseTypeId);
-    }
-    
-    if (query.isFree !== undefined) {
-      where.isFree = query.isFree;
-    }
-
-    if (query.status) {
-      where.status = query.status;
-    }
-
-    const [courses, total] = await this.em.findAndCount(Course, where, {
-      populate: ['courseType', 'professor.user'],
-      orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
-      limit: query.limit,
-      offset: query.offset,
-    });
-
-    return { courses, total };
+  if (query.q) {
+    where.name = new RegExp(query.q, 'i')
   }
+  
+  if (query.courseTypeId) {
+    where.courseType = new ObjectId(query.courseTypeId);
+  }
+  
+  if (query.isFree !== undefined) {
+    where.isFree = query.isFree;
+  }
+
+  if (query.status) {
+    where.status = query.status;
+  }
+
+  const [courses, total] = await this.em.findAndCount(Course, where, {
+    populate: ['courseType', 'professor.user'],
+    orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
+    limit: query.limit,
+    offset: query.offset,
+  });
+
+  const coursesWithCount = await Promise.all(
+    courses.map(async (course) => {
+      const studentCount = await this.em.count(Enrollement, { 
+        course: new ObjectId(course.id) 
+      });
+      
+      const courseObj = {
+        id: course.id,
+        name: course.name,
+        description: course.description,
+        imageUrl: course.imageUrl,
+        isFree: course.isFree,
+        priceInCents: course.priceInCents,
+        status: course.status,
+        units: course.units,
+        courseType: course.courseType,
+        professor: course.professor,
+      };
+      
+      console.log(`Course ${course.name} has ${studentCount} students.`);
+      
+      return {
+        ...courseObj,
+        studentsCount: studentCount
+      };
+    })
+  );
+
+  return { courses: coursesWithCount as any, total };
+}
 
   /**
    * Creates a new unit in an existing course.
@@ -381,6 +443,7 @@ export class CourseService {
     const newUnit = {
       unitNumber: nextUnitNumber,
       name: unitData.name,
+      description: unitData.description || '',
       detail: unitData.detail,
       materials: unitData.materials || [],
       questions: [],
@@ -428,6 +491,7 @@ export class CourseService {
     const unit = course.units[unitIndex];
     if (updateData.name !== undefined) unit.name = updateData.name;
     if (updateData.detail !== undefined) unit.detail = updateData.detail;
+    if (updateData.description !== undefined) unit.description = updateData.description;
     if (updateData.materials !== undefined)
       unit.materials = updateData.materials;
     if (

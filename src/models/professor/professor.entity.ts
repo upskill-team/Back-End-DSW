@@ -39,6 +39,13 @@ export class Professor extends BaseEntity {
   state!: string
 
   /**
+   * The date and time when the professor profile was created.
+   * @type {Date}
+   */
+  @Property({ type: 'date', nullable: true })
+  createdAt?: Date = new Date();
+
+  /**
    * A collection of courses taught by this professor.
    */
   @OneToMany(() => Course, (course) => course.professor)

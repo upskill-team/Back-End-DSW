@@ -54,6 +54,38 @@ async function getMe(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+async function getMyRecentEnrollments(req: Request, res: Response, next: NextFunction) {
+  try {
+    const service = new ProfessorService(orm.em.fork(), req.log);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, { message: 'You are not authenticated.' });
+    }
+
+    const recentEnrollments = await service.findRecentEnrollmentsForMyCourses(userId);
+    return HttpResponse.Ok(res, recentEnrollments);
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getMyAnalytics(req: Request, res: Response, next: NextFunction) {
+  try {
+    const service = new ProfessorService(orm.em.fork(), req.log);
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, { message: 'You are not authenticated.' });
+    }
+
+    const analyticsData = await service.getAnalyticsForProfessor(userId);
+    return HttpResponse.Ok(res, analyticsData);
+  } catch (error) {
+    next(error);
+  }
+}
+
 async function update(req: Request, res: Response, next: NextFunction) {
   try {
     const service = new ProfessorService(orm.em.fork(), req.log)
@@ -76,4 +108,4 @@ async function remove(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export { findAll, findOne, getMe, update, remove }
+export { findAll, findOne, getMe, update, remove, getMyRecentEnrollments, getMyAnalytics }

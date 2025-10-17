@@ -20,6 +20,7 @@ import { Professor } from '../professor/professor.entity.js';
 import { Unit } from './embeddables/unit.entity.js';
 import { Student } from '../student/student.entity.js';
 import { Enrollement } from '../Enrollement/enrollement.entity.js';
+import { InstitutionCourse } from './embeddables/institution.entity.js';
 
 /**
  * Defines the possible lifecycle states of a course.
@@ -80,6 +81,13 @@ export class Course extends BaseEntity {
   status: status = status.IN_DEVELOPMENT
 
   /**
+   * The date and time when the course was created.
+   * @type {Date}
+   */
+  @Property({ type: 'date', nullable: true })
+  createdAt?: Date = new Date();
+
+  /**
    * The image of the course.
    * @type {string | undefined}
    */
@@ -92,6 +100,14 @@ export class Course extends BaseEntity {
    */
   @Embedded(() => Unit, { array: true, default: [] })
   units: Unit[] = [];
+
+
+  /**
+   * The institution offering the course.
+   * @type {InstitutionCourse | undefined}
+   */
+  @Embedded(() => InstitutionCourse, { nullable: true })
+  institution?: InstitutionCourse;
 
   /**
    * The type or category this course belongs to.

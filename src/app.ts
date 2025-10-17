@@ -30,6 +30,7 @@ import { randomUUID } from 'crypto';
 import { swaggerSpec } from './docs/swagger.config.js';
 import { enrollementRouter } from './models/Enrollement/enrollement.routes.js';
 import { paymentRouter } from './models/payment/payment.routes.js';
+import { adminRouter } from './models/admin/admin.routes.js';
 
 const app = express();
 
@@ -180,6 +181,7 @@ async function startApp() {
   app.use('/api/assessments', apiLimiter, assessmentRouter);
   app.use('/api/enrollments', apiLimiter, enrollementRouter);
   app.use('/api/payments', apiLimiter, paymentRouter);
+  app.use('/api/admin', apiLimiter, adminRouter);
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {

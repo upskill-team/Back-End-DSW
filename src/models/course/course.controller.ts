@@ -53,8 +53,13 @@ async function findOne(req: Request, res: Response) {
   // This try...catch remains because it handles a specific error case (NotFoundError)
   // to return a 404, which is more specific than a generic 500. Check it
   try {
-    const courseService = new CourseService(orm.em.fork(), req.log);
     const { id } = req.params;
+    
+    if (!ObjectId.isValid(id)) {
+      return HttpResponse.BadRequest(res, 'El formato del ID del curso es inválido.');
+    }
+    
+    const courseService = new CourseService(orm.em.fork(), req.log);
     const course = await courseService.findOne(id);
     return HttpResponse.Ok(res, course);
   } catch (error: any) {

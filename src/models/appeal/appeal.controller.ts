@@ -51,10 +51,11 @@ async function findAll(req: Request, res: Response, next: NextFunction) {
   try {
     const validatedQuery = v.parse(SearchAppealsSchema, req.query);
     
-    const appealService = new AppealService(orm.em.fork(), req.log)
-    const result = await appealService.findAll(validatedQuery)
+    const appealService = new AppealService(orm.em.fork(), req.log);
+
+    const result = await appealService.findAll(validatedQuery);
     
-    return HttpResponse.Ok(res, result)
+    return HttpResponse.Ok(res, result);
 
   } catch (error) {
     if (error instanceof v.ValiError) {

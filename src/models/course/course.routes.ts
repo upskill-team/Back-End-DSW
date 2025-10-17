@@ -29,6 +29,7 @@ import {
   uploadCourseData,
   handleMulterUpload,
 } from '../../shared/middlewares/file-upload.middleware.js';
+import { enrollmentCheckMiddleware } from '../../shared/middlewares/enrollmentCheck.middleware.js'
 
 export const courseRouter = Router();
 
@@ -44,8 +45,8 @@ const professorOrAdmin = roleAuthMiddleware([
   UserRole.ADMIN,
 ]);
 
-
 courseRouter.get('/my-courses', professorOnly, courseController.findMyCourses);
+
 courseRouter.get('/:id', courseController.findOne);
 
 courseRouter.post(
@@ -213,6 +214,7 @@ import * as assessmentController from '../assessment/assessment.controller.js';
 
 courseRouter.get(
   '/:courseId/assessments',
+  enrollmentCheckMiddleware,
   assessmentController.getAssessmentsByCourse
 );
 

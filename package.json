@@ -54,7 +54,7 @@
     "pino-http": "^11.0.0",
     "pino-socket": "^7.4.0",
     "react": "19.1.1",
-    "react-dom": "^19.2.0",
+    "react-dom": "19.1.1",
     "reflect-metadata": "0.2.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
