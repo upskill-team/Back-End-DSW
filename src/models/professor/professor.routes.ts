@@ -5,7 +5,7 @@
  * @see {@link ProfessorController}
  */
 import { Router } from 'express'
-import { findAll, findOne, getMe, update, remove } from './professor.controller.js'
+import { findAll, findOne, getMe, update, remove, getMyRecentEnrollments, getMyAnalytics } from './professor.controller.js'
 import { authMiddleware, roleAuthMiddleware } from '../../auth/auth.middleware.js'
 import { validationMiddleware } from '../../shared/middlewares/validate.middleware.js'
 import { UpdateProfessorSchema } from './professor.schema.js'
@@ -22,6 +22,8 @@ const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR])
 professorRouter.get('/', findAll)
 professorRouter.get('/me', professorOnly, getMe)
 professorRouter.get('/:id', findOne)
+professorRouter.get('/me/recent-enrollments', professorOnly, getMyRecentEnrollments)
+professorRouter.get('/me/analytics', professorOnly, getMyAnalytics)
 
 // The POST route for direct creation has been removed as it's architecturally incorrect.
 // Professor profiles are created via business logic (accepting an Appeal).
