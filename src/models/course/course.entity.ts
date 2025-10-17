@@ -63,11 +63,13 @@ export class Course extends BaseEntity {
   isFree: boolean = true;
 
   /**
-   * The cost of the course if `isFree` is false.
+   * The cost of the course in cents (centavos) if `isFree` is false.
+   * Storing price in cents avoids floating-point precision issues.
+   * Example: 10000 cents = $100.00 ARS
    * @type {number | undefined}
    */
   @Property({ type: 'number', nullable: true })
-  price?: number;
+  priceInCents?: number;
 
   /**
    * The current lifecycle status of the course.

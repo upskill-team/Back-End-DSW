@@ -8,6 +8,7 @@ import { Enrollement, EnrollmentState } from './enrollement.entity.js';
 import { Course } from '../course/course.entity.js';
 import { Logger } from 'pino';
 import { User } from '../user/user.entity.js';
+import { Student } from '../student/student.entity.js';
 
 export class EnrollementService {
   constructor(
@@ -24,10 +25,10 @@ export class EnrollementService {
    * @returns {Promise<Enrollement>} The newly created or existing enrollment entity.
    */
   async create({
-    studentId, // This is actually the USER ID from the frontend
+    studentId,
     courseId,
   }: {
-    studentId: string; 
+    studentId: string;
     courseId: string;
   }): Promise<Enrollement> {
     this.logger.info({ userId: studentId, courseId }, 'EnrollementService.create - start');
@@ -83,7 +84,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement[]>} An array of all enrollment entities.
    */
   async findAll(): Promise<Enrollement[]> {
-    return this.em.find(Enrollement, {}, { populate: ['student.user', 'course.professor.user', 'course.units'] });
+    return this.em.find(Enrollement, {}, { populate: ['student', 'course'] });
   }
 
   /**
@@ -92,7 +93,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement | null>} The enrollment entity if found, otherwise null.
    */
   async findById(id: string): Promise<Enrollement | null> {
-    return this.em.findOne(Enrollement, { _id: new ObjectId(id) }, { populate: ['student.user', 'course.professor.user', 'course.units'] });
+    return this.em.findOne(Enrollement, { _id: new ObjectId(id) }, { populate: ['student', 'course'] });
   }
 
   /**
@@ -102,11 +103,24 @@ export class EnrollementService {
    * @returns {Promise<Enrollement | null>} The enrollment entity if found, otherwise null.
    */
   async findByStudentAndCourse(studentId: string, courseId: string): Promise<Enrollement | null> {
+    // The input studentId may be either a Student profile id or a User id.
+    // Try to resolve as User -> Student first, otherwise treat as Student id.
+    try {
+      const user = await this.em.findOne(User, { _id: new ObjectId(studentId) }, { populate: ['studentProfile'] });
+      if (user && (user as any).studentProfile) {
+        const studentProfile = (user as any).studentProfile as Student;
+        return this.em.findOne(Enrollement, {
+          student: new ObjectId(studentProfile.id!),
+          course: new ObjectId(courseId),
+        });
+      }
+    } catch {
+      // not a User id, continue to try as Student id
+    }
+
     return this.em.findOne(Enrollement, {
       student: new ObjectId(studentId),
       course: new ObjectId(courseId),
-    }, { 
-        populate: ['student.user', 'course.professor.user', 'course.units'] 
     });
   }
 
@@ -116,7 +130,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement[]>} An array of enrollment entities for the specified student.
    */
   async findByStudent(studentId: string): Promise<Enrollement[]> {
-    return this.em.find(Enrollement, { student: new ObjectId(studentId) }, { populate: ['student.user', 'course.professor.user', 'course.units'] });
+    return this.em.find(Enrollement, { student: new ObjectId(studentId) }, { populate: ['student', 'course'] });
   }
 
   /**
@@ -125,7 +139,7 @@ export class EnrollementService {
    * @returns {Promise<Enrollement[]>} An array of enrollment entities for the specified course.
    */
   async findByCourse(courseId: string): Promise<Enrollement[]> {
-    return this.em.find(Enrollement, { course: new ObjectId(courseId) }, { populate: ['student.user', 'course.professor.user', 'course.units'] });
+    return this.em.find(Enrollement, { course: new ObjectId(courseId) }, { populate: ['student', 'course'] });
   }
 
   /**
@@ -135,10 +149,10 @@ export class EnrollementService {
    * @returns {Promise<Enrollement>} The updated enrollment entity.
    */
   async update(id: string, data: Partial<{ state: EnrollmentState; grade?: number; progress?: number }>): Promise<Enrollement> {
-    const enrol = await this.em.findOneOrFail(Enrollement, { _id: new ObjectId(id) });
+    const enrol = await this.em.findOneOrFail(Enrollement, { _id: new ObjectId(id) }, { populate: ['student', 'course'] });
     Object.assign(enrol, data);
     await this.em.flush();
-    return this.findById(id) as Promise<Enrollement>;
+    return enrol;
   }
 
   /**
