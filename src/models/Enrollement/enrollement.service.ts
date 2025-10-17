@@ -9,7 +9,8 @@ import { Course } from '../course/course.entity.js';
 import { Logger } from 'pino';
 import { User } from '../user/user.entity.js';
 import { Student } from '../student/student.entity.js';
-//WASAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+import { Professor } from '../professor/professor.entity.js';
+
 export class EnrollementService {
   constructor(
     private readonly em: EntityManager,
@@ -47,10 +48,15 @@ export class EnrollementService {
           throw new Error('Student not found');
         }
 
-        const course = await em.findOne(Course, { _id: new ObjectId(courseId) });
+        const course = await em.findOne(Course, { _id: new ObjectId(courseId) }, { populate: ['professor'] });
         if (!course) {
           this.logger.warn({ courseId }, 'Course not found');
           throw new Error('Course not found');
+        }
+
+        if (user.professorProfile && user.professorProfile.id === (course.professor as Professor).id) {
+          this.logger.warn({ userId: studentId, courseId }, 'Professor attempted to enroll in their own course.');
+          throw new Error('Un profesor no puede inscribirse en su propio curso.');
         }
 
         const already = await em.findOne(Enrollement, { student: student.id, course: course.id });
