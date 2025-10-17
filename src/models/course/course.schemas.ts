@@ -7,6 +7,18 @@ import * as v from 'valibot';
 import { status } from './course.entity.js';
 import { QuestionType } from '../question/question.entity.js';
 
+const NumericString = v.pipe(
+  v.string('El valor debe ser un string.'),
+  v.regex(/^\d+$/, 'Debe contener solo dígitos.'),
+  v.transform(Number)
+);
+
+const BooleanString = v.pipe(
+  v.string('El valor debe ser un string.'),
+  v.regex(/^(true|false)$/, 'El valor debe ser "true" o "false".'),
+  v.transform((val) => val === 'true')
+);
+
 const QuestionUpdateSchema = v.object({
   questionText: v.pipe(v.string(), v.minLength(1)),
   questionType: v.picklist(Object.values(QuestionType)),
@@ -31,6 +43,7 @@ const UnitSchema = v.object({
   unitNumber: v.pipe(v.number(), v.integer('Unit number must be an integer.')),
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
+  description: v.optional(v.string()),
   materials: v.optional(v.array(MaterialSchema), []),
   questions: v.optional(v.array(QuestionUpdateSchema), []),
 });
@@ -60,22 +73,12 @@ export const CreateCourseSchema = v.object({
   ),
   units: v.optional(v.array(UnitSchema)),
 
+  useInstitution: v.optional(BooleanString),
   status: v.optional(
     v.picklist(Object.values(status), 'The provided status is not valid.')
   ),
 });
 
-const NumericString = v.pipe(
-  v.string('El valor debe ser un string.'),
-  v.regex(/^\d+$/, 'Debe contener solo dígitos.'),
-  v.transform(Number)
-);
-
-const BooleanString = v.pipe(
-  v.string('El valor debe ser un string.'),
-  v.regex(/^(true|false)$/, 'El valor debe ser "true" o "false".'),
-  v.transform((val) => val === 'true')
-);
 
 /**
  * Schema for searching/filtering courses via query parameters (for GET requests).
@@ -112,6 +115,7 @@ export const UpdateCourseSchema = v.partial(CreateCourseSchema);
  */
 export const CreateUnitSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
+  description: v.optional(v.string()),
   detail: v.pipe(v.string(), v.minLength(1, 'Unit detail is required.')),
   materials: v.optional(v.array(MaterialSchema), []),
 });
