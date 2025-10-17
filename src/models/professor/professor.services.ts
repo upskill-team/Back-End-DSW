@@ -16,6 +16,7 @@ import { User, UserRole } from '../user/user.entity.js';
 import { Enrollement } from '../Enrollement/enrollement.entity.js';
 import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
 import { Course, status } from '../course/course.entity.js';
+import { Earning, EarningType } from '../payment/earning.entity.js';
 
 /**
  * Provides methods for CRUD operations on Professor entities.
@@ -121,6 +122,7 @@ export class ProfessorService {
 
   /**
    * Calculates and returns key analytics for a professor's dashboard.
+   * Includes real earnings data from the Earning entity.
    * @param {string} userId - The ID of the user who is a professor.
    * @returns {Promise<object>} An object containing analytics data.
    */
@@ -136,7 +138,8 @@ export class ProfessorService {
       return {
         totalStudents: 0,
         publishedCourses: 0,
-        totalEarnings: 0,
+        totalEarningsInCents: 0,
+        monthlyEarnings: [],
       };
     }
 
@@ -146,14 +149,43 @@ export class ProfessorService {
       course: { $in: courseIds }
     });
     const distinctStudentIds = [...new Set(enrollments.map(enrollment => enrollment.student.id))];
-
     const totalStudentsCount = distinctStudentIds.length;
+
+    // Fetch real earnings data for this professor
+    const professorEarnings = await this.em.find(Earning, {
+      professor: new ObjectId(professorId),
+      type: EarningType.PROFESSOR_SHARE,
+    });
+
+    const totalEarningsInCents = professorEarnings.reduce((sum, earning) => sum + earning.amountInCents, 0);
+
+    // Calculate monthly earnings for the last 6 months
+    const now = new Date();
+    const monthlyEarnings = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+      const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+
+      const monthEarnings = professorEarnings.filter(earning => {
+        const earningDate = new Date(earning.createdAt);
+        return earningDate >= monthDate && earningDate < nextMonthDate;
+      });
+
+      const monthTotalInCents = monthEarnings.reduce((sum, earning) => sum + earning.amountInCents, 0);
+
+      monthlyEarnings.push({
+        month: monthKey,
+        earningsInCents: monthTotalInCents,
+      });
+    }
 
     return {
       totalStudents: totalStudentsCount,
       publishedCourses: publishedCoursesCount,
-      averageRating: 4.8, 
-      totalEarnings: 15420,
+      totalEarningsInCents,
+      monthlyEarnings,
     };
   }
 

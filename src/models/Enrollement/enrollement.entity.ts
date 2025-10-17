@@ -48,6 +48,13 @@ export class Enrollement extends BaseEntity {
   student!: Rel<Student>;
 
   /**
+   * Date and time when the enrollement entity was created.
+   * @type {Date}
+   */
+  @Property({ type: 'date', nullable: true })
+  createdAt?: Date = new Date();
+
+  /**
    * Incription date.
    * @param {Date} enrolledAt
    */

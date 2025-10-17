@@ -81,6 +81,13 @@ export class Course extends BaseEntity {
   status: status = status.IN_DEVELOPMENT
 
   /**
+   * The date and time when the course was created.
+   * @type {Date}
+   */
+  @Property({ type: 'date', nullable: true })
+  createdAt?: Date = new Date();
+
+  /**
    * The image of the course.
    * @type {string | undefined}
    */

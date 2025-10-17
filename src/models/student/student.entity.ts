@@ -11,6 +11,7 @@ import {
   Rel,
   OneToOne,
   OneToMany,
+  Property,
 } from '@mikro-orm/core';
 import { Course } from '../course/course.entity.js';
 import { User } from '../user/user.entity.js'
@@ -33,6 +34,12 @@ export class Student extends BaseEntity {
   @OneToOne(() => User, (user) => user.studentProfile, { nullable: false })
   user!: Rel<User>;
 
+  /**
+   * The date and time when the student profile was created.
+   * @type {Date}
+   */
+  @Property({ type: 'date', nullable: true })
+  createdAt?: Date = new Date();
 
   /**
    * A collection of enrollements associated with this student.
