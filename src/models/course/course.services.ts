@@ -18,6 +18,7 @@ import { User } from '../user/user.entity.js';
 import { safeParse } from 'valibot';
 import { UpdateCourseSchema } from './course.schemas.js';
 import { Institution } from '../institution/institution.entity.js';
+import { Enrollement } from '../Enrollement/enrollement.entity.js';
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -201,16 +202,10 @@ export class CourseService {
       professor: new ObjectId(user.professorProfile.id),
     });
 
-    console.log('--- Archivos recibidos por Multer ---');
-    console.log(materialFiles);
-
     const fileUrlMap = new Map<string, string>();
     for (const file of materialFiles) {
       fileUrlMap.set(file.originalname, file.path);
     }
-
-    console.log('--- Mapa de URLs generado ---');
-    console.log(fileUrlMap);
 
     if (data.units && data.units.length > 0) {
       for (const unit of data.units) {
@@ -296,10 +291,10 @@ export class CourseService {
    * @throws {Error} If the user is not found or is not a professor.
    */
   public async findCoursesOfProfessor(userId: string): Promise<Course[]> {
-    this.logger.info(
-      { userId },
-      'Fetching courses for an authenticated professor.'
-    );
+  this.logger.info(
+    { userId },
+    'Fetching courses for an authenticated professor.'
+  );
 
     const userObjectId = new ObjectId(userId);
 
@@ -315,50 +310,102 @@ export class CourseService {
 
     const professorObjectId = new ObjectId(user.professorProfile.id);
 
-    return await this.em.find(
+    const courses = await this.em.find(
       Course,
       { professor: professorObjectId },
       { populate: ['courseType', 'professor'] }
     );
+
+    const coursesWithCount = await Promise.all(
+      courses.map(async (course) => {
+        const studentCount = await this.em.count(Enrollement, { 
+          course: new ObjectId(course.id) 
+        });
+        
+        return {
+          id: course.id,
+          name: course.name,
+          description: course.description,
+          imageUrl: course.imageUrl,
+          isFree: course.isFree,
+          price: course.price,
+          status: course.status,
+          units: course.units,
+          courseType: course.courseType,
+          professor: course.professor,
+          studentsCount: studentCount
+        };
+      })
+    );
+
+    return coursesWithCount as any;
   }
 
-  /**
-   * Searches for courses based on various filters.
-   * @param {SearchCoursesQuery} query - The search filters and pagination options.
-   * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
-   */
-  async searchCourses(
-    query: SearchCoursesQuery
-  ): Promise<{ courses: Course[]; total: number }> {
-    this.logger.info({ query }, 'Searching courses with filters.');
+/**
+ * Searches for courses based on various filters.
+ * @param {SearchCoursesQuery} query - The search filters and pagination options.
+ * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
+ */
+async searchCourses(
+  query: SearchCoursesQuery
+): Promise<{ courses: Course[]; total: number }> {
+  this.logger.info({ query }, 'Searching courses with filters.');
 
-    const where: FilterQuery<Course> = {};
+  const where: FilterQuery<Course> = {};
 
-    if (query.q) {
-      where.name = new RegExp(query.q, 'i')
-    }
-    
-    if (query.courseTypeId) {
-      where.courseType = new ObjectId(query.courseTypeId);
-    }
-    
-    if (query.isFree !== undefined) {
-      where.isFree = query.isFree;
-    }
-
-    if (query.status) {
-      where.status = query.status;
-    }
-
-    const [courses, total] = await this.em.findAndCount(Course, where, {
-      populate: ['courseType', 'professor.user'],
-      orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
-      limit: query.limit,
-      offset: query.offset,
-    });
-
-    return { courses, total };
+  if (query.q) {
+    where.name = new RegExp(query.q, 'i')
   }
+  
+  if (query.courseTypeId) {
+    where.courseType = new ObjectId(query.courseTypeId);
+  }
+  
+  if (query.isFree !== undefined) {
+    where.isFree = query.isFree;
+  }
+
+  if (query.status) {
+    where.status = query.status;
+  }
+
+  const [courses, total] = await this.em.findAndCount(Course, where, {
+    populate: ['courseType', 'professor.user'],
+    orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
+    limit: query.limit,
+    offset: query.offset,
+  });
+
+  const coursesWithCount = await Promise.all(
+    courses.map(async (course) => {
+      const studentCount = await this.em.count(Enrollement, { 
+        course: new ObjectId(course.id) 
+      });
+      
+      const courseObj = {
+        id: course.id,
+        name: course.name,
+        description: course.description,
+        imageUrl: course.imageUrl,
+        isFree: course.isFree,
+        price: course.price,
+        status: course.status,
+        units: course.units,
+        courseType: course.courseType,
+        professor: course.professor,
+      };
+      
+      console.log(`Course ${course.name} has ${studentCount} students.`);
+      
+      return {
+        ...courseObj,
+        studentsCount: studentCount
+      };
+    })
+  );
+
+  return { courses: coursesWithCount as any, total };
+}
 
   /**
    * Creates a new unit in an existing course.

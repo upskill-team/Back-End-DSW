@@ -42,10 +42,6 @@ export const UpdateAssessmentSchema = v.partial(
  * Schema for starting an assessment attempt.
  */
 export const StartAttemptSchema = v.object({
-  assessmentId: v.pipe(
-    v.string(),
-    v.minLength(1, 'Assessment ID is required.')
-  ),
   studentId: v.pipe(v.string(), v.minLength(1, 'Student ID is required.')),
 });
 
@@ -70,7 +66,7 @@ export const SubmitAttemptSchema = v.object({
         answer: v.union([v.string(), v.number()]),
       })
     ),
-    v.minLength(1, 'At least one answer is required.')
+    v.minLength(1, 'Debes responder al menos una pregunta para enviar la evaluación.')
   ),
 });
 

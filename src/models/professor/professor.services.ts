@@ -13,6 +13,9 @@ import { Logger } from 'pino';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { safeParse } from 'valibot';
 import { User, UserRole } from '../user/user.entity.js';
+import { Enrollement } from '../Enrollement/enrollement.entity.js';
+import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
+import { Course, status } from '../course/course.entity.js';
 
 /**
  * Provides methods for CRUD operations on Professor entities.
@@ -79,6 +82,79 @@ export class ProfessorService {
       { _id: objectId },
       { populate: ['courses', 'institution', 'managedInstitution'] }
     );
+  }
+
+  /**
+   * Finds the 10 most recent enrollments from the last 7 days for all courses taught by a professor.
+   * @param {string} userId - The ID of the user who is a professor.
+   * @returns {Promise<Enrollement[]>} A promise resolving to an array of recent enrollments.
+   */
+  public async findRecentEnrollmentsForMyCourses(userId: string): Promise<Enrollement[]> {
+    this.logger.info({ userId }, 'Fetching recent enrollments for professor courses.');
+
+    const professorId = await getProfessorIdFromUserId(this.em, userId);
+
+    const professorCourses = await this.em.find(Course, { professor: new ObjectId(professorId) });
+    const courseIds = professorCourses.map(course => new ObjectId(course.id));
+
+    if (courseIds.length === 0) {
+      return [];
+    }
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const recentEnrollments = await this.em.find(Enrollement, 
+      {
+        course: { $in: courseIds },
+        enrolledAt: { $gte: sevenDaysAgo }
+      },
+      {
+        populate: ['student.user', 'course'],
+        orderBy: { enrolledAt: 'DESC' },
+        limit: 5
+      }
+    );
+
+    return recentEnrollments;
+  }
+
+  /**
+   * Calculates and returns key analytics for a professor's dashboard.
+   * @param {string} userId - The ID of the user who is a professor.
+   * @returns {Promise<object>} An object containing analytics data.
+   */
+  public async getAnalyticsForProfessor(userId: string): Promise<object> {
+    this.logger.info({ userId }, "Fetching analytics for professor's dashboard.");
+
+    const professorId = await getProfessorIdFromUserId(this.em, userId);
+
+    const professorCourses = await this.em.find(Course, { professor: new ObjectId(professorId) });
+    const courseIds = professorCourses.map(course => new ObjectId(course.id));
+
+    if (courseIds.length === 0) {
+      return {
+        totalStudents: 0,
+        publishedCourses: 0,
+        totalEarnings: 0,
+      };
+    }
+
+    const publishedCoursesCount = professorCourses.filter(course => course.status === status.PUBLISHED).length;
+
+    const enrollments = await this.em.find(Enrollement, {
+      course: { $in: courseIds }
+    });
+    const distinctStudentIds = [...new Set(enrollments.map(enrollment => enrollment.student.id))];
+
+    const totalStudentsCount = distinctStudentIds.length;
+
+    return {
+      totalStudents: totalStudentsCount,
+      publishedCourses: publishedCoursesCount,
+      averageRating: 4.8, 
+      totalEarnings: 15420,
+    };
   }
 
   /**

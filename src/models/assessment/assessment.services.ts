@@ -3,7 +3,7 @@
  * @remarks Encapsulates the business logic for managing assessments.
  */
 
-import { EntityManager } from '@mikro-orm/core';
+import { EntityManager, wrap } from '@mikro-orm/core';
 import { Logger } from 'pino';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { safeParse } from 'valibot';
@@ -21,7 +21,6 @@ import {
   CreateAssessmentType,
   UpdateAssessmentSchema,
   UpdateAssessmentType,
-  StartAttemptType,
   SubmitAnswerType,
   SubmitAttemptType,
 } from './assessment.schemas.js';
@@ -107,10 +106,26 @@ export class AssessmentService {
    * @param {string} [courseId] - Optional course ID to filter by.
    * @returns {Promise<Assessment[]>} Array of assessments.
    */
-  public async findAll(courseId?: string): Promise<Assessment[]> {
-    this.logger.info({ courseId }, 'Fetching all assessments.');
+  public async findAllForProfessor(professorId: string, courseId?: string): Promise<Assessment[]> {
+    this.logger.info({ professorId, courseId }, 'Fetching all assessments for professor.');
 
-    const filter = courseId ? { course: new ObjectId(courseId) } : {};
+    const professorCourses = await this.em.find(Course, { professor: new ObjectId(professorId) });
+    if (professorCourses.length === 0) {
+        return [];
+    }
+    const professorCourseIds = professorCourses.map(course => course._id!);
+
+    const filter: any = {
+      course: { $in: professorCourseIds },
+    };
+    
+    if (courseId) {
+        filter.course = new ObjectId(courseId);
+        if (!professorCourseIds.some(id => id.equals(courseId))) {
+            this.logger.warn({ professorId, courseId }, "Attempted to access assessments for a course not owned by the professor.");
+            return [];
+        }
+    }
 
     return this.em.find(Assessment, filter, {
       populate: ['course', 'questions'],
@@ -216,7 +231,7 @@ export class AssessmentService {
    * @returns {Promise<AssessmentAttempt>} The created attempt.
    */
   public async startAttempt(
-    data: StartAttemptType
+    data: { assessmentId: string; studentId: string }
   ): Promise<AssessmentAttempt> {
     this.logger.info({ data }, 'Starting assessment attempt.');
 
@@ -428,13 +443,13 @@ export class AssessmentService {
    */
   public async getAttemptWithAnswers(
     attemptId: string
-  ): Promise<AssessmentAttempt & { answers: AttemptAnswer[] }> {
+  ): Promise<any> {
     this.logger.info({ attemptId }, 'Fetching attempt with answers.');
 
     const attempt = await this.em.findOneOrFail(
       AssessmentAttempt,
       { _id: new ObjectId(attemptId) },
-      { populate: ['assessment', 'assessment.questions', 'student'] }
+      { populate: ['assessment', 'student.user'] }
     );
 
     const answers = await this.em.find(
@@ -442,8 +457,20 @@ export class AssessmentService {
       { attempt: attempt._id },
       { populate: ['question'] }
     );
+    const attemptPOJO = wrap(attempt).toJSON();
+    const answersPOJO = answers.map(answer => wrap(answer).toJSON());
 
-    return Object.assign(attempt, { answers });
+    let timeSpent = 0;
+    if (attempt.submittedAt) {
+      const diffMs = attempt.submittedAt.getTime() - attempt.startedAt.getTime();
+      timeSpent = Math.floor(diffMs / 60000); 
+    }
+
+    return {
+      ...attemptPOJO,
+      answers: answersPOJO,
+      timeSpent: timeSpent,
+    };
   }
 
   /**
@@ -630,6 +657,8 @@ export class AssessmentService {
 
     const assessment = await this.findOne(assessmentId);
 
+    const assessmentPOJO = wrap(assessment).toJSON();
+
     // Count attempts
     const attemptsCount = await this.em.count(AssessmentAttempt, {
       student: new ObjectId(studentId),
@@ -664,7 +693,7 @@ export class AssessmentService {
     }
 
     return {
-      ...assessment,
+      ...assessmentPOJO,
       attemptsCount,
       attemptsRemaining: assessment.maxAttempts
         ? assessment.maxAttempts - attemptsCount
@@ -927,5 +956,15 @@ export class AssessmentService {
     }
 
     return results;
+  }
+
+  /**
+   * Find all reviews for a specific course. Public and easy to use.
+   */
+  public async findAllByCourse(courseId: string): Promise<Assessment[]> {
+    this.logger.info({ courseId }, 'Fetching all assessments for a specific course.');
+    return this.em.find(Assessment, { course: new ObjectId(courseId) }, {
+        populate: ['course', 'questions'],
+    });
   }
 }
