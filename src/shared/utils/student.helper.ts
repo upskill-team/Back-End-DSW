@@ -6,6 +6,7 @@
 import { EntityManager } from '@mikro-orm/core';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { Student } from '../../models/student/student.entity.js';
+import { User } from '../../models/user/user.entity.js';
 
 /**
  * Gets a studentId from a userId
@@ -18,13 +19,17 @@ export async function getStudentIdFromUserId(
   em: EntityManager,
   userId: string
 ): Promise<string> {
-  const student = await em.findOne(Student, { user: new ObjectId(userId) });
+  const user = await em.findOne(User, { _id: new ObjectId(userId) }, { populate: ['studentProfile'] });
 
-  if (!student) {
+  if (!user) {
+    throw new Error('User not found for the given ID');
+  }
+
+  if (!user.studentProfile) {
     throw new Error('User is not a student');
   }
 
-  return student.id!;
+  return user.studentProfile.id!;
 }
 
 /**
@@ -38,11 +43,15 @@ export async function getStudentFromUserId(
   em: EntityManager,
   userId: string
 ): Promise<Student> {
-  const student = await em.findOne(Student, { user: new ObjectId(userId) });
+  const user = await em.findOne(User, { _id: new ObjectId(userId) }, { populate: ['studentProfile'] });
 
-  if (!student) {
+  if (!user) {
+    throw new Error('User not found for the given ID');
+  }
+
+  if (!user.studentProfile) {
     throw new Error('User is not a student');
   }
 
-  return student;
+  return user.studentProfile;
 }
