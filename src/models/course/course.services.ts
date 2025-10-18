@@ -78,6 +78,7 @@ export class CourseService {
       courseType: courseTypeRef,
       professor: professorRef,
       institution:{
+        institutionId: institutionRef?.id || '',
         name: institutionRef?.name || '',
         aliases: institutionRef?.aliases || []
       }
