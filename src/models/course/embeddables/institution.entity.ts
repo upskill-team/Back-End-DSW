@@ -18,6 +18,12 @@ export class InstitutionCourse {
    * The official name of the institution.
    */
   @Property({ nullable: false })
+  institutionId!: string
+  
+  /**
+   * The official name of the institution.
+   */
+  @Property({ nullable: false })
   name!: string
 
     /**

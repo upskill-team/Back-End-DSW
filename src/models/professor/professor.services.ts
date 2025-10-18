@@ -64,7 +64,7 @@ export class ProfessorService {
     return this.em.find(
       Professor,
       {},
-      { populate: ['courses', 'institution', 'managedInstitution'] }
+      { populate: ['courses', 'institution', 'managedInstitution','user'] }
     );
   }
 

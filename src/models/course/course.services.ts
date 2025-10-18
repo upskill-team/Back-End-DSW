@@ -3,7 +3,7 @@
  * @remarks Encapsulates the business logic for managing courses.
  */
 
-import { EntityManager, FilterQuery } from '@mikro-orm/core';
+import { EntityManager, FilterQuery, wrap } from '@mikro-orm/core';
 import { Course, status } from './course.entity.js';
 import {
   CreateCourseType,
@@ -78,6 +78,7 @@ export class CourseService {
       courseType: courseTypeRef,
       professor: professorRef,
       institution:{
+        institutionId: institutionRef?.id || '',
         name: institutionRef?.name || '',
         aliases: institutionRef?.aliases || []
       }
@@ -343,9 +344,13 @@ export class CourseService {
   }
 
 /**
- * Searches for courses based on various filters.
+ * Searches for courses based on various filters including text search across multiple fields.
+ * Implements a hybrid search strategy: direct database queries for simple filters,
+ * and in-memory filtering for complex text searches across related entities.
  * @param {SearchCoursesQuery} query - The search filters and pagination options.
  * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
+ * @remarks Text search (q parameter) matches against: course name, professor name/surname, institution name, and course type name.
+ * @remarks When text search or institution filter is present, all matching courses are loaded and filtered in memory for accurate results.
  */
 async searchCourses(
   query: SearchCoursesQuery
@@ -354,12 +359,12 @@ async searchCourses(
 
   const where: FilterQuery<Course> = {};
 
-  if (query.q) {
-    where.name = new RegExp(query.q, 'i')
-  }
-  
   if (query.courseTypeId) {
     where.courseType = new ObjectId(query.courseTypeId);
+  }
+
+  if (query.professorId) {
+    where.professor = new ObjectId(query.professorId);
   }
   
   if (query.isFree !== undefined) {
@@ -370,42 +375,143 @@ async searchCourses(
     where.status = query.status;
   }
 
-  const [courses, total] = await this.em.findAndCount(Course, where, {
-    populate: ['courseType', 'professor.user'],
-    orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
-    limit: query.limit,
-    offset: query.offset,
-  });
+  const needsTextSearch = !!query.q;
+  const needsInstitutionFilter = !!query.institutionId;
 
-  const coursesWithCount = await Promise.all(
-    courses.map(async (course) => {
-      const studentCount = await this.em.count(Enrollement, { 
-        course: new ObjectId(course.id) 
-      });
-      
-      const courseObj = {
-        id: course.id,
-        name: course.name,
-        description: course.description,
-        imageUrl: course.imageUrl,
-        isFree: course.isFree,
-        priceInCents: course.priceInCents,
-        status: course.status,
-        units: course.units,
-        courseType: course.courseType,
-        professor: course.professor,
-      };
-      
-      console.log(`Course ${course.name} has ${studentCount} students.`);
-      
-      return {
-        ...courseObj,
-        studentsCount: studentCount
-      };
-    })
-  );
+  let allCourses: Course[];
+  let filteredCourses: Course[];
+  
+  if (needsTextSearch || needsInstitutionFilter) {
+    allCourses = await this.em.find(Course, where, {
+      populate: ['courseType', 'professor.user', 'professor.institution'],
+    });
 
-  return { courses: coursesWithCount as any, total };
+    filteredCourses = allCourses.filter((course) => {
+      let matches = true;
+
+      if (query.q) {
+        const searchTerm = query.q.toLowerCase();
+        const wrappedCourse = wrap(course).toObject();
+        
+        const courseName = course.name?.toLowerCase() || '';
+        
+        const professorData: any = wrappedCourse.professor || {};
+        const professorUserData: any = professorData.user || {};
+        const professorName = professorUserData.name?.toLowerCase() || '';
+        const professorSurname = professorUserData.surname?.toLowerCase() || '';
+        
+        const professorInstitutionData: any = professorData.institution || {};
+        const institutionName = professorInstitutionData.name?.toLowerCase() || '';
+        
+        const courseTypeData: any = wrappedCourse.courseType || {};
+        const courseTypeName = courseTypeData.name?.toLowerCase() || '';
+
+        const matchesText = 
+          courseName.includes(searchTerm) ||
+          professorName.includes(searchTerm) ||
+          professorSurname.includes(searchTerm) ||
+          institutionName.includes(searchTerm) ||
+          courseTypeName.includes(searchTerm);
+
+        if (!matchesText) {
+          matches = false;
+        }
+      }
+
+      if (query.institutionId && matches) {
+        const courseInstitutionId = (course.professor as any)?.institution?.id?.toString();
+        if (courseInstitutionId !== query.institutionId) {
+          matches = false;
+        }
+      }
+
+      return matches;
+    });
+
+    const sortField = query.sortBy;
+    const sortOrder = query.sortOrder.toLowerCase();
+    
+    filteredCourses.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      if (sortField === 'name') {
+        aValue = a.name || '';
+        bValue = b.name || '';
+      } else if (sortField === 'priceInCents') {
+        aValue = a.priceInCents || 0;
+        bValue = b.priceInCents || 0;
+      } else if (sortField === 'createdAt') {
+        aValue = a.createdAt || new Date(0);
+        bValue = b.createdAt || new Date(0);
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+
+    const total = filteredCourses.length;
+    const paginatedCourses = filteredCourses.slice(query.offset, query.offset + query.limit);
+
+    const coursesWithCount = await Promise.all(
+      paginatedCourses.map(async (course) => {
+        const studentCount = await this.em.count(Enrollement, { 
+          course: new ObjectId(course.id) 
+        });
+        
+        return {
+          id: course.id,
+          name: course.name,
+          description: course.description,
+          imageUrl: course.imageUrl,
+          isFree: course.isFree,
+          priceInCents: course.priceInCents,
+          status: course.status,
+          units: course.units,
+          courseType: course.courseType,
+          professor: course.professor,
+          studentsCount: studentCount
+        };
+      })
+    );
+
+    return { courses: coursesWithCount as any, total };
+
+  } else {
+    const [courses, total] = await this.em.findAndCount(Course, where, {
+      populate: ['courseType', 'professor.user', 'professor.institution'],
+      orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
+      limit: query.limit,
+      offset: query.offset,
+    });
+
+    const coursesWithCount = await Promise.all(
+      courses.map(async (course) => {
+        const studentCount = await this.em.count(Enrollement, { 
+          course: new ObjectId(course.id) 
+        });
+        
+        return {
+          id: course.id,
+          name: course.name,
+          description: course.description,
+          imageUrl: course.imageUrl,
+          isFree: course.isFree,
+          priceInCents: course.priceInCents,
+          status: course.status,
+          units: course.units,
+          courseType: course.courseType,
+          professor: course.professor,
+          studentsCount: studentCount
+        };
+      })
+    );
+
+    return { courses: coursesWithCount as any, total };
+  }
 }
 
   /**
