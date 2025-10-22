@@ -227,13 +227,46 @@ export class AssessmentService {
   }
 
   /**
+   * Filters questions to remove correct answer information for students.
+   * This is a security measure to prevent students from seeing correct answers before completing the assessment.
+   * @param {Question[]} questions - The original questions with correct answers.
+   * @returns {any[]} Questions without the isCorrect field in options.
+   * @private
+   */
+  private filterQuestionsForStudent(questions: Question[]): any[] {
+    return questions.map(question => {
+      const questionObj = wrap(question).toObject();
+      
+      if (questionObj.type === 'multiple_choice' && questionObj.options) {
+        return {
+          id: questionObj.id,
+          text: questionObj.text,
+          type: questionObj.type,
+          points: questionObj.points,
+          options: questionObj.options.map((option: any) => ({
+            id: option.id,
+            text: option.text,
+          }))
+        };
+      } else {
+        return {
+          id: questionObj.id,
+          text: questionObj.text,
+          type: questionObj.type,
+          points: questionObj.points,
+        };
+      }
+    });
+  }
+
+  /**
    * Starts a new attempt for a student on an assessment.
    * @param {StartAttemptType} data - The attempt start data.
-   * @returns {Promise<AssessmentAttempt>} The created attempt.
+   * @returns {Promise<any>} The created attempt with questions (without correct answers).
    */
   public async startAttempt(
     data: { assessmentId: string; studentId: string }
-  ): Promise<AssessmentAttempt> {
+  ): Promise<any> {
     this.logger.info({ data }, 'Starting assessment attempt.');
 
     const { assessmentId, studentId } = data;
@@ -294,11 +327,52 @@ export class AssessmentService {
 
     await this.em.persistAndFlush(attempt);
 
+    // Load any existing answers for this attempt (for auto-save recovery)
+    const existingAnswers = await this.em.find(
+      AttemptAnswer,
+      { attempt: attempt._id },
+      { populate: ['question'] }
+    );
+
+    // Filter questions to remove correct answers
+    const questionsForStudent = this.filterQuestionsForStudent(
+      assessment.questions.getItems()
+    );
+
+    // Calculate time spent
+    const timeSpent = attempt.submittedAt
+      ? Math.floor((attempt.submittedAt.getTime() - attempt.startedAt.getTime()) / 1000)
+      : 0;
+
     this.logger.info(
       { attemptId: attempt.id },
       'Assessment attempt started successfully.'
     );
-    return attempt;
+
+    // Return attempt with filtered questions (without correct answers)
+    return {
+      id: attempt.id,
+      assessment: {
+        id: assessment.id,
+        title: assessment.title,
+        durationMinutes: assessment.durationMinutes,
+        passingScore: assessment.passingScore,
+        questions: questionsForStudent,
+      },
+      student: student.id,
+      startedAt: attempt.startedAt,
+      submittedAt: attempt.submittedAt || null,
+      score: attempt.score || null,
+      passed: attempt.passed || null,
+      answers: existingAnswers.map(ans => ({
+        id: ans.id,
+        question: { id: (ans.question as Question).id },
+        answer: ans.answer,
+        answeredAt: ans.answeredAt,
+      })),
+      status: attempt.status,
+      timeSpent,
+    };
   }
 
   /**
@@ -466,7 +540,7 @@ export class AssessmentService {
     const attempt = await this.em.findOneOrFail(
       AssessmentAttempt,
       { _id: new ObjectId(attemptId) },
-      { populate: ['assessment', 'student.user'] }
+      { populate: ['assessment.questions', 'student.user'] }
     );
 
     const answers = await this.em.find(
@@ -476,6 +550,13 @@ export class AssessmentService {
     );
     const attemptPOJO = wrap(attempt).toJSON();
     const answersPOJO = answers.map(answer => wrap(answer).toJSON());
+
+    // Filter questions if attempt is not yet submitted (security)
+    if (attemptPOJO.assessment?.questions && attempt.status !== AttemptStatus.SUBMITTED) {
+      attemptPOJO.assessment.questions = this.filterQuestionsForStudent(
+        attempt.assessment.questions.getItems()
+      );
+    }
 
     let timeSpent = 0;
     if (attempt.submittedAt) {
@@ -675,6 +756,13 @@ export class AssessmentService {
     const assessment = await this.findOne(assessmentId);
 
     const assessmentPOJO = wrap(assessment).toJSON();
+
+    // Filter questions to remove correct answers (security)
+    if (assessmentPOJO.questions) {
+      assessmentPOJO.questions = this.filterQuestionsForStudent(
+        assessment.questions.getItems()
+      );
+    }
 
     // Count attempts
     const attemptsCount = await this.em.count(AssessmentAttempt, {
