@@ -172,4 +172,16 @@ export class AppealService {
 
     this.logger.info({ appealId: id }, 'Appeal deleted successfully.')
   }
+
+  /**
+   * Retrieves all appeals created by the authenticated user.
+   * @param {string} userId - The ID of the authenticated user.
+   * @returns {Promise<Appeal[]>} A list of the user's appeals.
+   */
+  public async findMyAppeals(userId: string): Promise<Appeal[]> {
+    this.logger.info({ userId }, 'Fetching appeals for user.')
+    const objectId = new ObjectId(userId);
+
+    return this.em.find(Appeal, { user: objectId }, { orderBy: { date: 'DESC' } })
+  }
 }

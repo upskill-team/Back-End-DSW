@@ -130,4 +130,23 @@ async function remove(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export { findAll, findOne, add, update, remove }
+/**
+ * Handles the retrieval of the authenticated user's appeals.
+ */
+async function findMyAppeals(req: Request, res: Response, next: NextFunction) {
+  try {
+    const appealService = new AppealService(orm.em.fork(), req.log)
+    const userId = req.user?.id
+    
+    if (!userId) {
+      return HttpResponse.Unauthorized(res, 'User ID not found in token')
+    }
+
+    const appeals = await appealService.findMyAppeals(userId)
+    return HttpResponse.Ok(res, appeals)
+  } catch (error) {
+    next(error)
+  }
+}
+
+export { findAll, findOne, add, update, remove, findMyAppeals }
