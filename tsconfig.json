@@ -14,7 +14,8 @@
     "skipLibCheck": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "isolatedModules": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules","docs"]
