@@ -2,7 +2,6 @@
 module.exports = {
   preset: 'ts-jest/presets/default-esm',
   testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.ts'],
   roots: ['<rootDir>/src'],
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
   moduleNameMapper: {
@@ -13,6 +12,10 @@ module.exports = {
       'ts-jest',
       {
         useESM: true,
+        isolatedModules: true, 
+        diagnostics: {
+          ignoreCodes: [1378, 151001]
+        },
         tsconfig: {
           module: 'esnext',
           target: 'es2022'
