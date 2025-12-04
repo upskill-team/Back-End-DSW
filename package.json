@@ -94,7 +94,8 @@
   "pnpm": {
     "overrides": {
       "glob": "^10.5.0",
-      "validator": "^13.15.22"
+      "validator": "^13.15.22",
+      "jws": "^3.2.3"
     }
   }
 }
