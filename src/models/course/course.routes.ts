@@ -50,23 +50,23 @@ courseRouter.get('/:id', courseController.findOne);
 
 courseRouter.post(
   '/',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   uploadCourseImage.single('image'),
   validationMiddleware(CreateCourseSchema),
   courseController.add
 );
 courseRouter.put(
   '/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   handleMulterUpload(uploadCourseData),
   courseController.update
 );
 courseRouter.patch(
   '/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(UpdateCourseSchema),
   courseController.update
 );
@@ -76,30 +76,30 @@ courseRouter.delete('/:id', professorOrAdmin, courseController.remove);
 // Question routes not nested under courses
 courseRouter.get(
   '/questions/my',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   questionController.findMyQuestions
 );
 
 // Question routes - nested under courses
 courseRouter.get(
   '/:courseId/questions',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   questionController.findByCourse
 );
 
 courseRouter.get(
   '/:courseId/questions/general',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   questionController.findGeneralQuestions
 );
 
 courseRouter.post(
   '/:courseId/questions',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(CreateQuestionSchema),
   questionController.add
 );
@@ -109,101 +109,101 @@ courseRouter.get('/:courseId/questions/:id', authMiddleware, questionController.
 
 courseRouter.put(
   '/:courseId/questions/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(UpdateQuestionSchema),
   questionController.update
 );
 
 courseRouter.patch(
   '/:courseId/questions/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(UpdateQuestionSchema),
   questionController.update
 );
 
 courseRouter.delete(
   '/:courseId/questions/:id',
-  professorOrAdmin,
   authMiddleware,
+  professorOrAdmin,
   questionController.remove
 );
 
 // Unit-specific question routes
 courseRouter.get(
   '/:courseId/units/:unitNumber/questions',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   questionController.findByUnit
 );
 
 courseRouter.post(
   '/:courseId/units/:unitNumber/questions',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(CreateQuestionSchema),
   questionController.addToUnit
 );
 
 courseRouter.get(
   '/:courseId/units/:unitNumber/questions/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   questionController.findOneFromUnit
 );
 
 courseRouter.put(
   '/:courseId/units/:unitNumber/questions/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(UpdateQuestionSchema),
   questionController.updateFromUnit
 );
 
 courseRouter.patch(
   '/:courseId/units/:unitNumber/questions/:id',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(UpdateQuestionSchema),
   questionController.updateFromUnit
 );
 
 courseRouter.delete(
   '/:courseId/units/:unitNumber/questions/:id',
-  professorOrAdmin,
   authMiddleware,
+  professorOrAdmin,
   questionController.removeFromUnit
 );
 
 // Individual unit management routes
 courseRouter.post(
   '/:courseId/units',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(CreateUnitSchema),
   courseController.createUnit
 );
 
 courseRouter.put(
   '/:courseId/units/:unitNumber',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(UpdateUnitSchema),
   courseController.updateUnit
 );
 
 courseRouter.delete(
   '/:courseId/units/:unitNumber',
-  professorOrAdmin,
   authMiddleware,
+  professorOrAdmin,
   courseController.deleteUnit
 );
 
 courseRouter.patch(
   '/:courseId/units/reorder',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(ReorderUnitsSchema),
   courseController.reorderUnits
 );
@@ -211,24 +211,24 @@ courseRouter.patch(
 // Individual material management routes
 courseRouter.post(
   '/:courseId/units/:unitNumber/materials',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   handleMulterUpload(uploadCourseData),
   courseController.uploadMaterial
 );
 
 courseRouter.delete(
   '/:courseId/units/:unitNumber/materials/:materialIndex',
-  professorOrAdmin,
   authMiddleware,
+  professorOrAdmin,
   courseController.deleteMaterial
 );
 
 // Quick save route
 courseRouter.patch(
   '/:courseId/quick-save',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   validationMiddleware(QuickSaveSchema),
   courseController.quickSave
 );
@@ -250,7 +250,7 @@ import * as enrollmentController from '../Enrollement/enrollement.controller.js'
 // GET /api/courses/:courseId/enrollments (for professors)
 courseRouter.get(
   '/:courseId/enrollments',
-  professorOnly,
   authMiddleware,
+  professorOnly,
   enrollmentController.getEnrollementsByCourse
 );

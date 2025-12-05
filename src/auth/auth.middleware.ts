@@ -75,6 +75,8 @@ export const roleAuthMiddleware = (allowedRoles: UserRole[]) => {
       return next();
     }
 
+    console.log(userRole && allowedRoles.includes(userRole));
+    console.log(userRole, allowedRoles);
     return HttpResponse.Unauthorized(
       res,
       'No tienes permiso para realizar esta acción.'
