@@ -51,6 +51,13 @@ assessmentRouter.put(
   assessmentController.update
 );
 
+assessmentRouter.patch(
+  '/:id',
+  professorOnly,
+  validationMiddleware(UpdateAssessmentSchema),
+  assessmentController.update
+);
+
 assessmentRouter.delete('/:id', professorOrAdmin, assessmentController.remove);
 
 // Attempt routes (Students & Professors)

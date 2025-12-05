@@ -239,8 +239,8 @@ import * as assessmentController from '../assessment/assessment.controller.js';
 
 courseRouter.get(
   '/:courseId/assessments',
-  enrollmentCheckMiddleware,
   authMiddleware,
+  enrollmentCheckMiddleware,
   assessmentController.getAssessmentsByCourse
 );
 
