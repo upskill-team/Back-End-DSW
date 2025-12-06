@@ -21,3 +21,17 @@ adminRouter.get(
   roleAuthMiddleware([UserRole.ADMIN]),
   adminController.getAnalytics
 );
+
+/**
+ * POST /api/admin/test-reminder
+ * Manually trigger the daily pending appeals reminder email (development only)
+ * This endpoint is only available when NODE_ENV !== 'production'
+ */
+if (process.env.NODE_ENV !== 'production') {
+  adminRouter.post(
+    '/test-reminder',
+    authMiddleware,
+    roleAuthMiddleware([UserRole.ADMIN]),
+    adminController.testPendingAppealsReminder
+  );
+}

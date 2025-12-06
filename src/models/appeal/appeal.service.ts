@@ -11,6 +11,8 @@ import { ProfessorService } from '../professor/professor.services.js'
 import { ObjectId } from '@mikro-orm/mongodb'
 import { Logger } from 'pino'
 import { safeParse } from 'valibot'
+import { EmailNotificationService } from '../../emails/services/email-notification.service.js'
+import { EmailType } from '../../emails/types/email-types.js'
 
 /**
  * Provides methods for CRUD operations on Appeal entities.
@@ -19,10 +21,12 @@ import { safeParse } from 'valibot'
 export class AppealService {
   private em: EntityManager
   private logger: Logger
+  private emailService: EmailNotificationService
 
   constructor(em: EntityManager, logger: Logger) {
     this.em = em
     this.logger = logger.child({ context: { service: 'AppealService' } })
+    this.emailService = new EmailNotificationService(logger)
   }
 
   /**
@@ -147,8 +151,30 @@ export class AppealService {
     if (data.state === 'accepted' && appeal.user) {
       const professorService = new ProfessorService(this.em, this.logger)
       professorService.createFromUser(appeal.user)
+      
+      // Send acceptance email
+      await this.emailService.sendAppealAcceptedEmail({
+        recipientEmail: appeal.user.mail,
+        recipientName: appeal.user.name,
+        appealId: id,
+        status: 'accepted',
+        message: 'Tu solicitud ha sido aprobada. Ahora puedes crear y gestionar cursos en la plataforma.',
+      }).catch(err => {
+        this.logger.error({ err, appealId: id }, 'Failed to send appeal accepted email')
+      })
     } else if (data.state === 'rejected') {
       this.logger.info({ appealId: id, userId: appeal.user.id }, 'Appeal rejected.')
+      
+      // Send rejection email
+      await this.emailService.sendAppealRejectedEmail({
+        recipientEmail: appeal.user.mail,
+        recipientName: appeal.user.name,
+        appealId: id,
+        status: 'rejected',
+        message: 'Lamentablemente tu solicitud no ha sido aprobada en esta ocasión. Por favor revisa los requisitos y vuelve a intentarlo.',
+      }).catch(err => {
+        this.logger.error({ err, appealId: id }, 'Failed to send appeal rejected email')
+      })
     }
 
     await this.em.flush()

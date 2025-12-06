@@ -24,7 +24,8 @@ import {
   SubmitAnswerType,
   SubmitAttemptType,
 } from './assessment.schemas.js';
-import { EnrollementService } from '../Enrollement/enrollement.service.js'
+import { EnrollementService } from '../Enrollement/enrollement.service.js';
+import { EmailNotificationService } from '../../emails/services/email-notification.service.js';
 
 /**
  * Provides methods for CRUD operations on Assessment entities.
@@ -33,10 +34,12 @@ import { EnrollementService } from '../Enrollement/enrollement.service.js'
 export class AssessmentService {
   private em: EntityManager;
   private logger: Logger;
+  private emailService: EmailNotificationService;
 
   constructor(em: EntityManager, logger: Logger) {
     this.em = em;
     this.logger = logger.child({ context: { service: 'AssessmentService' } });
+    this.emailService = new EmailNotificationService(logger);
   }
 
   /**
@@ -99,6 +102,16 @@ export class AssessmentService {
       { assessmentId: assessment.id },
       'Assessment created successfully.'
     );
+    
+    // Notify all enrolled students about the new assessment
+    // Execute asynchronously to not block the response
+    this.notifyStudentsAboutNewAssessment(assessment, course).catch((err) => {
+      this.logger.error(
+        { err, assessmentId: assessment.id, courseId: course.id },
+        'Failed to send new assessment notifications'
+      );
+    });
+    
     return assessment;
   }
 
@@ -1071,5 +1084,70 @@ export class AssessmentService {
     return this.em.find(Assessment, { course: new ObjectId(courseId) }, {
         populate: ['course', 'questions'],
     });
+  }
+
+  /**
+   * Notifies all enrolled students about a new assessment.
+   * @private
+   */
+  private async notifyStudentsAboutNewAssessment(
+    assessment: Assessment,
+    course: Course
+  ): Promise<void> {
+    try {
+      const enrollmentService = new EnrollementService(this.em, this.logger);
+      const enrollments = await enrollmentService.findByCourse(course.id!);
+
+      if (enrollments.length === 0) {
+        this.logger.info({ courseId: course.id }, 'No enrolled students to notify');
+        return;
+      }
+
+      const frontendUrl = process.env.NGROK_FRONTEND_URL || 'http://localhost:5173';
+      
+      // Send emails to all enrolled students
+      const emailPromises = enrollments.map(async (enrollment) => {
+        // Populate the student.user relationship to get the User entity
+        await this.em.populate(enrollment, ['student.user']);
+        const student = enrollment.student as Student;
+        const user = student.user;
+        
+        if (!user) {
+          this.logger.warn({ studentId: student.id }, 'User not found for student');
+          return;
+        }
+
+        return this.emailService.sendNewAssessmentEmail({
+          recipientEmail: user.mail,
+          recipientName: user.name,
+          courseName: course.name,
+          assessmentTitle: assessment.title,
+          availableFrom: assessment.availableFrom,
+          availableUntil: assessment.availableUntil,
+          assessmentUrl: `${frontendUrl}/courses/${course.id}/assessments/${assessment.id}`,
+        });
+      });
+
+      const results = await Promise.allSettled(emailPromises);
+      
+      const failedEmails = results.filter(r => r.status === 'rejected').length;
+      const successfulEmails = results.filter(r => r.status === 'fulfilled').length;
+      
+      this.logger.info(
+        { 
+          assessmentId: assessment.id, 
+          courseId: course.id,
+          total: enrollments.length,
+          successful: successfulEmails,
+          failed: failedEmails
+        },
+        'Finished sending new assessment notifications'
+      );
+    } catch (error: any) {
+      this.logger.error(
+        { err: error, assessmentId: assessment.id, courseId: course.id },
+        'Error notifying students about new assessment'
+      );
+    }
   }
 }
