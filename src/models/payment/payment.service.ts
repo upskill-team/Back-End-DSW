@@ -18,6 +18,7 @@ import {
   calculateProfessorShare, 
   calculatePlatformFee 
 } from '../../shared/utils/currency.js';
+import { EmailNotificationService } from '../../emails/services/email-notification.service.js';
 
 interface PreferenceResponse {
   preferenceId: string;
@@ -26,6 +27,7 @@ interface PreferenceResponse {
 
 export class PaymentService {
   private readonly client: MercadoPagoConfig;
+  private emailService: EmailNotificationService;
 
   constructor(
     private readonly em: EntityManager, 
@@ -40,6 +42,7 @@ export class PaymentService {
     this.client = new MercadoPagoConfig({ 
         accessToken: accessToken 
     });
+    this.emailService = new EmailNotificationService(logger);
   }
 
   /**
@@ -277,6 +280,24 @@ export class PaymentService {
             await em.persistAndFlush(payment);
 
             this.logger.info({ userId, courseId, paymentId }, 'Payment, Earnings, and Enrollment created successfully from webhook.');
+            
+            // Send purchase confirmation email
+            const user = await em.findOne(User, { _id: new ObjectId(userId) });
+            if (user) {
+              const frontendUrl = process.env.NGROK_FRONTEND_URL || 'http://localhost:5173';
+              await this.emailService.sendCoursePurchaseEmail({
+                recipientEmail: user.mail,
+                recipientName: user.name,
+                courseName: course.name,
+                courseImageUrl: course.imageUrl,
+                amount: toAmount(totalAmountInCents),
+                transactionId: paymentId,
+                purchaseDate: new Date(),
+                courseUrl: `${frontendUrl}/courses/${courseId}`,
+              }).catch(err => {
+                this.logger.error({ err, userId, courseId }, 'Failed to send purchase confirmation email')
+              })
+            }
           } else {
             this.logger.warn({ userId, courseId }, 'Webhook received for an already existing enrollment. Payment and Earnings created.');
           }

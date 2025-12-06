@@ -7,6 +7,8 @@ import type { Request, Response } from 'express';
 import { orm } from '../../shared/db/orm.js';
 import { AdminService } from './admin.service.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
+import { ScheduledNotificationService } from '../../shared/services/scheduled-notification.service.js';
+import { logger } from '../../shared/utils/logger.js';
 
 /**
  * Get platform analytics.
@@ -26,5 +28,26 @@ export async function getAnalytics(req: Request, res: Response) {
     return HttpResponse.Ok(res, analytics);
   } catch {
     return HttpResponse.InternalServerError(res, 'Error fetching analytics');
+  }
+}
+
+/**
+ * Manually trigger the daily pending appeals reminder email (development only).
+ * POST /api/admin/test-reminder
+ */
+export async function testPendingAppealsReminder(req: Request, res: Response) {
+  try {
+    const em = orm.em.fork();
+    const scheduledService = new ScheduledNotificationService(em, logger);
+    
+    await scheduledService.sendDailyPendingAppealsReminder();
+    
+    return HttpResponse.Ok(res, { 
+      success: true, 
+      message: 'Pending appeals reminder sent successfully. Check logs for details.' 
+    });
+  } catch (error: any) {
+    logger.error({ err: error }, 'Failed to send test reminder');
+    return HttpResponse.InternalServerError(res, 'Failed to send reminder: ' + error.message);
   }
 }

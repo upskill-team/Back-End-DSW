@@ -10,12 +10,17 @@ import { Logger } from 'pino';
 import { User } from '../user/user.entity.js';
 import { Student } from '../student/student.entity.js';
 import { Professor } from '../professor/professor.entity.js';
+import { EmailNotificationService } from '../../emails/services/email-notification.service.js';
 
 export class EnrollementService {
+  private emailService: EmailNotificationService;
+
   constructor(
     private readonly em: EntityManager,
     private readonly logger: Logger
-  ) {}
+  ) {
+    this.emailService = new EmailNotificationService(logger);
+  }
 
   /**
    * Creates a new enrollment record, linking a student to a course.
@@ -48,7 +53,7 @@ export class EnrollementService {
           throw new Error('Student not found');
         }
 
-        const course = await em.findOne(Course, { _id: new ObjectId(courseId) }, { populate: ['professor'] });
+        const course = await em.findOne(Course, { _id: new ObjectId(courseId) }, { populate: ['professor', 'professor.user'] });
         if (!course) {
           this.logger.warn({ courseId }, 'Course not found');
           throw new Error('Course not found');
@@ -73,6 +78,26 @@ export class EnrollementService {
 
         student.courses.add(course);
         await em.persistAndFlush(student);
+
+        // Send enrollment confirmation email for free courses
+        if (course.isFree) {
+          const professor = course.professor as Professor;
+          const professorUser = professor.user;
+          const professorName = professorUser ? `${professorUser.name} ${professorUser.surname}` : 'Profesor';
+          const frontendUrl = process.env.NGROK_FRONTEND_URL || 'http://localhost:5173';
+          
+          await this.emailService.sendCourseEnrollmentEmail({
+            recipientEmail: user.mail,
+            recipientName: user.name,
+            courseName: course.name,
+            courseImageUrl: course.imageUrl,
+            courseUrl: `${frontendUrl}/courses/${courseId}`,
+            enrollmentDate: new Date(),
+            professorName: professorName,
+          }).catch(err => {
+            this.logger.error({ err, userId: studentId, courseId }, 'Failed to send enrollment confirmation email')
+          });
+        }
 
         return enrol;
       });
