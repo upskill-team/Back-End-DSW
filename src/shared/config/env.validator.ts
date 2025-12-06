@@ -58,6 +58,10 @@ const EnvSchema = v.object({
     v.string(),
     v.minLength(1, 'MP_ACCESS_TOKEN is required.')
   ),
+
+  LOG_SOURCE_TOKEN: v.optional(v.string()),
+
+  LOG_SOURCE_URL: v.optional(v.string()),
 });
 
 try {
