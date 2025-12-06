@@ -31,6 +31,8 @@ import { swaggerSpec } from './docs/swagger.config.js';
 import { enrollementRouter } from './models/Enrollement/enrollement.routes.js';
 import { paymentRouter } from './models/payment/payment.routes.js';
 import { adminRouter } from './models/admin/admin.routes.js';
+import { contactRouter } from './models/contact/contact.routes.js';
+import { ScheduledNotificationService } from './shared/services/scheduled-notification.service.js';
 
 const app = express();
 
@@ -182,6 +184,7 @@ async function startApp() {
   app.use('/api/enrollments', apiLimiter, enrollementRouter);
   app.use('/api/payments', apiLimiter, paymentRouter);
   app.use('/api/admin', apiLimiter, adminRouter);
+  app.use('/api/contact', apiLimiter, contactRouter);
 
   // Middleware for handling 404 Not Found errors
   app.use((_, res) => {
@@ -196,6 +199,11 @@ async function startApp() {
   app.listen(PORT, () => {
     logger.info(`Server running on http://localhost:${PORT}/`);
     logger.info(`API docs available at http://localhost:${PORT}/api-docs`);
+    
+    // Initialize scheduled notifications (daily admin reminders)
+    const scheduledNotificationService = new ScheduledNotificationService(orm.em, logger);
+    scheduledNotificationService.scheduleDailyReminder();
+    logger.info('Scheduled notification service initialized');
   });
 }
 

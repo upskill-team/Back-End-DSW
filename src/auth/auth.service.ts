@@ -13,7 +13,7 @@ import { User, UserRole } from '../models/user/user.entity.js'
 import { Student } from '../models/student/student.entity.js'
 import { sendEmail } from '../shared/services/email.service.js'
 import { render } from '@react-email/render'
-import { ResetPasswordEmail } from '../emails/ResetPasswordEmail.js'
+import { ResetPasswordEmail } from '../emails/templates/ResetPasswordEmail.js'
 import { Logger } from 'pino'
 
 /**
