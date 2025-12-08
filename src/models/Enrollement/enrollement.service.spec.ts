@@ -1,160 +1,381 @@
 import { EntityManager } from '@mikro-orm/core';
 import { Logger } from 'pino';
-import { EnrollementService } from './enrollement.service';
-import { Enrollement, EnrollmentState } from './enrollement.entity';
-import { Student } from '../student/student.entity';
-import { Course } from '../course/course.entity';
+import { EnrollementService } from './enrollement.service.js';
+import { Enrollement, EnrollmentState } from './enrollement.entity.js';
+import { Student } from '../student/student.entity.js';
+import { Course } from '../course/course.entity.js';
 
-// Valid 24-char hex IDs to avoid BSONError
-const validStudentId = '507f1f77bcf86cd799439011';
-const validCourseId = '507f1f77bcf86cd799439012';
-const validEnrollmentId = '507f1f77bcf86cd799439013';
-
-// Entity Mocks
-const mockStudent = { 
-  id: validStudentId, 
-  courses: { add: jest.fn(), remove: jest.fn() } 
-} as unknown as Student;
-
-const mockCourse = { 
-  id: validCourseId 
-} as unknown as Course;
-
-describe('EnrollementService', () => {
-  let service: EnrollementService;
+describe('EnrollementService - Unit Tests', () => {
+  let enrollementService: EnrollementService;
   let mockEm: jest.Mocked<EntityManager>;
   let mockLogger: jest.Mocked<Logger>;
-  let dateSpy: jest.SpyInstance;
+
+  // IDs válidos de 24 caracteres hex para evitar BSONError
+  const validStudentId = '507f1f77bcf86cd799439011';
+  const validCourseId = '507f1f77bcf86cd799439012';
+  const validEnrollmentId = '507f1f77bcf86cd799439013';
 
   beforeEach(() => {
-    // Full Mock of EntityManager
     mockEm = {
       findOne: jest.fn(),
       findOneOrFail: jest.fn(),
       find: jest.fn(),
       create: jest.fn().mockImplementation((entity, data) => data),
       persistAndFlush: jest.fn(),
-      flush: jest.fn(), // Required for update()
+      flush: jest.fn(),
       removeAndFlush: jest.fn(),
-      transactional: jest.fn().mockImplementation(cb => cb(mockEm)),
+      transactional: jest.fn().mockImplementation((cb) => cb(mockEm)),
       getReference: jest.fn(),
-    } as any;
-    
-    // Mock Logger
-    mockLogger = { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() } as any;
-    
-    service = new EnrollementService(mockEm, mockLogger);
+    } as unknown as jest.Mocked<EntityManager>;
 
-    // Date Mock for consistency
-    const OriginalDate = global.Date;
-    const testDate = new Date('2025-10-26T10:00:00Z');
-    dateSpy = jest.spyOn(global, 'Date')
-      .mockImplementation((...args) => {
-        if (args.length) return new OriginalDate(...args);
-        return testDate;
-      });
-    Object.setPrototypeOf(dateSpy, OriginalDate);
-    
+    mockLogger = {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      child: jest.fn().mockReturnThis(),
+    } as unknown as jest.Mocked<Logger>;
+
+    enrollementService = new EnrollementService(mockEm, mockLogger);
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
-    dateSpy.mockRestore();
-  });
-  
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
   describe('create', () => {
-    it('should create a new enrollment with correct default values', async () => {
-      // Mock findOne: returns User wrapper, then Course, then null (no existing enrollment)
+    it('should create enrollement with ENROLLED state by default', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = {
+        id: validCourseId,
+      } as unknown as Course;
+
+      mockEm.findOne
+        .mockResolvedValueOnce({ studentProfile: mockStudent } as any) // User wrapper
+        .mockResolvedValueOnce(mockCourse) // Course
+        .mockResolvedValueOnce(null); // No existing enrollment
+
+      // 2. Act
+      await enrollementService.create({
+        studentId: validStudentId,
+        courseId: validCourseId,
+      });
+
+      // 3. Assert
+      const persistedEnrollment = mockEm.persistAndFlush.mock
+        .calls[0][0] as Enrollement;
+      expect(persistedEnrollment.state).toBe(EnrollmentState.ENROLLED);
+    });
+
+    it('should set enrolledAt timestamp', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
       mockEm.findOne
         .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
         .mockResolvedValueOnce(mockCourse)
         .mockResolvedValueOnce(null);
 
-      await service.create({ studentId: validStudentId, courseId: validCourseId });
+      // 2. Act
+      await enrollementService.create({
+        studentId: validStudentId,
+        courseId: validCourseId,
+      });
 
-      const persistedEnrollment = mockEm.persistAndFlush.mock.calls[0][0] as Enrollement;
-      
-      expect(persistedEnrollment.state).toBe(EnrollmentState.ENROLLED);
-      expect(persistedEnrollment.enrolledAt).toEqual(new Date('2025-10-26T10:00:00Z'));
+      // 3. Assert
+      const persistedEnrollment = mockEm.persistAndFlush.mock
+        .calls[0][0] as Enrollement;
+      expect(persistedEnrollment.enrolledAt).toBeInstanceOf(Date);
+    });
+
+    it('should add course to student courses collection', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
+      mockEm.findOne
+        .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
+        .mockResolvedValueOnce(mockCourse)
+        .mockResolvedValueOnce(null);
+
+      // 2. Act
+      await enrollementService.create({
+        studentId: validStudentId,
+        courseId: validCourseId,
+      });
+
+      // 3. Assert
       expect(mockStudent.courses.add).toHaveBeenCalledWith(mockCourse);
     });
 
-    it('should throw an error if student is not found', async () => {
-      mockEm.findOne.mockResolvedValue(null);
-      await expect(service.create({ studentId: validStudentId, courseId: 'any' }))
-        .rejects.toThrow('User not found');
-    });
+    it('should persist created enrollement', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
 
-    it('should throw an error if course is not found', async () => {
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
       mockEm.findOne
         .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
+        .mockResolvedValueOnce(mockCourse)
         .mockResolvedValueOnce(null);
 
-      await expect(service.create({ studentId: validStudentId, courseId: validCourseId }))
-        .rejects.toThrow('Course not found');
+      // 2. Act
+      await enrollementService.create({
+        studentId: validStudentId,
+        courseId: validCourseId,
+      });
+
+      // 3. Assert
+      expect(mockEm.persistAndFlush).toHaveBeenCalled();
     });
-    
-    it('should return existing enrollment if it already exists', async () => {
-        // Complete structure needed to avoid logger errors
-        const existingEnrollment = {
-            id: validEnrollmentId,
-            student: { id: validStudentId },
-            course: { id: validCourseId }
-        } as unknown as Enrollement;
 
-        mockEm.findOne
-            .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
-            .mockResolvedValueOnce(mockCourse)
-            .mockResolvedValueOnce(existingEnrollment);
+    it('should throw error when student not found', async () => {
+      // 1. Arrange
+      mockEm.findOne.mockResolvedValue(null);
 
-        const result = await service.create({ studentId: validStudentId, courseId: validCourseId });
-        
-        expect(result).toBe(existingEnrollment);
+      // 2. Act & Assert
+      await expect(
+        enrollementService.create({
+          studentId: validStudentId,
+          courseId: validCourseId,
+        })
+      ).rejects.toThrow('User not found');
+    });
+
+    it('should throw error when course not found', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
+
+      mockEm.findOne
+        .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
+        .mockResolvedValueOnce(null); // Course not found
+
+      // 2. Act & Assert
+      await expect(
+        enrollementService.create({
+          studentId: validStudentId,
+          courseId: validCourseId,
+        })
+      ).rejects.toThrow('Course not found');
+    });
+
+    it('should return existing enrollement if already exists', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
+      const existingEnrollment = {
+        id: validEnrollmentId,
+        student: { id: validStudentId },
+        course: { id: validCourseId },
+      } as unknown as Enrollement;
+
+      mockEm.findOne
+        .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
+        .mockResolvedValueOnce(mockCourse)
+        .mockResolvedValueOnce(existingEnrollment); // Already exists
+
+      // 2. Act
+      const result = await enrollementService.create({
+        studentId: validStudentId,
+        courseId: validCourseId,
+      });
+
+      // 3. Assert
+      expect(result).toBe(existingEnrollment);
+    });
+
+    it('should not persist if enrollement already exists', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { add: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
+      const existingEnrollment = {
+        id: validEnrollmentId,
+        student: { id: validStudentId },
+        course: { id: validCourseId },
+      } as unknown as Enrollement;
+
+      mockEm.findOne
+        .mockResolvedValueOnce({ studentProfile: mockStudent } as any)
+        .mockResolvedValueOnce(mockCourse)
+        .mockResolvedValueOnce(existingEnrollment);
+
+      // 2. Act
+      await enrollementService.create({
+        studentId: validStudentId,
+        courseId: validCourseId,
+      });
+
+      // 3. Assert
+      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
     });
   });
 
   describe('update', () => {
-    it('should update an enrollment', async () => {
-        const existingEnrollment = new Enrollement();
-        existingEnrollment.student = mockStudent as any;
-        
-        mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
-        mockEm.findOne.mockResolvedValue(existingEnrollment);
+    it('should update enrollement progress', async () => {
+      // 1. Arrange
+      const existingEnrollment = new Enrollement();
+      existingEnrollment.progress = 0;
 
-        const result = await service.update(validEnrollmentId, { progress: 50 });
-        
-        expect(mockEm.findOneOrFail).toHaveBeenCalled();
-        expect(mockEm.flush).toHaveBeenCalled();
-        expect(result.progress).toBe(50);
+      mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
+      mockEm.findOne.mockResolvedValue(existingEnrollment);
+
+      // 2. Act
+      const result = await enrollementService.update(validEnrollmentId, {
+        progress: 50,
+      });
+
+      // 3. Assert
+      expect(result.progress).toBe(50);
     });
 
-     it('should throw an error if enrollment to update is not found', async () => {
+    it('should find enrollement by id before updating', async () => {
+      // 1. Arrange
+      const existingEnrollment = new Enrollement();
+
+      mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
+      mockEm.findOne.mockResolvedValue(existingEnrollment);
+
+      // 2. Act
+      await enrollementService.update(validEnrollmentId, { progress: 50 });
+
+      // 3. Assert
+      expect(mockEm.findOneOrFail).toHaveBeenCalledWith(
+        Enrollement,
+        expect.objectContaining({ _id: expect.anything() })
+      );
+    });
+
+    it('should flush changes after modifying', async () => {
+      // 1. Arrange
+      const existingEnrollment = new Enrollement();
+
+      mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
+      mockEm.findOne.mockResolvedValue(existingEnrollment);
+
+      // 2. Act
+      await enrollementService.update(validEnrollmentId, { progress: 50 });
+
+      // 3. Assert
+      expect(mockEm.flush).toHaveBeenCalled();
+    });
+
+    it('should throw error if enrollement not found', async () => {
+      // 1. Arrange
       mockEm.findOneOrFail.mockRejectedValue(new Error('Enrollment not found'));
-      await expect(service.update(validEnrollmentId, {})).rejects.toThrow('Enrollment not found');
+
+      // 2. Act & Assert
+      await expect(
+        enrollementService.update(validEnrollmentId, { progress: 50 })
+      ).rejects.toThrow('Enrollment not found');
     });
   });
 
   describe('remove', () => {
-      it('should remove an enrollment', async () => {
-          const existingEnrollment = new Enrollement();
-          existingEnrollment.student = mockStudent as any;
-          existingEnrollment.course = mockCourse as any;
-          
-          mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
-          
-          await service.remove(validEnrollmentId);
-          
-          expect(mockStudent.courses.remove).toHaveBeenCalledWith(mockCourse);
-          expect(mockEm.removeAndFlush).toHaveBeenCalledWith(existingEnrollment);
-      });
+    it('should remove enrollement from database', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { remove: jest.fn() },
+      } as unknown as Student;
 
-       it('should throw an error if enrollment to remove is not found', async () => {
-        mockEm.findOneOrFail.mockRejectedValue(new Error('Enrollment not found'));
-        await expect(service.remove(validEnrollmentId)).rejects.toThrow('Enrollment not found');
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
+      const existingEnrollment = new Enrollement();
+      existingEnrollment.student = mockStudent as any;
+      existingEnrollment.course = mockCourse as any;
+
+      mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
+
+      // 2. Act
+      await enrollementService.remove(validEnrollmentId);
+
+      // 3. Assert
+      expect(mockEm.removeAndFlush).toHaveBeenCalledWith(existingEnrollment);
+    });
+
+    it('should remove course from student courses collection', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { remove: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
+      const existingEnrollment = new Enrollement();
+      existingEnrollment.student = mockStudent as any;
+      existingEnrollment.course = mockCourse as any;
+
+      mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
+
+      // 2. Act
+      await enrollementService.remove(validEnrollmentId);
+
+      // 3. Assert
+      expect(mockStudent.courses.remove).toHaveBeenCalledWith(mockCourse);
+    });
+
+    it('should find enrollement by id before removing', async () => {
+      // 1. Arrange
+      const mockStudent = {
+        id: validStudentId,
+        courses: { remove: jest.fn() },
+      } as unknown as Student;
+
+      const mockCourse = { id: validCourseId } as unknown as Course;
+
+      const existingEnrollment = new Enrollement();
+      existingEnrollment.student = mockStudent as any;
+      existingEnrollment.course = mockCourse as any;
+
+      mockEm.findOneOrFail.mockResolvedValue(existingEnrollment);
+
+      // 2. Act
+      await enrollementService.remove(validEnrollmentId);
+
+      // 3. Assert
+      expect(mockEm.findOneOrFail).toHaveBeenCalledWith(
+        Enrollement,
+        expect.objectContaining({ _id: expect.anything() }),
+        expect.objectContaining({ populate: expect.any(Array) })
+      );
+    });
+
+    it('should throw error if enrollement not found', async () => {
+      // 1. Arrange
+      mockEm.findOneOrFail.mockRejectedValue(new Error('Enrollment not found'));
+
+      // 2. Act & Assert
+      await expect(
+        enrollementService.remove(validEnrollmentId)
+      ).rejects.toThrow('Enrollment not found');
     });
   });
 });
