@@ -67,16 +67,19 @@ jobs:
         run: pnpm run test:unit
         env:
           NODE_ENV: test
+          JWT_SECRET: test-secret-key
 
       - name: Run integration tests
         run: pnpm run test:integration
         env:
           NODE_ENV: test
+          JWT_SECRET: test-secret-key
 
       - name: Generate coverage report
         run: pnpm run test:coverage
         env:
           NODE_ENV: test
+          JWT_SECRET: test-secret-key
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

@@ -44,5 +44,10 @@ module.exports = {
     '!src/**/*.integration.spec.ts',
     '!src/types/**',
     '!src/migrations/**',
+    '!src/shared/testing/**',
+    '!src/server.ts',
+    '!src/app.ts',
   ],
+  
+  coverageProvider: 'v8',
 };
