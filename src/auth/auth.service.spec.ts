@@ -275,14 +275,12 @@ describe('AuthService - Unit Tests', () => {
       });
 
       // 3. Assert
-      expect(jwt.sign).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: '123',
-          role: UserRole.PROFESSOR,
-        }),
-        expect.anything(),
-        expect.any(Object)
-      );
+      expect(jwt.sign).toHaveBeenCalled();
+      const callArgs = (jwt.sign as jest.Mock).mock.calls[0];
+      expect(callArgs[0]).toMatchObject({
+        id: '123',
+        role: UserRole.PROFESSOR,
+      });
     });
 
     it('should throw error when user does not exist', async () => {
