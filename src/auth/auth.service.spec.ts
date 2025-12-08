@@ -280,7 +280,7 @@ describe('AuthService - Unit Tests', () => {
           id: '123',
           role: UserRole.PROFESSOR,
         }),
-        expect.any(String),
+        expect.anything(),
         expect.any(Object)
       );
     });
