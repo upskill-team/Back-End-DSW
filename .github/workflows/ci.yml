@@ -1,37 +1,121 @@
-name: Backend CI Checks
+name: CI Pipeline
 
 on:
+  push:
+    branches:
+      - develop
+      - main
   pull_request:
-    branches: [develop]
-
+    branches:
+      - develop
+      - main
   workflow_dispatch:
 
 jobs:
-  test:
+  lint-and-typecheck:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.9.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ESLint
+        run: pnpm run lint
+
+      - name: Run TypeScript type check
+        run: pnpm run type-check
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
         with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          version: 10.9.0
 
-      - name: Install Dependencies
-        run: pnpm install
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
 
-      - name: Run Quality Checks
-        run: pnpm test:node
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm run test:unit
+        env:
+          NODE_ENV: test
+
+      - name: Run integration tests
+        run: pnpm run test:integration
+        env:
+          NODE_ENV: test
+
+      - name: Generate coverage report
+        run: pnpm run test:coverage
+        env:
+          NODE_ENV: test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: success()
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  build:
+    name: Build Project
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.9.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build TypeScript project
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
