@@ -47,7 +47,7 @@ export class Appeal extends BaseEntity {
    */
   @Property({ nullable: true })
   documentUrl?: string;
-  
+
   /**
    * The user who submitted this appeal.
    * @type {Rel<User>}

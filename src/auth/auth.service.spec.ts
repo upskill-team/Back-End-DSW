@@ -1,31 +1,25 @@
-import { AuthService } from './auth.service';
-import { User, UserRole } from '../models/user/user.entity';
+import { AuthService } from './auth.service.js';
+import { User, UserRole } from '../models/user/user.entity.js';
 import { EntityManager } from '@mikro-orm/core';
 import { Logger } from 'pino';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// --- Mocks ---
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
 
-// Helper type to avoid repeating the definition in every test
-type RegisterInput = Omit<User, 'password'> & { password_plaintext: string };
-
 describe('AuthService - Unit Tests', () => {
-  let service: AuthService;
+  let authService: AuthService;
   let mockEm: jest.Mocked<EntityManager>;
   let mockLogger: jest.Mocked<Logger>;
 
   beforeEach(() => {
-    // Mock Entity Manager
     mockEm = {
       findOne: jest.fn(),
       create: jest.fn(),
       persistAndFlush: jest.fn(),
     } as unknown as jest.Mocked<EntityManager>;
 
-    // Mock Logger
     mockLogger = {
       child: jest.fn().mockReturnThis(),
       info: jest.fn(),
@@ -33,85 +27,318 @@ describe('AuthService - Unit Tests', () => {
       error: jest.fn(),
     } as unknown as jest.Mocked<Logger>;
 
-    service = new AuthService(mockEm, mockLogger);
+    authService = new AuthService(mockEm, mockLogger);
     jest.clearAllMocks();
   });
 
-  // --- TEST 1: Successful Registration Test ---
-  it('TEST 1: Should register a user successfully', async () => {
-    // 1. Setup
-    mockEm.findOne.mockResolvedValue(null); // User does not exist
-    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_pass');
-    
-    const mockUser = { id: '1', role: UserRole.STUDENT } as User;
-    mockEm.create.mockReturnValue(mockUser);
+  describe('register', () => {
+    it('should hash password before saving user', async () => {
+      // 1. Arrange
+      const hashedPassword = '$2a$10$hashedPasswordExample';
+      mockEm.findOne.mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
 
-    const inputData = {
-      name: 'John',
-      surname: 'Doe',
-      mail: 'john@test.com',
-      password_plaintext: 'password123',
-    };
+      const mockUser = {
+        id: '123',
+        role: UserRole.STUDENT,
+        password: hashedPassword,
+      } as User;
+      mockEm.create.mockReturnValue(mockUser);
 
-    // 2. Execution
-    // Type casting input to satisfy TypeScript strict checks
-    const result = await service.register(inputData as RegisterInput);
+      const registerData = {
+        mail: 'test@test.com',
+        password_plaintext: 'plainPassword123',
+        firstName: 'Test',
+        lastName: 'User',
+        role: UserRole.STUDENT,
+      };
 
-    // 3. Verification
-    expect(mockEm.findOne).toHaveBeenCalledWith(User, { mail: 'john@test.com' });
-    expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
-    expect(mockEm.persistAndFlush).toHaveBeenCalled();
-    expect(result).toEqual(mockUser);
-  });
+      // 2. Act
+      await authService.register(registerData as any);
 
-  // --- TEST 2: Registration Error Test ---
-  it('TEST 2: Should fail if email already exists', async () => {
-    // 1. Setup: Email ALREADY exists
-    mockEm.findOne.mockResolvedValue({ id: 'existing' } as User);
-
-    const inputData = {
-      name: 'Jane',
-      surname: 'Doe',
-      mail: 'jane@test.com',
-      password_plaintext: '12345',
-    };
-
-    // 2. Execution & Verification
-    await expect(service.register(inputData as RegisterInput)).rejects.toThrow('Email already used');
-
-    expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
-  });
-
-  // --- TEST 3: Successful Login Test ---
-  it('TEST 3: Should login and return token if credentials are valid', async () => {
-    // 1. Setup
-    const mockUser = { id: '1', password: 'hashed_pass', role: 'student' } as User;
-    mockEm.findOne.mockResolvedValue(mockUser);
-    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-    (jwt.sign as jest.Mock).mockReturnValue('fake_token_jwt');
-
-    // 2. Execution
-    const result = await service.login({
-      mail: 'john@test.com',
-      password_plaintext: 'password123'
+      // 3. Assert
+      expect(bcrypt.hash).toHaveBeenCalledWith('plainPassword123', 10);
     });
 
-    // 3. Verification
-    expect(result).toHaveProperty('token', 'fake_token_jwt');
-    expect(jwt.sign).toHaveBeenCalled();
+    it('should create user with provided data', async () => {
+      // 1. Arrange
+      mockEm.findOne.mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPass');
+
+      const mockUser = { id: '123' } as User;
+      mockEm.create.mockReturnValue(mockUser);
+
+      const registerData = {
+        mail: 'test@test.com',
+        password_plaintext: 'password123',
+        name: 'John',
+        surname: 'Doe',
+        role: UserRole.STUDENT,
+      };
+
+      // 2. Act
+      await authService.register(registerData as any);
+
+      // 3. Assert
+      expect(mockEm.create).toHaveBeenCalledWith(
+        User,
+        expect.objectContaining({
+          mail: 'test@test.com',
+          name: 'John',
+          surname: 'Doe',
+          role: UserRole.STUDENT,
+        })
+      );
+    });
+
+    it('should persist user and student profile', async () => {
+      // 1. Arrange
+      mockEm.findOne.mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPass');
+
+      const mockUser = { id: '123' } as User;
+      mockEm.create.mockReturnValue(mockUser);
+
+      const registerData = {
+        mail: 'test@test.com',
+        password_plaintext: 'password123',
+        name: 'Test',
+        surname: 'User',
+        role: UserRole.STUDENT,
+      };
+
+      // 2. Act
+      await authService.register(registerData as any);
+
+      // 3. Assert
+      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(expect.any(Array));
+    });
+
+    it('should verify email does not exist before registering', async () => {
+      // 1. Arrange
+      mockEm.findOne.mockResolvedValue(null);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPass');
+      mockEm.create.mockReturnValue({ id: '123' } as User);
+
+      const registerData = {
+        mail: 'test@test.com',
+        password_plaintext: 'password123',
+        firstName: 'Test',
+        lastName: 'User',
+        role: UserRole.STUDENT,
+      };
+
+      // 2. Act
+      await authService.register(registerData as any);
+
+      // 3. Assert
+      expect(mockEm.findOne).toHaveBeenCalledWith(User, {
+        mail: 'test@test.com',
+      });
+    });
+
+    it('should throw error when email already exists', async () => {
+      // 1. Arrange
+      const existingUser = { id: '123', mail: 'existing@test.com' } as User;
+      mockEm.findOne.mockResolvedValue(existingUser);
+
+      const registerData = {
+        mail: 'existing@test.com',
+        password_plaintext: 'password123',
+        firstName: 'Test',
+        lastName: 'User',
+        role: UserRole.STUDENT,
+      };
+
+      // 2. Act & Assert
+      await expect(authService.register(registerData as any)).rejects.toThrow(
+        'Email already used'
+      );
+    });
+
+    it('should not persist user when email already exists', async () => {
+      // 1. Arrange
+      const existingUser = { id: '123', mail: 'existing@test.com' } as User;
+      mockEm.findOne.mockResolvedValue(existingUser);
+
+      const registerData = {
+        mail: 'existing@test.com',
+        password_plaintext: 'password123',
+        firstName: 'Test',
+        lastName: 'User',
+        role: UserRole.STUDENT,
+      };
+
+      // 2. Act
+      try {
+        await authService.register(registerData as any);
+      } catch (error) {
+        // Expected
+      }
+
+      // 3. Assert
+      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
+    });
   });
 
-  // --- TEST 4: Failed Login Test ---
-  it('TEST 4: Should fail if password is incorrect', async () => {
-    // 1. Setup
-    const mockUser = { id: '1', password: 'hashed_pass' } as User;
-    mockEm.findOne.mockResolvedValue(mockUser);
-    (bcrypt.compare as jest.Mock).mockResolvedValue(false); // Incorrect password
+  describe('login', () => {
+    it('should return JWT token when credentials are correct', async () => {
+      // 1. Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+        role: UserRole.STUDENT,
+      } as User;
 
-    // 2. Execution & Verification
-    await expect(service.login({
-      mail: 'john@test.com',
-      password_plaintext: 'wrong_password'
-    })).rejects.toThrow('Credenciales inválidas.');
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('jwt.token.here');
+
+      // 2. Act
+      const result = await authService.login({
+        mail: 'test@test.com',
+        password_plaintext: 'correctPassword',
+      });
+
+      // 3. Assert
+      expect(result).toHaveProperty('token');
+      expect(result.token).toBe('jwt.token.here');
+    });
+
+    it('should find user by email in database', async () => {
+      // 1. Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('token');
+
+      // 2. Act
+      await authService.login({
+        mail: 'test@test.com',
+        password_plaintext: 'password',
+      });
+
+      // 3. Assert
+      expect(mockEm.findOne).toHaveBeenCalledWith(User, {
+        mail: 'test@test.com',
+      });
+    });
+
+    it('should verify password with bcrypt', async () => {
+      // 1. Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('token');
+
+      // 2. Act
+      await authService.login({
+        mail: 'test@test.com',
+        password_plaintext: 'plainPassword',
+      });
+
+      // 3. Assert
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'plainPassword',
+        'hashedPassword'
+      );
+    });
+
+    it('should include id and role in token payload', async () => {
+      // 1. Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+        role: UserRole.PROFESSOR,
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('token');
+
+      // 2. Act
+      await authService.login({
+        mail: 'test@test.com',
+        password_plaintext: 'password',
+      });
+
+      // 3. Assert
+      expect(jwt.sign).toHaveBeenCalled();
+      const callArgs = (jwt.sign as jest.Mock).mock.calls[0];
+      expect(callArgs[0]).toMatchObject({
+        id: '123',
+        role: UserRole.PROFESSOR,
+      });
+    });
+
+    it('should throw error when user does not exist', async () => {
+      // 1. Arrange
+      mockEm.findOne.mockResolvedValue(null);
+
+      // 2. Act & Assert
+      await expect(
+        authService.login({
+          mail: 'nonexistent@test.com',
+          password_plaintext: 'password',
+        })
+      ).rejects.toThrow();
+    });
+
+    it('should throw error when password is incorrect', async () => {
+      // 1. Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      // 2. Act & Assert
+      await expect(
+        authService.login({
+          mail: 'test@test.com',
+          password_plaintext: 'wrongPassword',
+        })
+      ).rejects.toThrow();
+    });
+
+    it('should not generate token when password is incorrect', async () => {
+      // 1. Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      // 2. Act
+      try {
+        await authService.login({
+          mail: 'test@test.com',
+          password_plaintext: 'wrongPassword',
+        });
+      } catch (error) {
+        // Expected
+      }
+
+      // 3. Assert
+      expect(jwt.sign).not.toHaveBeenCalled();
+    });
   });
 });
