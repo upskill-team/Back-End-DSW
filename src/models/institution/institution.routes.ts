@@ -30,9 +30,6 @@ import { UserRole } from '../user/user.entity.js'
 
 export const institutionRouter = Router()
 
-// Apply authentication to all routes
-institutionRouter.use(authMiddleware)
-
 const adminOnly = roleAuthMiddleware([UserRole.ADMIN])
 const professorOnly = roleAuthMiddleware([UserRole.PROFESSOR])
 
@@ -42,11 +39,12 @@ institutionRouter.get('/:id', findOne)
 
 // Professor routes
 // Get institution managed by the current professor
-institutionRouter.get('/managed/me', professorOnly, getManagedInstitution)
+institutionRouter.get('/managed/me', authMiddleware, professorOnly, getManagedInstitution)
 
 // Create a new institution (professor becomes manager)
 institutionRouter.post(
   '/',
+  authMiddleware,
   professorOnly,
   validationMiddleware(CreateInstitutionSchema),
   createByProfessor
@@ -55,6 +53,7 @@ institutionRouter.post(
 // Update institution managed by the current professor
 institutionRouter.patch(
   '/managed/me',
+  authMiddleware,
   professorOnly,
   validationMiddleware(UpdateManagedInstitutionSchema),
   updateManagedInstitution
@@ -63,21 +62,24 @@ institutionRouter.patch(
 // Leave an institution (professor can't be manager)
 institutionRouter.delete(
   '/:institutionId/leave',
+  authMiddleware,
   professorOnly,
   leaveInstitution
 )
 
 institutionRouter.delete(
   '/:id/professors/:professorId',
+  authMiddleware,
   professorOnly,
   removeProfessor
 )
 
 // Admin routes
-institutionRouter.get('/admin/all', adminOnly, findAllAdmin)
+institutionRouter.get('/admin/all', authMiddleware, adminOnly, findAllAdmin)
 
 institutionRouter.put(
   '/:id',
+  authMiddleware,
   adminOnly,
   validationMiddleware(UpdateInstitutionSchema),
   update
