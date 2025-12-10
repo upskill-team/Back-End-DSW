@@ -3,7 +3,8 @@
  * @remarks Defines the database schema and relationships for the Appeal entity.
  */
 
-import { Entity, Property, ManyToOne, Rel } from '@mikro-orm/core';
+import { Entity, Property, ManyToOne } from '@mikro-orm/core';
+import type { Rel } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { User } from '../user/user.entity.js';
 

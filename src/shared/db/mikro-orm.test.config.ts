@@ -7,6 +7,7 @@ import { Course } from '../../models/course/course.entity.js';
 import { CourseType } from '../../models/courseType/courseType.entity.js';
 import { Enrollement } from '../../models/Enrollement/enrollement.entity.js';
 import { Appeal } from '../../models/appeal/appeal.entity.js';
+import { RefreshToken } from '../../auth/refreshToken.entity.js';
 
 /**
  * MikroORM configuration for testing environment
@@ -33,5 +34,6 @@ export default defineConfig({
     CourseType,
     Enrollement,
     Appeal,
+    RefreshToken,
   ],
 });

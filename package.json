@@ -41,6 +41,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
@@ -64,6 +65,7 @@
   "devDependencies": {
     "@eslint/js": "^9.33.0",
     "@mikro-orm/cli": "6.5.1",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",

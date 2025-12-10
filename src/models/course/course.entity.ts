@@ -7,13 +7,13 @@ import {
   Entity,
   Property,
   ManyToOne,
-  Rel,
   ManyToMany,
   Collection,
   Embedded,
   Enum,
   OneToMany,
 } from '@mikro-orm/core';
+import type { Rel } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { CourseType } from '../courseType/courseType.entity.js';
 import { Professor } from '../professor/professor.entity.js';

@@ -9,7 +9,9 @@ module.exports = {
   globalSetup: '<rootDir>/src/shared/testing/setup-wrapper.ts',
   globalTeardown: '<rootDir>/src/shared/testing/teardown-wrapper.ts',
 
-  // Timeout extendido para MongoDB Memory Server (primera ejecución descarga binarios)
+  // ESTA ES LA CLAVE: Carga reflect-metadata antes que nada
+  setupFiles: ['<rootDir>/src/shared/testing/jest-setup.ts'],
+
   testTimeout: 30000,
 
   moduleNameMapper: {
@@ -21,33 +23,13 @@ module.exports = {
       'ts-jest',
       {
         useESM: true,
-        isolatedModules: true,
-        diagnostics: {
-          ignoreCodes: [1378, 151001],
-        },
-        tsconfig: {
-          module: 'esnext',
-          target: 'es2022',
-        },
+        // Usamos la config del tsconfig para evitar conflictos
+        tsconfig: 'tsconfig.json', 
       },
     ],
   },
 
-  // Patrones de tests
   testMatch: ['**/*.spec.ts', '**/*.integration.spec.ts'],
-
-  // Configuración de cobertura
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.spec.ts',
-    '!src/**/*.integration.spec.ts',
-    '!src/types/**',
-    '!src/migrations/**',
-    '!src/shared/testing/**',
-    '!src/server.ts',
-    '!src/app.ts',
-  ],
   
   coverageProvider: 'v8',
 };

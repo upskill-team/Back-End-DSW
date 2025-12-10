@@ -12,7 +12,6 @@ import { ObjectId } from '@mikro-orm/mongodb'
 import { Logger } from 'pino'
 import { safeParse } from 'valibot'
 import { EmailNotificationService } from '../../emails/services/email-notification.service.js'
-import { EmailType } from '../../emails/types/email-types.js'
 
 /**
  * Provides methods for CRUD operations on Appeal entities.

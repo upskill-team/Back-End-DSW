@@ -2,7 +2,6 @@
  * @module Models/Course/Schemas
  * @remarks Defines validation schemas for the Course module and its embeddable components.
  */
-
 import * as v from 'valibot';
 import { status } from './course.entity.js';
 import { QuestionType } from '../question/question.entity.js';
@@ -59,15 +58,13 @@ export const CreateCourseSchema = v.object({
   ),
   priceInCents: v.optional(
     v.pipe(
-      v.union([v.string(), v.number()]),
-      v.transform((input) =>
-        typeof input === 'string' ? Number(input) : input
-      ),
       v.number('Price must be a number.'),
       v.integer('Price in cents must be an integer.'),
       v.minValue(0, 'Price cannot be negative.')
     )
   ),
+  isFree: v.optional(v.boolean()),
+  
   courseTypeId: v.pipe(
     v.string(),
     v.minLength(1, 'Course type ID is required.')
@@ -83,19 +80,6 @@ export const CreateCourseSchema = v.object({
 
 /**
  * Schema for searching and filtering courses via query parameters.
- * Validates and transforms URL parameters for the course search endpoint.
- * @remarks Supports text search across course name, professor name, institution name, and course type.
- * @remarks All filters can be combined and applied with AND logic.
- * @property {string} [q] - Text search term (searches in name, professor, institution, course type).
- * @property {string} [courseTypeId] - Filter by specific course type ID.
- * @property {string} [institutionId] - Filter by professor's institution ID.
- * @property {string} [professorId] - Filter by specific professor ID.
- * @property {boolean} [isFree] - Filter by free or paid courses.
- * @property {status} [status] - Filter by course status.
- * @property {number} [limit=10] - Number of results per page.
- * @property {number} [offset=0] - Pagination offset.
- * @property {string} [sortBy=createdAt] - Field to sort by (name, priceInCents, createdAt).
- * @property {string} [sortOrder=DESC] - Sort direction (ASC or DESC).
  */
 export const SearchCoursesSchema = v.object({
   q: v.optional(v.string()),
@@ -126,7 +110,6 @@ export const UpdateCourseSchema = v.partial(CreateCourseSchema);
 
 /**
  * Schema for creating a single unit within a course.
- * unitNumber is optional as it will be auto-assigned by the backend.
  */
 export const CreateUnitSchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Unit name is required.')),
@@ -142,7 +125,6 @@ export const UpdateUnitSchema = v.partial(CreateUnitSchema);
 
 /**
  * Schema for reordering units within a course.
- * Expected format from frontend: { units: [{ unitNumber: 3, newOrder: 1 }, ...] }
  */
 export const ReorderUnitsSchema = v.object({
   units: v.array(
@@ -168,10 +150,9 @@ export const QuickSaveSchema = v.object({
     'unit-materials',
     'unit-questions',
   ]),
-  data: v.any(), // Validation will be specific per type
+  data: v.any(), 
 });
 
-// Infer TypeScript types from the schemas for strong typing.
 export type SearchCoursesQuery = v.InferOutput<typeof SearchCoursesSchema>;
 export type CreateCourseType = v.InferOutput<typeof CreateCourseSchema>;
 export type UpdateCourseType = v.InferOutput<typeof UpdateCourseSchema>;
