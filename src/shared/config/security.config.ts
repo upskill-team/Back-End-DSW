@@ -33,7 +33,7 @@ export const corsOptions: cors.CorsOptions = {
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  credentials: true, // Required for cookies to work
 };
 
 /**
@@ -41,8 +41,8 @@ export const corsOptions: cors.CorsOptions = {
  * Applies stricter limits to prevent brute-force attacks.
  */
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 requests per windowMs
+  windowMs: 15 * 60 * 1000, 
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -56,8 +56,8 @@ export const authLimiter = rateLimit({
  * Protects the application from Denial of Service (DoS) attacks.
  */
 export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 1000 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

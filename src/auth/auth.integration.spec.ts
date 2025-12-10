@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service.js';
 import { User, UserRole } from '../models/user/user.entity.js';
 import { Student } from '../models/student/student.entity.js';
+import { RefreshToken } from './refreshToken.entity.js'; // Imported RefreshToken
 import {
   initTestDb,
   clearDatabase,
@@ -155,7 +156,7 @@ describe('AuthService - Integration Tests', () => {
       // 2. Act
       try {
         await authService.register(registerData as any);
-      } catch (error) {
+      } catch {
         // Expected
       }
 
@@ -166,7 +167,7 @@ describe('AuthService - Integration Tests', () => {
   });
 
   describe('login', () => {
-    it('should return valid JWT token with correct credentials', async () => {
+    it('should return valid JWT token and Refresh Token with correct credentials', async () => {
       // 1. Arrange
       const password = 'correctPassword123';
       await userFactory.create(em, {
@@ -181,16 +182,38 @@ describe('AuthService - Integration Tests', () => {
       });
 
       // 3. Assert
-      expect(result).toHaveProperty('token');
-      expect(typeof result.token).toBe('string');
+      expect(result).toHaveProperty('accessToken'); // Changed check
+      expect(typeof result.accessToken).toBe('string');
+      expect(result).toHaveProperty('refreshToken'); // Added check
+      expect(typeof result.refreshToken).toBe('string');
 
       // Verificar que el token es válido
       const decoded = jwt.verify(
-        result.token,
+        result.accessToken, // Updated property
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded.id).toBeDefined();
       expect(decoded.role).toBe(UserRole.STUDENT);
+    });
+
+    it('should create a refresh token in the database', async () => {
+        // 1. Arrange
+        const password = 'pass';
+        const user = await userFactory.create(em, {
+            mail: 'rt@test.com',
+            password: password
+        });
+
+        // 2. Act
+        await authService.login({
+            mail: 'rt@test.com',
+            password_plaintext: password
+        });
+
+        // 3. Assert
+        const storedRt = await em.findOne(RefreshToken, { user: user });
+        expect(storedRt).toBeDefined();
+        expect(storedRt?.revoked).toBe(false);
     });
 
     it('should include correct data in token payload', async () => {
@@ -209,7 +232,7 @@ describe('AuthService - Integration Tests', () => {
 
       // 3. Assert
       const decoded = jwt.verify(
-        result.token,
+        result.accessToken, // Updated property
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded).toHaveProperty('id', user.id?.toString());
@@ -262,10 +285,10 @@ describe('AuthService - Integration Tests', () => {
       });
 
       // 3. Assert
-      expect(result).toHaveProperty('token');
+      expect(result).toHaveProperty('accessToken'); // Updated property
 
       const decoded = jwt.verify(
-        result.token,
+        result.accessToken, // Updated property
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded.role).toBe(UserRole.PROFESSOR);
@@ -295,10 +318,10 @@ describe('AuthService - Integration Tests', () => {
       });
 
       // 3. Assert
-      expect(loginResult).toHaveProperty('token');
+      expect(loginResult).toHaveProperty('accessToken');
 
       const decoded = jwt.verify(
-        loginResult.token,
+        loginResult.accessToken, // Updated property
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded.id).toBeDefined();

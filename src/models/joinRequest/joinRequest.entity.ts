@@ -2,7 +2,8 @@
  * @module Models/JoinRequest/Entity
  * @remarks Defines the database schema and relationships for the JoinRequest entity.
  */
-import { Entity, Property, ManyToOne, Rel, Enum } from '@mikro-orm/core';
+import { Entity, Property, ManyToOne, Enum } from '@mikro-orm/core';
+import type { Rel } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { Professor } from '../professor/professor.entity.js';
 import { Institution } from '../institution/institution.entity.js';

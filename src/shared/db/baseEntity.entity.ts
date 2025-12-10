@@ -3,6 +3,7 @@
  * @remarks Provides a base entity class for all MikroORM entities.
  */
 
+import 'reflect-metadata';
 import { PrimaryKey, SerializedPrimaryKey } from '@mikro-orm/core';
 import { ObjectId } from '@mikro-orm/mongodb';
 

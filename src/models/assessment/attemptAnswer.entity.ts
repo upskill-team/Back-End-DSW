@@ -3,7 +3,8 @@
  * @remarks Defines the database schema for the AttemptAnswer entity.
  */
 
-import { Entity, Property, ManyToOne, Rel } from '@mikro-orm/core';
+import { Entity, Property, ManyToOne } from '@mikro-orm/core';
+import type { Rel } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { AssessmentAttempt } from './assessmentAttempt.entity.js';
 import { Question } from '../question/question.entity.js';

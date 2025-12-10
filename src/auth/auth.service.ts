@@ -1,9 +1,7 @@
 /**
  * @module Auth/Service
- * @remarks Manages the business logic for user authentication.
- * Responsibilities: registering new users, validating credentials for login,
- * and handling the password recovery flow.
- * @see {@link ./auth.controller.ts}
+ * @remarks Manages authentication logic, including JWT generation,
+ * refresh token rotation, and password management.
  */
 import { EntityManager } from '@mikro-orm/core'
 import bcrypt from 'bcryptjs'
@@ -11,15 +9,12 @@ import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import { User, UserRole } from '../models/user/user.entity.js'
 import { Student } from '../models/student/student.entity.js'
+import { RefreshToken } from './refreshToken.entity.js'
 import { sendEmail } from '../shared/services/email.service.js'
 import { render } from '@react-email/render'
 import { ResetPasswordEmail } from '../emails/templates/ResetPasswordEmail.js'
 import { Logger } from 'pino'
 
-/**
- * Provides methods for handling the user authentication lifecycle.
- * @class AuthService
- */
 export class AuthService {
   private em: EntityManager
   private logger: Logger
@@ -30,11 +25,7 @@ export class AuthService {
   }
 
   /**
-   * Registers a new user in the system and creates their associated student profile.
-   * Hashes the password before persisting to ensure security.
-   * @param userData - User data for registration, including the plaintext password.
-   * @returns {Promise<User>} A promise that resolves to the newly created user entity (without the password).
-   * @throws {Error} If the provided email is already in use.
+   * Registers a new user and creates their student profile.
    */
   public async register(
     userData: Omit<User, 'password'> & { password_plaintext: string }
@@ -44,7 +35,6 @@ export class AuthService {
     const existingUser = await this.em.findOne(User, { mail: userData.mail })
     if (existingUser) {
       this.logger.warn({ mail: userData.mail }, 'Registration failed: email already in use.')
-
       throw new Error('Email already used')
     }
 
@@ -74,22 +64,47 @@ export class AuthService {
   }
 
   /**
-   * Validates a user's credentials and generates a JWT if they are correct.
-   * @param credentials - Object containing the user's email and plaintext password.
-   * @returns {Promise<{ token: string }>} A promise that resolves to an object containing the JWT.
-   * @throws {Error} If the credentials are invalid or the user does not exist.
+   * Generates Access and Refresh tokens for a user.
+   * Persists the Refresh Token in the database.
+   */
+  private async generateTokens(user: User) {
+    const payload = { id: user.id, role: user.role };
+    const JWT_SECRET = process.env.JWT_SECRET!;
+    
+    // 1. Access Token (Short lived: 15 min)
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+
+    // 2. Refresh Token (Long lived: 7 days)
+    const refreshTokenStr = crypto.randomBytes(40).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    // Explicitly setting revoked: false to satisfy MikroORM strict typing
+    const refreshTokenEntity = this.em.create(RefreshToken, {
+      token: refreshTokenStr,
+      user: user,
+      expiresAt: expiresAt,
+      revoked: false 
+    });
+
+    await this.em.persistAndFlush(refreshTokenEntity);
+
+    return { accessToken, refreshToken: refreshTokenStr };
+  }
+
+  /**
+   * Validates credentials and returns both tokens.
    */
   public async login(credentials: {
     mail: string
     password_plaintext: string
-  }): Promise<{ token: string }> {
+  }): Promise<{ accessToken: string; refreshToken: string }> {
     this.logger.info({ mail: credentials.mail }, 'User login attempt.')
 
     const user = await this.em.findOne(User, { mail: credentials.mail })
 
     if (!user) {
       this.logger.warn({ mail: credentials.mail }, 'Login failed: user not found.')
-
       throw new Error('Credenciales inválidas.')
     }
 
@@ -100,33 +115,90 @@ export class AuthService {
 
     if (!isPasswordValid) {
       this.logger.warn({ mail: credentials.mail }, 'Login failed: invalid password.')
-
       throw new Error('Credenciales inválidas.')
     }
 
-    const payload = { id: user.id, role: user.role }
-    // FIX: The '||' fallback is now removed.
-    const JWT_SECRET = process.env.JWT_SECRET!
-    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' })
+    // Generate token pair
+    const tokens = await this.generateTokens(user);
 
     this.logger.info({ userId: user.id }, 'User logged in successfully.')
 
-    return { token }
+    return tokens;
   }
 
   /**
-   * Initiates the password recovery process. Generates a secure token,
-   * stores it in the database, and sends a reset link email to the user.
-   * @param {string} mail - The email of the user who forgot their password.
-   * @returns {Promise<void>} A promise that resolves when the process is complete.
-   * @throws {Error} If the email sending fails.
+   * Handles Token Rotation.
+   * Validates the old refresh token, revokes it, and issues a new pair.
+   * Detects reuse of revoked tokens (theft attempt).
+   */
+  public async refreshToken(token: string): Promise<{ accessToken: string; refreshToken: string }> {
+    const refreshToken = await this.em.findOne(RefreshToken, { token }, { populate: ['user'] });
+
+    if (!refreshToken) {
+      throw new Error('Invalid refresh token');
+    }
+
+    // Reuse Detection
+    if (refreshToken.revoked) {
+      this.logger.warn({ userId: refreshToken.user.id }, 'Security Warning: Reuse of revoked token detected. Revoking all sessions.');
+      
+      // Revoke all tokens for this user family
+      await this.em.nativeUpdate(RefreshToken, { user: refreshToken.user }, { revoked: true });
+      
+      throw new Error('Security breach detected. Please login again.');
+    }
+
+    if (refreshToken.expiresAt < new Date()) {
+       throw new Error('Refresh token expired');
+    }
+
+    // Rotate: Revoke current and create new
+    const newRefreshTokenStr = crypto.randomBytes(40).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    const newRefreshTokenEntity = this.em.create(RefreshToken, {
+      token: newRefreshTokenStr,
+      user: refreshToken.user,
+      expiresAt,
+      revoked: false
+    });
+
+    // Link the chain
+    refreshToken.revoked = true;
+    refreshToken.replacedByToken = newRefreshTokenStr;
+
+    await this.em.persistAndFlush([refreshToken, newRefreshTokenEntity]);
+
+    // Generate new Access Token
+    const payload = { id: refreshToken.user.id, role: refreshToken.user.role };
+    const JWT_SECRET = process.env.JWT_SECRET!;
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+
+    return { accessToken, refreshToken: newRefreshTokenStr };
+  }
+
+  /**
+   * Revokes a refresh token (Logout).
+   */
+  public async logout(refreshToken?: string): Promise<void> {
+    if (refreshToken) {
+        const tokenEntity = await this.em.findOne(RefreshToken, { token: refreshToken });
+        if (tokenEntity) {
+            tokenEntity.revoked = true;
+            await this.em.flush();
+        }
+    }
+  }
+
+  /**
+   * Initiates password recovery.
    */
   public async forgotPassword(mail: string): Promise<void> {
      this.logger.info({ mail }, 'Forgot password process initiated.')
 
     const user = await this.em.findOne(User, { mail })
 
-    // For security, don't reveal if the user exists.
     if (user) {
       const resetToken = crypto.randomBytes(32).toString('hex')
       const passwordResetToken = crypto
@@ -154,8 +226,6 @@ export class AuthService {
 
       } catch(error) {
         this.logger.error({ err: error, mail }, 'Failed to send password reset email.')
-
-        // If email sending fails, clear the tokens to allow the user to try again.
         user.resetPasswordToken = undefined
         user.resetPasswordExpires = undefined
         await this.em.persistAndFlush(user)
@@ -167,11 +237,7 @@ export class AuthService {
   }
 
   /**
-   * Resets a user's password using a valid, non-expired token.
-   * @param {string} token - The plain reset token from the URL.
-   * @param {string} password_plaintext - The new password to set.
-   * @returns {Promise<void>}
-   * @throws {Error} If the token is invalid or has expired.
+   * Resets password with token.
    */
   public async resetPassword(
     token: string,
@@ -188,7 +254,6 @@ export class AuthService {
 
     if (!user) {
       this.logger.warn('Password reset failed: token is invalid or has expired.')
-
       throw new Error('El token es inválido o ha expirado.')
     }
 

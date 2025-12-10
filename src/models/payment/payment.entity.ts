@@ -8,11 +8,11 @@ import {
   Property,
   ManyToOne,
   Enum,
-  Rel,
   OneToOne,
   OneToMany,
   Collection,
 } from '@mikro-orm/core';
+import type { Rel } from '@mikro-orm/core';
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js';
 import { Course } from '../course/course.entity.js';
 import { Student } from '../student/student.entity.js';

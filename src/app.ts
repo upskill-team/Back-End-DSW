@@ -1,8 +1,6 @@
 /**
  * @module App
- * @remarks Application factory module. This file configures the Express application,
- * middleware, and routes, but does not start the server.
- * It exports a `createApp` function to be used by the entry point or test suites.
+ * @remarks Application factory module.
  */
 import './shared/config/env.validator.js';
 import express, { Express, Response } from 'express';
@@ -12,6 +10,7 @@ import cors from 'cors';
 import pinoHttp from 'pino-http';
 import { randomUUID } from 'crypto';
 import swaggerUi from 'swagger-ui-express';
+import cookieParser from 'cookie-parser';
 
 // Database & Config
 import { orm } from './shared/db/orm.js';
@@ -37,17 +36,9 @@ import { paymentRouter } from './models/payment/payment.routes.js';
 import { adminRouter } from './models/admin/admin.routes.js';
 import { contactRouter } from './models/contact/contact.routes.js';
 
-/**
- * Creates and configures the Express application.
- * @returns {Express} The configured Express application instance.
- */
 export const createApp = (): Express => {
   const app = express();
 
-  /**
-   * HTTP request logger middleware configuration.
-   * Redacts sensitive information like passwords and tokens.
-   */
   app.use(
     pinoHttp({
       logger,
@@ -92,15 +83,13 @@ export const createApp = (): Express => {
   // Security Middlewares
   app.use(helmet());
   app.use(cors(corsOptions));
+  app.use(cookieParser());
 
   // Body Parsing
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  /**
-   * MikroORM Context Middleware.
-   * Ensures a unique Identity Map for each request.
-   */
+  // MikroORM Context Middleware
   app.use((req, res, next) => {
     RequestContext.create(orm.em, next);
   });

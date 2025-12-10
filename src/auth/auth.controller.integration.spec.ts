@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
 
-// 1. Mock the ORM module (CRITICAL: Must be done before importing the controller)
+// 1. Mock the ORM module BEFORE import
 jest.mock('../shared/db/orm', () => ({
   orm: {
     em: {
-      fork: jest.fn(() => ({
-        // Return an empty object or whatever AuthService needs if it used it directly
-      })),
+      fork: jest.fn(() => ({})),
     },
   },
 }));
@@ -32,6 +30,7 @@ describe('AuthController Integration', () => {
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
+      cookie: jest.fn(), // Mock cookie method
     };
     
     nextFn = jest.fn();
@@ -39,20 +38,33 @@ describe('AuthController Integration', () => {
   });
 
   it('Should integrate Controller and Service for a successful login', async () => {
-    const mockToken = { token: 'integration_test_token' };
+    // FIX: Update mock return to match new Service signature
+    const mockTokens = { 
+      accessToken: 'integration_access_token',
+      refreshToken: 'integration_refresh_token'
+    };
     
     // Configure the Service mock
-    (AuthService.prototype.login as jest.Mock).mockResolvedValue(mockToken);
+    (AuthService.prototype.login as jest.Mock).mockResolvedValue(mockTokens);
 
     // Execute the Controller
     await login(mockReq as Request, mockRes as Response, nextFn);
 
     // Verifications
     expect(AuthService.prototype.login).toHaveBeenCalledWith(mockReq.body);
+    
+    // 1. Check Cookie was set (HttpOnly)
+    expect(mockRes.cookie).toHaveBeenCalledWith(
+      'refreshToken', 
+      'integration_refresh_token',
+      expect.objectContaining({ httpOnly: true })
+    );
+
+    // 2. Check JSON response (Only Access Token)
     expect(mockRes.status).toHaveBeenCalledWith(200);
     expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Success',
-      data: mockToken
+      data: { token: 'integration_access_token' }
     }));
   });
 });

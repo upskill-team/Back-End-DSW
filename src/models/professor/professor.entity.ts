@@ -8,9 +8,9 @@ import {
   Property,
   Collection,
   ManyToOne,
-  Rel,
   OneToOne,
 } from '@mikro-orm/core'
+import type { Rel } from '@mikro-orm/core'
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js'
 import { Course } from '../course/course.entity.js'
 import { Institution } from '../institution/institution.entity.js'

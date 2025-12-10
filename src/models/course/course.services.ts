@@ -174,7 +174,6 @@ export class CourseService {
    * @param {UpdateCourseType} data - An object containing the fields to update.
    * @param {string} userId - The ID of the authenticated user.
    * @returns {Promise<Course>} A promise that resolves to the updated course entity.
-   * @throws {Error} If validation fails, the course is not found, or user doesn't own the course.
    */
   public async update(
     id: string,
@@ -233,8 +232,15 @@ export class CourseService {
     }
 
     const validatedData: UpdateCourseType = validationResult.output;
-
     const updateData: Partial<Course> = { ...validatedData as any };
+
+    if (updateData.priceInCents !== undefined) {
+      updateData.isFree = updateData.priceInCents === 0;
+    } else if (updateData.isFree !== undefined) {
+       if (updateData.isFree === true) {
+         updateData.priceInCents = 0;
+       }
+    }
 
     if (imageUrl) {
       updateData.imageUrl = imageUrl;

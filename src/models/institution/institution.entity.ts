@@ -9,8 +9,8 @@ import {
   Cascade,
   Collection,
   OneToOne,
-  Rel,
 } from '@mikro-orm/core'
+import type { Rel } from '@mikro-orm/core'
 import { BaseEntity } from '../../shared/db/baseEntity.entity.js'
 import { Professor } from '../professor/professor.entity.js'
 
