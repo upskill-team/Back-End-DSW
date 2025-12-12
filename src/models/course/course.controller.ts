@@ -44,23 +44,31 @@ async function findAll(req: Request, res: Response) {
 
 /**
  * Handles the retrieval of a single course by its ID.
+ * Returns filtered data based on user authentication and enrollment status.
  * @param {Request} req The Express request object, containing the course ID in params.
  * @param {Response} res The Express response object.
  * @param {NextFunction} next The next middleware function.
- * @returns {Promise<Response>} The requested course data.
+ * @returns {Promise<Response>} The requested course data (filtered based on user context).
  */
 async function findOne(req: Request, res: Response) {
   // This try...catch remains because it handles a specific error case (NotFoundError)
   // to return a 404, which is more specific than a generic 500. Check it
   try {
     const { id } = req.params;
-    
+
     if (!ObjectId.isValid(id)) {
-      return HttpResponse.BadRequest(res, 'El formato del ID del curso es inválido.');
+      return HttpResponse.BadRequest(
+        res,
+        'El formato del ID del curso es inválido.'
+      );
     }
-    
+
     const courseService = new CourseService(orm.em.fork(), req.log);
-    const course = await courseService.findOne(id);
+
+    // Get userId if user is authenticated (from optionalAuthMiddleware)
+    const userId = req.user?.id || null;
+
+    const course = await courseService.findOne(id, userId);
     return HttpResponse.Ok(res, course);
   } catch (error: any) {
     // Handle specific, expected errors locally.
@@ -209,14 +217,12 @@ async function findAllWithPagination(
   next: NextFunction
 ) {
   try {
-
     const validatedQuery = v.parse(SearchCoursesSchema, req.query);
 
     const courseService = new CourseService(orm.em.fork(), req.log);
     const result = await courseService.searchCourses(validatedQuery);
 
     return HttpResponse.Ok(res, result);
-
   } catch (error) {
     if (error instanceof v.ValiError) {
       const errorDetails = error.issues.map((issue) => ({
@@ -225,7 +231,6 @@ async function findAllWithPagination(
         receivedValue: issue.input,
       }));
 
-   
       return HttpResponse.BadRequest(res, {
         message: 'Los parámetros de consulta son inválidos.',
         errors: errorDetails,
