@@ -58,6 +58,7 @@
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "reflect-metadata": "0.2.2",
+    "resend": "^6.6.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "valibot": "^1.2.0"
