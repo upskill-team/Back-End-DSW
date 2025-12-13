@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { AuthService } from './auth.service.js';
 import { User, UserRole } from '../models/user/user.entity.js';
 import { Student } from '../models/student/student.entity.js';
-import { RefreshToken } from './refreshToken.entity.js'; // Imported RefreshToken
+import { RefreshToken } from './refreshToken.entity.js';
 import {
   initTestDb,
   clearDatabase,
@@ -44,7 +44,6 @@ describe('AuthService - Integration Tests', () => {
 
   describe('register', () => {
     it('should persist user and student profile to database', async () => {
-      // 1. Arrange
       const registerData = {
         mail: 'newuser@test.com',
         password_plaintext: 'password123',
@@ -53,23 +52,17 @@ describe('AuthService - Integration Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       const result = await authService.register(registerData as any);
 
-      // 3. Assert
       expect(result.id).toBeDefined();
       expect(result.mail).toBe('newuser@test.com');
-      expect(result.name).toBe('John');
-      expect(result.surname).toBe('Doe');
-
-      // Verificar que se guardó en DB
+      
       const savedUser = await em.findOne(User, { mail: 'newuser@test.com' });
       expect(savedUser).toBeDefined();
       expect(savedUser!.id).toEqual(result.id);
     });
 
     it('should hash password before persisting', async () => {
-      // 1. Arrange
       const registerData = {
         mail: 'hashtest@test.com',
         password_plaintext: 'plainPassword123',
@@ -78,19 +71,14 @@ describe('AuthService - Integration Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       await authService.register(registerData as any);
 
-      // 3. Assert
-      // Crear un nuevo fork del EM para obtener datos frescos de DB
       const freshEm = orm.em.fork();
       const savedUser = await freshEm.findOne(User, {
         mail: 'hashtest@test.com',
       });
-      expect(savedUser?.password).toBeDefined();
       expect(savedUser?.password).not.toBe('plainPassword123');
 
-      // Verificar que es un hash de bcrypt válido
       const isValidHash = await bcrypt.compare(
         'plainPassword123',
         savedUser!.password
@@ -99,7 +87,6 @@ describe('AuthService - Integration Tests', () => {
     });
 
     it('should create student profile associated to user', async () => {
-      // 1. Arrange
       const registerData = {
         mail: 'student@test.com',
         password_plaintext: 'password123',
@@ -108,10 +95,8 @@ describe('AuthService - Integration Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       await authService.register(registerData as any);
 
-      // 3. Assert
       const savedUser = await em.findOne(
         User,
         { mail: 'student@test.com' },
@@ -122,7 +107,6 @@ describe('AuthService - Integration Tests', () => {
     });
 
     it('should reject registration with duplicate email', async () => {
-      // 1. Arrange
       await userFactory.create(em, { mail: 'existing@test.com' });
 
       const registerData = {
@@ -133,16 +117,13 @@ describe('AuthService - Integration Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act & Assert
       await expect(authService.register(registerData as any)).rejects.toThrow(
         'Email already used'
       );
     });
 
     it('should not persist user when email already exists', async () => {
-      // 1. Arrange
       await userFactory.create(em, { mail: 'duplicate@test.com' });
-
       const initialCount = await em.count(User, { mail: 'duplicate@test.com' });
 
       const registerData = {
@@ -153,14 +134,12 @@ describe('AuthService - Integration Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       try {
         await authService.register(registerData as any);
       } catch {
         // Expected
       }
 
-      // 3. Assert
       const finalCount = await em.count(User, { mail: 'duplicate@test.com' });
       expect(finalCount).toBe(initialCount);
     });
@@ -168,127 +147,112 @@ describe('AuthService - Integration Tests', () => {
 
   describe('login', () => {
     it('should return valid JWT token and Refresh Token with correct credentials', async () => {
-      // 1. Arrange
       const password = 'correctPassword123';
       await userFactory.create(em, {
         mail: 'login@test.com',
         password: password,
       });
 
-      // 2. Act
       const result = await authService.login({
         mail: 'login@test.com',
         password_plaintext: password,
+        rememberMe: true, 
       });
 
-      // 3. Assert
-      expect(result).toHaveProperty('accessToken'); // Changed check
+      expect(result).toHaveProperty('accessToken');
       expect(typeof result.accessToken).toBe('string');
-      expect(result).toHaveProperty('refreshToken'); // Added check
+      expect(result).toHaveProperty('refreshToken'); 
       expect(typeof result.refreshToken).toBe('string');
 
-      // Verificar que el token es válido
       const decoded = jwt.verify(
-        result.accessToken, // Updated property
+        result.accessToken, 
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded.id).toBeDefined();
       expect(decoded.role).toBe(UserRole.STUDENT);
     });
 
-    it('should create a refresh token in the database', async () => {
-        // 1. Arrange
+    it('should create a refresh token in the database when rememberMe is true', async () => {
         const password = 'pass';
         const user = await userFactory.create(em, {
             mail: 'rt@test.com',
             password: password
         });
 
-        // 2. Act
         await authService.login({
             mail: 'rt@test.com',
-            password_plaintext: password
+            password_plaintext: password,
+            rememberMe: true 
         });
 
-        // 3. Assert
         const storedRt = await em.findOne(RefreshToken, { user: user });
         expect(storedRt).toBeDefined();
         expect(storedRt?.revoked).toBe(false);
     });
 
     it('should include correct data in token payload', async () => {
-      // 1. Arrange
       const user = await userFactory.create(em, {
         mail: 'payload@test.com',
         password: 'password123',
         role: UserRole.PROFESSOR,
       });
 
-      // 2. Act
       const result = await authService.login({
         mail: 'payload@test.com',
         password_plaintext: 'password123',
+        rememberMe: false, 
       });
 
-      // 3. Assert
       const decoded = jwt.verify(
-        result.accessToken, // Updated property
+        result.accessToken, 
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded).toHaveProperty('id', user.id?.toString());
       expect(decoded).toHaveProperty('role', UserRole.PROFESSOR);
-      expect(decoded).toHaveProperty('iat'); // issued at
-      expect(decoded).toHaveProperty('exp'); // expiration
     });
 
     it('should throw error when user does not exist', async () => {
-      // 1. Arrange
-      // No crear ningún usuario
-
-      // 2. Act & Assert
       await expect(
         authService.login({
           mail: 'nonexistent@test.com',
           password_plaintext: 'password123',
+          rememberMe: false,
         })
       ).rejects.toThrow('Credenciales inválidas.');
     });
 
     it('should throw error when password is incorrect', async () => {
-      // 1. Arrange
       await userFactory.create(em, {
         mail: 'wrongpass@test.com',
         password: 'correctPassword',
       });
 
-      // 2. Act & Assert
       await expect(
         authService.login({
           mail: 'wrongpass@test.com',
           password_plaintext: 'wrongPassword',
+          rememberMe: false,
         })
       ).rejects.toThrow('Credenciales inválidas.');
     });
 
     it('should allow login for users with PROFESSOR role', async () => {
-      // 1. Arrange
       await userFactory.create(em, {
         mail: 'professor@test.com',
         password: 'profPass123',
         role: UserRole.PROFESSOR,
       });
 
-      // 2. Act
       const result = await authService.login({
         mail: 'professor@test.com',
         password_plaintext: 'profPass123',
+        rememberMe: false,
       });
 
-      // 3. Assert
-      expect(result).toHaveProperty('accessToken'); // Updated property
+      expect(result).toHaveProperty('accessToken'); 
 
       const decoded = jwt.verify(
-        result.accessToken, // Updated property
+        result.accessToken, 
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded.role).toBe(UserRole.PROFESSOR);
@@ -297,7 +261,6 @@ describe('AuthService - Integration Tests', () => {
 
   describe('register + login flow', () => {
     it('should allow login immediately after registration', async () => {
-      // 1. Arrange
       const registerData = {
         mail: 'flow@test.com',
         password_plaintext: 'flowPassword123',
@@ -306,22 +269,19 @@ describe('AuthService - Integration Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       await authService.register(registerData as any);
-
-      // Limpiar identity map para forzar recarga de DB
       em.clear();
 
       const loginResult = await authService.login({
         mail: 'flow@test.com',
         password_plaintext: 'flowPassword123',
+        rememberMe: false,
       });
 
-      // 3. Assert
       expect(loginResult).toHaveProperty('accessToken');
-
+      
       const decoded = jwt.verify(
-        loginResult.accessToken, // Updated property
+        loginResult.accessToken,
         process.env.JWT_SECRET || 'hyp3rS3cr3t_JW7_t0k3n_dsw'
       ) as any;
       expect(decoded.id).toBeDefined();

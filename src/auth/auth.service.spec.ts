@@ -7,12 +7,9 @@ import { Logger } from 'pino';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// Mock dependencies
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
 
-// FIX: Usamos la implementación real de crypto para no romper MikroORM, 
-// y solo mockeamos randomBytes que es lo que necesitamos controlar.
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
   return {
@@ -48,7 +45,6 @@ describe('AuthService - Unit Tests', () => {
 
   describe('register', () => {
     it('should hash password before saving user', async () => {
-      // 1. Arrange
       const hashedPassword = '$2a$10$hashedPasswordExample';
       mockEm.findOne.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
@@ -63,15 +59,12 @@ describe('AuthService - Unit Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       await authService.register(registerData as any);
 
-      // 3. Assert
       expect(bcrypt.hash).toHaveBeenCalledWith('plainPassword123', 10);
     });
 
     it('should create user with provided data', async () => {
-      // 1. Arrange
       mockEm.findOne.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPass');
 
@@ -85,10 +78,8 @@ describe('AuthService - Unit Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act
       await authService.register(registerData as any);
 
-      // 3. Assert
       expect(mockEm.create).toHaveBeenCalledWith(
         User,
         expect.objectContaining({
@@ -101,7 +92,6 @@ describe('AuthService - Unit Tests', () => {
     });
 
     it('should throw error when email already exists', async () => {
-      // 1. Arrange
       const existingUser = { id: '123', mail: 'existing@test.com' } as User;
       mockEm.findOne.mockResolvedValue(existingUser);
 
@@ -113,7 +103,6 @@ describe('AuthService - Unit Tests', () => {
         role: UserRole.STUDENT,
       };
 
-      // 2. Act & Assert
       await expect(authService.register(registerData as any)).rejects.toThrow(
         'Email already used'
       );
@@ -122,7 +111,6 @@ describe('AuthService - Unit Tests', () => {
 
   describe('login', () => {
     it('should return JWT access token and refresh token when credentials are correct', async () => {
-      // 1. Arrange
       const mockUser = {
         id: '123',
         mail: 'test@test.com',
@@ -131,19 +119,17 @@ describe('AuthService - Unit Tests', () => {
       } as User;
 
       mockEm.findOne.mockResolvedValue(mockUser);
-      // Mock creation of RefreshToken entity to satisfy strict typing
       mockEm.create.mockImplementation((entity, data) => ({ ...data, id: 'rt_123' }) as any);
       
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (jwt.sign as jest.Mock).mockReturnValue('jwt.access.token');
 
-      // 2. Act
       const result = await authService.login({
         mail: 'test@test.com',
         password_plaintext: 'correctPassword',
+        rememberMe: true, 
       });
 
-      // 3. Assert
       expect(result).toHaveProperty('accessToken');
       expect(result.accessToken).toBe('jwt.access.token');
       
@@ -154,20 +140,18 @@ describe('AuthService - Unit Tests', () => {
     });
 
     it('should throw error when user does not exist', async () => {
-      // 1. Arrange
       mockEm.findOne.mockResolvedValue(null);
 
-      // 2. Act & Assert
       await expect(
         authService.login({
           mail: 'nonexistent@test.com',
           password_plaintext: 'password',
+          rememberMe: false,
         })
       ).rejects.toThrow();
     });
 
     it('should throw error when password is incorrect', async () => {
-      // 1. Arrange
       const mockUser = {
         id: '123',
         mail: 'test@test.com',
@@ -177,11 +161,11 @@ describe('AuthService - Unit Tests', () => {
       mockEm.findOne.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      // 2. Act & Assert
       await expect(
         authService.login({
           mail: 'test@test.com',
           password_plaintext: 'wrongPassword',
+          rememberMe: false,
         })
       ).rejects.toThrow('Credenciales inválidas.');
     });
@@ -189,12 +173,11 @@ describe('AuthService - Unit Tests', () => {
 
   describe('refreshToken (Rotation)', () => {
     it('should rotate tokens: revoke old one and issue new pair', async () => {
-      // 1. Arrange: Valid existing token
       const mockUser = { id: '123', role: UserRole.STUDENT } as User;
       const existingToken = {
         token: 'oldToken',
         user: mockUser,
-        expiresAt: new Date(Date.now() + 10000), // Valid in future
+        expiresAt: new Date(Date.now() + 10000), 
         revoked: false,
       } as RefreshToken;
 
@@ -202,18 +185,14 @@ describe('AuthService - Unit Tests', () => {
       mockEm.create.mockImplementation((entity, data) => data as any);
       (jwt.sign as jest.Mock).mockReturnValue('new.access.token');
 
-      // 2. Act
       const result = await authService.refreshToken('oldToken');
 
-      // 3. Assert
       expect(result.accessToken).toBe('new.access.token');
       expect(result.refreshToken).toBe('mockRefreshToken');
       
-      // Check rotation logic:
-      expect(existingToken.revoked).toBe(true); // Old token revoked
-      expect(existingToken.replacedByToken).toBe('mockRefreshToken'); // Linked to new
+      expect(existingToken.revoked).toBe(true); 
+      expect(existingToken.replacedByToken).toBe('mockRefreshToken'); 
       
-      // Should save both old (updated) and new tokens
       expect(mockEm.persistAndFlush).toHaveBeenCalledWith(expect.arrayContaining([
         expect.objectContaining({ token: 'oldToken', revoked: true }),
         expect.objectContaining({ token: 'mockRefreshToken', revoked: false })
@@ -221,21 +200,18 @@ describe('AuthService - Unit Tests', () => {
     });
 
     it('should detect reuse of revoked token and trigger security breach (revoke all)', async () => {
-      // 1. Arrange: Revoked token
       const mockUser = { id: '123' } as User;
       const stolenToken = {
         token: 'stolenToken',
         user: mockUser,
-        revoked: true, // Already used!
+        revoked: true, 
       } as RefreshToken;
 
       mockEm.findOne.mockResolvedValue(stolenToken);
 
-      // 2. Act & Assert
       await expect(authService.refreshToken('stolenToken'))
         .rejects.toThrow('Security breach detected. Please login again.');
 
-      // 3. Verify security measure: Revoke ALL tokens for this user
       expect(mockEm.nativeUpdate).toHaveBeenCalledWith(
         RefreshToken,
         { user: mockUser },
@@ -247,7 +223,6 @@ describe('AuthService - Unit Tests', () => {
 
   describe('logout', () => {
     it('should revoke the refresh token provided', async () => {
-      // 1. Arrange
       const tokenString = 'valid-refresh-token';
       const mockTokenEntity = {
         token: tokenString,
@@ -256,23 +231,18 @@ describe('AuthService - Unit Tests', () => {
 
       mockEm.findOne.mockResolvedValue(mockTokenEntity);
 
-      // 2. Act
       await authService.logout(tokenString);
 
-      // 3. Assert
       expect(mockEm.findOne).toHaveBeenCalledWith(RefreshToken, { token: tokenString });
       expect(mockTokenEntity.revoked).toBe(true);
       expect(mockEm.flush).toHaveBeenCalled();
     });
 
     it('should do nothing if token is not found (idempotent)', async () => {
-      // 1. Arrange
       mockEm.findOne.mockResolvedValue(null);
 
-      // 2. Act
       await authService.logout('non-existent-token');
 
-      // 3. Assert
       expect(mockEm.flush).not.toHaveBeenCalled();
     });
   });

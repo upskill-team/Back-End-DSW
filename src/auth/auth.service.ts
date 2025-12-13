@@ -67,27 +67,29 @@ export class AuthService {
    * Generates Access and Refresh tokens for a user.
    * Persists the Refresh Token in the database.
    */
-  private async generateTokens(user: User) {
+  private async generateTokens(user: User, rememberMe: boolean) {
     const payload = { id: user.id, role: user.role };
     const JWT_SECRET = process.env.JWT_SECRET!;
-    
-    // 1. Access Token (Short lived: 15 min)
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+    const accessTokenTTL = rememberMe ? '15m' : '3h';
 
-    // 2. Refresh Token (Long lived: 7 days)
-    const refreshTokenStr = crypto.randomBytes(40).toString('hex');
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: accessTokenTTL });
 
-    // Explicitly setting revoked: false to satisfy MikroORM strict typing
-    const refreshTokenEntity = this.em.create(RefreshToken, {
-      token: refreshTokenStr,
-      user: user,
-      expiresAt: expiresAt,
-      revoked: false 
-    });
+    let refreshTokenStr: string | undefined = undefined;
 
-    await this.em.persistAndFlush(refreshTokenEntity);
+    if (rememberMe) {
+      refreshTokenStr = crypto.randomBytes(40).toString('hex');
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      const refreshTokenEntity = this.em.create(RefreshToken, {
+        token: refreshTokenStr,
+        user: user,
+        expiresAt: expiresAt,
+        revoked: false 
+      });
+
+      await this.em.persistAndFlush(refreshTokenEntity);
+    }
 
     return { accessToken, refreshToken: refreshTokenStr };
   }
@@ -98,7 +100,8 @@ export class AuthService {
   public async login(credentials: {
     mail: string
     password_plaintext: string
-  }): Promise<{ accessToken: string; refreshToken: string }> {
+    rememberMe: boolean
+  }): Promise<{ accessToken: string; refreshToken?: string }> {
     this.logger.info({ mail: credentials.mail }, 'User login attempt.')
 
     const user = await this.em.findOne(User, { mail: credentials.mail })
@@ -119,9 +122,9 @@ export class AuthService {
     }
 
     // Generate token pair
-    const tokens = await this.generateTokens(user);
+    const tokens = await this.generateTokens(user, credentials.rememberMe);
 
-    this.logger.info({ userId: user.id }, 'User logged in successfully.')
+    this.logger.info({ userId: user.id, rememberMe: credentials.rememberMe }, 'User logged in successfully.');
 
     return tokens;
   }

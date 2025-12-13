@@ -23,6 +23,7 @@ describe('AuthController Integration', () => {
 
   beforeEach(() => {
     mockReq = {
+      // Body original sin rememberMe
       body: { mail: 'test@test.com', password_plaintext: '123456' },
       log: { child: () => ({ info: jest.fn(), error: jest.fn() }) } as any 
     };
@@ -30,7 +31,8 @@ describe('AuthController Integration', () => {
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
-      cookie: jest.fn(), // Mock cookie method
+      cookie: jest.fn(),
+      clearCookie: jest.fn(),
     };
     
     nextFn = jest.fn();
@@ -38,7 +40,6 @@ describe('AuthController Integration', () => {
   });
 
   it('Should integrate Controller and Service for a successful login', async () => {
-    // FIX: Update mock return to match new Service signature
     const mockTokens = { 
       accessToken: 'integration_access_token',
       refreshToken: 'integration_refresh_token'
@@ -51,9 +52,13 @@ describe('AuthController Integration', () => {
     await login(mockReq as Request, mockRes as Response, nextFn);
 
     // Verifications
-    expect(AuthService.prototype.login).toHaveBeenCalledWith(mockReq.body);
+    expect(AuthService.prototype.login).toHaveBeenCalledWith({
+      mail: 'test@test.com',
+      password_plaintext: '123456',
+      rememberMe: false 
+    });
     
-    // 1. Check Cookie was set (HttpOnly)
+    // 1. Check Cookie was set (HttpOnly) because refreshToken is present
     expect(mockRes.cookie).toHaveBeenCalledWith(
       'refreshToken', 
       'integration_refresh_token',

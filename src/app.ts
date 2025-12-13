@@ -39,6 +39,8 @@ import { contactRouter } from './models/contact/contact.routes.js';
 export const createApp = (): Express => {
   const app = express();
 
+  app.set('trust proxy', 1);
+
   app.use(
     pinoHttp({
       logger,
