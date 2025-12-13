@@ -54,7 +54,8 @@ const sendViaResend = async (options: MailOptions) => {
     to: [options.to],
     subject: options.subject,
     html: options.html,
-  });
+    reply_to: 'contacto.upskill@gmail.com',
+  } as any);
 
   if (error) {
     logger.error({ err: error, to: options.to }, 'Resend API Error');
