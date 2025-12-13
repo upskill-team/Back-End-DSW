@@ -49,10 +49,15 @@ const EnvSchema = v.object({
   ),
 
   // Email Service
-  EMAIL_HOST: v.pipe(v.string(), v.minLength(1, 'EMAIL_HOST is required.')),
-  EMAIL_PORT: v.pipe(v.string(), v.minLength(1, 'EMAIL_PORT is required.')),
-  EMAIL_USER: v.pipe(v.string(), v.minLength(1, 'EMAIL_USER is required.')),
-  EMAIL_PASS: v.pipe(v.string(), v.minLength(1, 'EMAIL_PASS is required.')),
+  EMAIL_HOST: v.optional(v.string()),
+  EMAIL_PORT: v.optional(v.string()),
+  EMAIL_USER: v.optional(v.string()),
+  EMAIL_PASS: v.optional(v.string()),
+  
+  RESEND_API_KEY: v.optional(v.string()),
+  EMAIL_FROM: v.optional(v.string(), 'onboarding@resend.dev'),
+
+  NODE_ENV: v.optional(v.picklist(['development', 'production']), 'development'),
 
   MP_ACCESS_TOKEN: v.pipe(
     v.string(),
