@@ -10,6 +10,10 @@ import { QuestionService } from './question.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
 import { CreateQuestionType, UpdateQuestionType } from './question.schemas.js';
 import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
+import {
+  mapQuestionToStudent,
+  mapQuestionToProfessor,
+} from './question.mappers.js';
 
 /**
  * Handles the creation of a new question for a specific course.
@@ -123,10 +127,12 @@ async function findMyQuestions(req: Request, res: Response) {
 
 /**
  * Handles the retrieval of a single question by its ID.
- * Accessible by both students (enrolled in the course) and professors.
+ * Filters response data based on user role:
+ * - Professors: receive full question with correct answers
+ * - Students: receive question without correct answers
  * @param {Request} req - The Express request object, containing the question ID and course ID in params.
  * @param {Response} res - The Express response object.
- * @returns {Promise<Response>} The requested question data.
+ * @returns {Promise<Response>} The filtered question data.
  */
 async function findOne(req: Request, res: Response) {
   try {
@@ -134,18 +140,27 @@ async function findOne(req: Request, res: Response) {
     const { id, courseId } = req.params;
     const userId = req.user!.id;
 
-    // Try to get professor ID, but allow students to access too
+    // Check if user is a professor
+    let isProfessor = false;
     let professorId: string | null = null;
     try {
       professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+      isProfessor = true;
     } catch {
-      // User is not a professor, that's okay for this endpoint
-      // Students can also access questions
+      // User is not a professor - will receive filtered question
+      isProfessor = false;
     }
 
     const question = await questionService.findOne(id, courseId, professorId);
 
-    return HttpResponse.Ok(res, question);
+    // Filter response based on role
+    if (isProfessor && professorId) {
+      // Professor gets full question with correct answers
+      return HttpResponse.Ok(res, mapQuestionToProfessor(question));
+    } else {
+      // Student gets question without correct answers
+      return HttpResponse.Ok(res, mapQuestionToStudent(question));
+    }
   } catch (error: any) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Question not found.');
@@ -356,9 +371,10 @@ async function findByUnit(req: Request, res: Response) {
 
 /**
  * Handles the retrieval of a single question by its ID from a specific unit.
+ * Filters response data based on user role.
  * @param {Request} req - The Express request object, containing the question ID, course ID, and unit number in params.
  * @param {Response} res - The Express response object.
- * @returns {Promise<Response>} The requested question data.
+ * @returns {Promise<Response>} The filtered question data.
  */
 async function findOneFromUnit(req: Request, res: Response) {
   try {
@@ -366,8 +382,15 @@ async function findOneFromUnit(req: Request, res: Response) {
     const { id, courseId, unitNumber } = req.params;
     const userId = req.user!.id;
 
-    // Get the professor ID from the user ID
-    const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+    // Check if user is a professor
+    let isProfessor = false;
+    let professorId: string | null = null;
+    try {
+      professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+      isProfessor = true;
+    } catch {
+      isProfessor = false;
+    }
 
     const question = await questionService.findOne(id, courseId, professorId);
 
@@ -379,7 +402,12 @@ async function findOneFromUnit(req: Request, res: Response) {
       );
     }
 
-    return HttpResponse.Ok(res, question);
+    // Filter response based on role
+    if (isProfessor && professorId) {
+      return HttpResponse.Ok(res, mapQuestionToProfessor(question));
+    } else {
+      return HttpResponse.Ok(res, mapQuestionToStudent(question));
+    }
   } catch (error: any) {
     if (error.name === 'NotFoundError') {
       return HttpResponse.NotFound(res, 'Question not found.');

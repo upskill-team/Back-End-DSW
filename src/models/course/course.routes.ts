@@ -22,6 +22,7 @@ import {
 import {
   authMiddleware,
   roleAuthMiddleware,
+  optionalAuthMiddleware,
 } from '../../auth/auth.middleware.js';
 import { UserRole } from '../user/user.entity.js';
 import { uploadCourseImage } from '../../shared/middlewares/file-upload.middleware.js';
@@ -39,14 +40,18 @@ const professorOrAdmin = roleAuthMiddleware([
   UserRole.ADMIN,
 ]);
 
-
 courseRouter.get('/', courseController.findAllWithPagination);
 
 courseRouter.get('/trending', courseController.findTrending);
 
-courseRouter.get('/my-courses', authMiddleware, professorOnly, courseController.findMyCourses);
+courseRouter.get(
+  '/my-courses',
+  authMiddleware,
+  professorOnly,
+  courseController.findMyCourses
+);
 
-courseRouter.get('/:id', courseController.findOne);
+courseRouter.get('/:id', optionalAuthMiddleware, courseController.findOne);
 
 courseRouter.post(
   '/',
@@ -105,7 +110,11 @@ courseRouter.post(
 );
 
 // Allow both students and professors to view a question
-courseRouter.get('/:courseId/questions/:id', authMiddleware, questionController.findOne);
+courseRouter.get(
+  '/:courseId/questions/:id',
+  authMiddleware,
+  questionController.findOne
+);
 
 courseRouter.put(
   '/:courseId/questions/:id',

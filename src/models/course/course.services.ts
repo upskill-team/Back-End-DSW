@@ -19,6 +19,16 @@ import { safeParse } from 'valibot';
 import { UpdateCourseSchema } from './course.schemas.js';
 import { Institution } from '../institution/institution.entity.js';
 import { Enrollement } from '../Enrollement/enrollement.entity.js';
+import {
+  mapCourseToPublic,
+  mapCourseToEnrolled,
+  mapCourseToProfessor,
+} from './course.mappers.js';
+import {
+  CoursePublicResponse,
+  CourseEnrolledResponse,
+  CourseProfessorResponse,
+} from './course.dtos.js';
 
 /**
  * Provides methods for CRUD operations on Course entities.
@@ -46,7 +56,7 @@ export class CourseService {
   ): Promise<Course> {
     this.logger.info({ name: courseData.name }, 'Creating new course.');
 
-    const { courseTypeId,useInstitution ,...topLevelData } = courseData;
+    const { courseTypeId, useInstitution, ...topLevelData } = courseData;
 
     await this.em.findOneOrFail(Professor, { _id: new ObjectId(professorId) });
     await this.em.findOneOrFail(CourseType, {
@@ -63,25 +73,28 @@ export class CourseService {
     );
 
     let institutionRef: Institution | undefined = undefined;
-    if (useInstitution){
-
-      institutionRef = await this.em.findOneOrFail(Institution, { manager: professorRef });
+    if (useInstitution) {
+      institutionRef = await this.em.findOneOrFail(Institution, {
+        manager: professorRef,
+      });
     }
 
     const course = new Course();
 
     this.em.assign(course, {
       ...topLevelData,
-      isFree: topLevelData.priceInCents === 0 || topLevelData.priceInCents === undefined,
+      isFree:
+        topLevelData.priceInCents === 0 ||
+        topLevelData.priceInCents === undefined,
       units: [],
       imageUrl: imageUrl,
       courseType: courseTypeRef,
       professor: professorRef,
-      institution:{
+      institution: {
         institutionId: institutionRef?.id || '',
         name: institutionRef?.name || '',
-        aliases: institutionRef?.aliases || []
-      }
+        aliases: institutionRef?.aliases || [],
+      },
     });
 
     await this.em.persistAndFlush(course);
@@ -135,38 +148,115 @@ export class CourseService {
     );
   }
 
-  public async findOne(id: string): Promise<Course> {
-    this.logger.info({ courseId: id }, 'Fetching course.');
+  /**
+   * Retrieves a single course with filtered data based on user enrollment status.
+   * - If userId is null (unauthenticated): returns public data only
+   * - If userId is provided and enrolled: returns course with units and materials
+   * - If userId is provided but not enrolled: returns public data only
+   * @param {string} id - The course ID
+   * @param {string | null} userId - The ID of the authenticated user (null if unauthenticated)
+   * @returns {Promise<CoursePublicResponse | CourseEnrolledResponse>}
+   */
+  public async findOne(
+    id: string,
+    userId: string | null = null
+  ): Promise<CoursePublicResponse | CourseEnrolledResponse> {
+    this.logger.info({ courseId: id, userId }, 'Fetching course.');
 
     const objectId = new ObjectId(id);
-    return this.em.findOneOrFail(
+    const course = await this.em.findOneOrFail(
       Course,
       { _id: objectId },
       {
-        populate: ["courseType", "professor.user"],
+        populate: [
+          'courseType',
+          'professor.user',
+          'professor.institution',
+          'units.materials',
+          'units.questions',
+        ],
       }
     );
+
+    // Count enrolled students
+    const studentsCount = await this.em.count(Enrollement, {
+      course: objectId,
+    });
+
+    // If user is authenticated, check if they are enrolled
+    if (userId) {
+      const userObjectId = new ObjectId(userId);
+      const user = await this.em.findOne(
+        User,
+        { _id: userObjectId },
+        { populate: ['studentProfile'] }
+      );
+
+      if (user?.studentProfile) {
+        const enrollment = await this.em.findOne(Enrollement, {
+          course: objectId,
+          student: user.studentProfile.id,
+        });
+
+        if (enrollment) {
+          this.logger.info(
+            { courseId: id, userId },
+            'User is enrolled - returning full course data.'
+          );
+          // Populate units for enrolled user
+          await this.em.populate(course, [
+            'units.materials',
+            'units.questions',
+          ]);
+          return mapCourseToEnrolled(course, studentsCount);
+        }
+      }
+    }
+
+    // User is not authenticated or not enrolled - return public data only
+    this.logger.info(
+      { courseId: id, userId },
+      'User not enrolled - returning public data only.'
+    );
+    return mapCourseToPublic(course, studentsCount);
   }
 
   /**
    * Finds the top 6 most popular courses based on the number of enrolled students.
-   * @returns {Promise<Course[]>} A promise that resolves to an array of the top 4 courses.
+   * Returns only public-safe data (no sensitive information or course content).
+   * @returns {Promise<CoursePublicResponse[]>}
    */
-  public async findTrendingCourses(): Promise<Course[]> {
-      this.logger.info('Fetching trending courses.');
-  
-      const courses = await this.em.find(
-        Course,
-        { status: status.PUBLISHED },
-        {
-          populate: ['courseType', 'professor.user', 'students'],
-          orderBy: { students: 'DESC' },
-          limit: 6,
-        }
-      );
-  
-      return courses;
-    }
+  public async findTrendingCourses(): Promise<CoursePublicResponse[]> {
+    this.logger.info('Fetching trending courses.');
+
+    const courses = await this.em.find(
+      Course,
+      { status: status.PUBLISHED },
+      {
+        populate: [
+          'courseType',
+          'professor.user',
+          'professor.institution',
+          'units.materials',
+          'units.questions',
+        ],
+        orderBy: { students: 'DESC' },
+        limit: 6,
+      }
+    );
+
+    // Map to public data with student counts
+    const coursesWithCounts = await Promise.all(
+      courses.map(async (course) => {
+        const studentsCount = await this.em.count(Enrollement, {
+          course: new ObjectId(course.id),
+        });
+        return mapCourseToPublic(course, studentsCount);
+      })
+    );
+
+    return coursesWithCounts;
+  }
 
   /**
    * Updates an existing course.
@@ -232,14 +322,14 @@ export class CourseService {
     }
 
     const validatedData: UpdateCourseType = validationResult.output;
-    const updateData: Partial<Course> = { ...validatedData as any };
+    const updateData: Partial<Course> = { ...(validatedData as any) };
 
     if (updateData.priceInCents !== undefined) {
       updateData.isFree = updateData.priceInCents === 0;
     } else if (updateData.isFree !== undefined) {
-       if (updateData.isFree === true) {
-         updateData.priceInCents = 0;
-       }
+      if (updateData.isFree === true) {
+        updateData.priceInCents = 0;
+      }
     }
 
     if (imageUrl) {
@@ -249,8 +339,8 @@ export class CourseService {
     if (validatedData.status) {
       updateData.status = validatedData.status;
     }
-    
-    this.em.assign(course, updateData)
+
+    this.em.assign(course, updateData);
 
     await this.em.flush();
 
@@ -294,15 +384,18 @@ export class CourseService {
 
   /**
    * Retrieves all courses for a professor user.
+   * Returns professor view with unit content but filtered student data.
    * @param {string} userId - The ID of the authenticated user.
-   * @returns {Promise<Course[]>} A promise that resolves to an array of courses owned by the professor.
+   * @returns {Promise<CourseProfessorResponse[]>}
    * @throws {Error} If the user is not found or is not a professor.
    */
-  public async findCoursesOfProfessor(userId: string): Promise<Course[]> {
-  this.logger.info(
-    { userId },
-    'Fetching courses for an authenticated professor.'
-  );
+  public async findCoursesOfProfessor(
+    userId: string
+  ): Promise<CourseProfessorResponse[]> {
+    this.logger.info(
+      { userId },
+      'Fetching courses for an authenticated professor.'
+    );
 
     const userObjectId = new ObjectId(userId);
 
@@ -321,204 +414,194 @@ export class CourseService {
     const courses = await this.em.find(
       Course,
       { professor: professorObjectId },
-      { populate: ['courseType', 'professor'] }
+      {
+        populate: [
+          'courseType',
+          'professor.user',
+          'professor.institution',
+          'units.materials',
+          'units.questions',
+        ],
+      }
     );
 
     const coursesWithCount = await Promise.all(
       courses.map(async (course) => {
-        const studentCount = await this.em.count(Enrollement, { 
-          course: new ObjectId(course.id) 
+        const studentCount = await this.em.count(Enrollement, {
+          course: new ObjectId(course.id),
         });
-        
-        return {
-          id: course.id,
-          name: course.name,
-          description: course.description,
-          imageUrl: course.imageUrl,
-          isFree: course.isFree,
-          priceInCents: course.priceInCents,
-          status: course.status,
-          units: course.units,
-          courseType: course.courseType,
-          professor: course.professor,
-          studentsCount: studentCount
-        };
+
+        return mapCourseToProfessor(course, studentCount);
       })
     );
 
-    return coursesWithCount as any;
+    return coursesWithCount;
   }
 
-/**
- * Searches for courses based on various filters including text search across multiple fields.
- * Implements a hybrid search strategy: direct database queries for simple filters,
- * and in-memory filtering for complex text searches across related entities.
- * @param {SearchCoursesQuery} query - The search filters and pagination options.
- * @returns {Promise<{courses: Course[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
- * @remarks Text search (q parameter) matches against: course name, professor name/surname, institution name, and course type name.
- * @remarks When text search or institution filter is present, all matching courses are loaded and filtered in memory for accurate results.
- */
-async searchCourses(
-  query: SearchCoursesQuery
-): Promise<{ courses: Course[]; total: number }> {
-  this.logger.info({ query }, 'Searching courses with filters.');
+  /**
+   * Searches for courses based on various filters including text search across multiple fields.
+   * Implements a hybrid search strategy: direct database queries for simple filters,
+   * and in-memory filtering for complex text searches across related entities.
+   * @param {SearchCoursesQuery} query - The search filters and pagination options.
+   * @returns {Promise<{courses: CoursePublicResponse[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
+   * @remarks Text search (q parameter) matches against: course name, professor name/surname, institution name, and course type name.
+   * @remarks When text search or institution filter is present, all matching courses are loaded and filtered in memory for accurate results.
+   */
+  async searchCourses(
+    query: SearchCoursesQuery
+  ): Promise<{ courses: CoursePublicResponse[]; total: number }> {
+    this.logger.info({ query }, 'Searching courses with filters.');
 
-  const where: FilterQuery<Course> = {};
+    const where: FilterQuery<Course> = {};
 
-  if (query.courseTypeId) {
-    where.courseType = new ObjectId(query.courseTypeId);
-  }
+    if (query.courseTypeId) {
+      where.courseType = new ObjectId(query.courseTypeId);
+    }
 
-  if (query.professorId) {
-    where.professor = new ObjectId(query.professorId);
-  }
-  
-  if (query.isFree !== undefined) {
-    where.isFree = query.isFree;
-  }
+    if (query.professorId) {
+      where.professor = new ObjectId(query.professorId);
+    }
 
-  if (query.status) {
-    where.status = query.status;
-  }
+    if (query.isFree !== undefined) {
+      where.isFree = query.isFree;
+    }
 
-  const needsTextSearch = !!query.q;
-  const needsInstitutionFilter = !!query.institutionId;
+    if (query.status) {
+      where.status = query.status;
+    }
 
-  let allCourses: Course[];
-  let filteredCourses: Course[];
-  
-  if (needsTextSearch || needsInstitutionFilter) {
-    allCourses = await this.em.find(Course, where, {
-      populate: ['courseType', 'professor.user', 'professor.institution'],
-    });
+    const needsTextSearch = !!query.q;
+    const needsInstitutionFilter = !!query.institutionId;
 
-    filteredCourses = allCourses.filter((course) => {
-      let matches = true;
+    let allCourses: Course[];
+    let filteredCourses: Course[];
 
-      if (query.q) {
-        const searchTerm = query.q.toLowerCase();
-        const wrappedCourse = wrap(course).toObject();
-        
-        const courseName = course.name?.toLowerCase() || '';
-        
-        const professorData: any = wrappedCourse.professor || {};
-        const professorUserData: any = professorData.user || {};
-        const professorName = professorUserData.name?.toLowerCase() || '';
-        const professorSurname = professorUserData.surname?.toLowerCase() || '';
-        
-        const professorInstitutionData: any = professorData.institution || {};
-        const institutionName = professorInstitutionData.name?.toLowerCase() || '';
-        
-        const courseTypeData: any = wrappedCourse.courseType || {};
-        const courseTypeName = courseTypeData.name?.toLowerCase() || '';
+    if (needsTextSearch || needsInstitutionFilter) {
+      allCourses = await this.em.find(Course, where, {
+        populate: [
+          'courseType',
+          'professor.user',
+          'professor.institution',
+          'units.materials',
+          'units.questions',
+        ],
+      });
 
-        const matchesText = 
-          courseName.includes(searchTerm) ||
-          professorName.includes(searchTerm) ||
-          professorSurname.includes(searchTerm) ||
-          institutionName.includes(searchTerm) ||
-          courseTypeName.includes(searchTerm);
+      filteredCourses = allCourses.filter((course) => {
+        let matches = true;
 
-        if (!matchesText) {
-          matches = false;
+        if (query.q) {
+          const searchTerm = query.q.toLowerCase();
+          const wrappedCourse = wrap(course).toObject();
+
+          const courseName = course.name?.toLowerCase() || '';
+
+          const professorData: any = wrappedCourse.professor || {};
+          const professorUserData: any = professorData.user || {};
+          const professorName = professorUserData.name?.toLowerCase() || '';
+          const professorSurname =
+            professorUserData.surname?.toLowerCase() || '';
+
+          const professorInstitutionData: any = professorData.institution || {};
+          const institutionName =
+            professorInstitutionData.name?.toLowerCase() || '';
+
+          const courseTypeData: any = wrappedCourse.courseType || {};
+          const courseTypeName = courseTypeData.name?.toLowerCase() || '';
+
+          const matchesText =
+            courseName.includes(searchTerm) ||
+            professorName.includes(searchTerm) ||
+            professorSurname.includes(searchTerm) ||
+            institutionName.includes(searchTerm) ||
+            courseTypeName.includes(searchTerm);
+
+          if (!matchesText) {
+            matches = false;
+          }
         }
-      }
 
-      if (query.institutionId && matches) {
-        const courseInstitutionId = (course.professor as any)?.institution?.id?.toString();
-        if (courseInstitutionId !== query.institutionId) {
-          matches = false;
+        if (query.institutionId && matches) {
+          const courseInstitutionId = (
+            course.professor as any
+          )?.institution?.id?.toString();
+          if (courseInstitutionId !== query.institutionId) {
+            matches = false;
+          }
         }
-      }
 
-      return matches;
-    });
+        return matches;
+      });
 
-    const sortField = query.sortBy;
-    const sortOrder = query.sortOrder.toLowerCase();
-    
-    filteredCourses.sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      const sortField = query.sortBy;
+      const sortOrder = query.sortOrder.toLowerCase();
 
-      if (sortField === 'name') {
-        aValue = a.name || '';
-        bValue = b.name || '';
-      } else if (sortField === 'priceInCents') {
-        aValue = a.priceInCents || 0;
-        bValue = b.priceInCents || 0;
-      } else if (sortField === 'createdAt') {
-        aValue = a.createdAt || new Date(0);
-        bValue = b.createdAt || new Date(0);
-      }
+      filteredCourses.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
 
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
+        if (sortField === 'name') {
+          aValue = a.name || '';
+          bValue = b.name || '';
+        } else if (sortField === 'priceInCents') {
+          aValue = a.priceInCents || 0;
+          bValue = b.priceInCents || 0;
+        } else if (sortField === 'createdAt') {
+          aValue = a.createdAt || new Date(0);
+          bValue = b.createdAt || new Date(0);
+        }
 
-    const total = filteredCourses.length;
-    const paginatedCourses = filteredCourses.slice(query.offset, query.offset + query.limit);
+        if (sortOrder === 'asc') {
+          return aValue > bValue ? 1 : -1;
+        } else {
+          return aValue < bValue ? 1 : -1;
+        }
+      });
 
-    const coursesWithCount = await Promise.all(
-      paginatedCourses.map(async (course) => {
-        const studentCount = await this.em.count(Enrollement, { 
-          course: new ObjectId(course.id) 
-        });
-        
-        return {
-          id: course.id,
-          name: course.name,
-          description: course.description,
-          imageUrl: course.imageUrl,
-          isFree: course.isFree,
-          priceInCents: course.priceInCents,
-          status: course.status,
-          units: course.units,
-          courseType: course.courseType,
-          professor: course.professor,
-          studentsCount: studentCount
-        };
-      })
-    );
+      const total = filteredCourses.length;
+      const paginatedCourses = filteredCourses.slice(
+        query.offset,
+        query.offset + query.limit
+      );
 
-    return { courses: coursesWithCount as any, total };
+      const coursesWithCount = await Promise.all(
+        paginatedCourses.map(async (course) => {
+          const studentCount = await this.em.count(Enrollement, {
+            course: new ObjectId(course.id),
+          });
 
-  } else {
-    const [courses, total] = await this.em.findAndCount(Course, where, {
-      populate: ['courseType', 'professor.user', 'professor.institution'],
-      orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
-      limit: query.limit,
-      offset: query.offset,
-    });
+          return mapCourseToPublic(course, studentCount);
+        })
+      );
 
-    const coursesWithCount = await Promise.all(
-      courses.map(async (course) => {
-        const studentCount = await this.em.count(Enrollement, { 
-          course: new ObjectId(course.id) 
-        });
-        
-        return {
-          id: course.id,
-          name: course.name,
-          description: course.description,
-          imageUrl: course.imageUrl,
-          isFree: course.isFree,
-          priceInCents: course.priceInCents,
-          status: course.status,
-          units: course.units,
-          courseType: course.courseType,
-          professor: course.professor,
-          studentsCount: studentCount
-        };
-      })
-    );
+      return { courses: coursesWithCount, total };
+    } else {
+      const [courses, total] = await this.em.findAndCount(Course, where, {
+        populate: [
+          'courseType',
+          'professor.user',
+          'professor.institution',
+          'units.materials',
+          'units.questions',
+        ],
+        orderBy: { [query.sortBy]: query.sortOrder as 'asc' | 'desc' },
+        limit: query.limit,
+        offset: query.offset,
+      });
 
-    return { courses: coursesWithCount as any, total };
+      const coursesWithCount = await Promise.all(
+        courses.map(async (course) => {
+          const studentCount = await this.em.count(Enrollement, {
+            course: new ObjectId(course.id),
+          });
+
+          return mapCourseToPublic(course, studentCount);
+        })
+      );
+
+      return { courses: coursesWithCount, total };
+    }
   }
-}
 
   /**
    * Creates a new unit in an existing course.
@@ -600,7 +683,8 @@ async searchCourses(
     const unit = course.units[unitIndex];
     if (updateData.name !== undefined) unit.name = updateData.name;
     if (updateData.detail !== undefined) unit.detail = updateData.detail;
-    if (updateData.description !== undefined) unit.description = updateData.description;
+    if (updateData.description !== undefined)
+      unit.description = updateData.description;
     if (updateData.materials !== undefined)
       unit.materials = updateData.materials;
     if (

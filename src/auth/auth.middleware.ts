@@ -40,9 +40,9 @@ export const authMiddleware = (
   const token = authHeader.split(' ')[1];
 
   if (!token || token === 'undefined' || token.length < 10) {
-      return HttpResponse.Unauthorized(res, 'Token inválido.');
+    return HttpResponse.Unauthorized(res, 'Token inválido.');
   }
-  
+
   const JWT_SECRET = process.env.JWT_SECRET!;
 
   try {
@@ -57,6 +57,52 @@ export const authMiddleware = (
   } catch {
     // If token is invalid or expired, block access
     return HttpResponse.Unauthorized(res, 'Token inválido o expirado.');
+  }
+};
+
+/**
+ * Optional authentication middleware - validates token if provided but allows access without it.
+ * Useful for endpoints that change behavior based on authentication status.
+ * If a valid token is provided, attaches user info to req.user.
+ * If no token or invalid token, continues without user info (req.user will be undefined).
+ * @param {Request} req - The Express request object.
+ * @param {Response} res - The Express response object.
+ * @param {NextFunction} next - The next middleware function in the stack.
+ */
+export const optionalAuthMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const authReq = req as Request & { user?: { id: string; role: string } };
+  const authHeader = authReq.headers['authorization'];
+
+  // If no authorization header, continue without user
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  // If token is malformed, continue without user
+  if (!token || token === 'undefined' || token.length < 10) {
+    return next();
+  }
+
+  const JWT_SECRET = process.env.JWT_SECRET!;
+
+  try {
+    // Verify the token and get user data
+    const decodedPayload = jwt.verify(token, JWT_SECRET) as {
+      id: string;
+      role: UserRole;
+    };
+    // Attach user info to request
+    authReq.user = decodedPayload;
+    next();
+  } catch {
+    // If token is invalid or expired, continue without user
+    next();
   }
 };
 

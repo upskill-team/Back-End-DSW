@@ -7,8 +7,15 @@ import { EntityManager, FilterQuery } from '@mikro-orm/core';
 import { CourseType } from './courseType.entity.js';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { safeParse } from 'valibot';
-import { CreateCourseType, UpdateCourseType, UpdateCourseTypeSchema, SearchCourseTypesQuery } from './courseType.schemas.js';
+import {
+  CreateCourseType,
+  UpdateCourseType,
+  UpdateCourseTypeSchema,
+  SearchCourseTypesQuery,
+} from './courseType.schemas.js';
 import { Logger } from 'pino';
+import { mapCourseTypeToFilter } from './courseType.mappers.js';
+import type { CourseTypeFilterResponse } from './courseType.dtos.js';
 
 /**
  * Provides methods for CRUD operations on CourseType entities.
@@ -23,7 +30,7 @@ export class CourseTypeService {
     this.logger = logger.child({ context: { service: 'CourseTypeService' } });
   }
 
-   /**
+  /**
    * Creates a new course type.
    * @param {CreateCourseType} data - The validated data for the new course type.
    * @returns {Promise<CourseType>} A promise that resolves to the newly created course type.
@@ -34,7 +41,10 @@ export class CourseTypeService {
     const courseType = this.em.create(CourseType, data);
     await this.em.flush();
 
-    this.logger.info({ courseTypeId: courseType.id }, 'Course type created successfully.');
+    this.logger.info(
+      { courseTypeId: courseType.id },
+      'Course type created successfully.'
+    );
 
     return courseType;
   }
@@ -47,22 +57,27 @@ export class CourseTypeService {
    * @throws {Error} If validation fails or the course type is not found.
    */
   public async update(id: string, data: UpdateCourseType): Promise<CourseType> {
-    this.logger.info({ courseTypeId: id, data }, 'Updating course type.')
+    this.logger.info({ courseTypeId: id, data }, 'Updating course type.');
 
-    const result = safeParse(UpdateCourseTypeSchema, data)
-      if (!result.success) {
-        this.logger.error({ issues: result.issues }, 'Validation failed for course type update.')
-        throw new Error('Invalid data for course type update.')
-      }
+    const result = safeParse(UpdateCourseTypeSchema, data);
+    if (!result.success) {
+      this.logger.error(
+        { issues: result.issues },
+        'Validation failed for course type update.'
+      );
+      throw new Error('Invalid data for course type update.');
+    }
 
-    const objectId = new ObjectId(id)
-    const courseType = await this.em.findOneOrFail(CourseType, { _id: objectId })
-    this.em.assign(courseType, data)
-    await this.em.flush()
-    
-    this.logger.info({ courseTypeId: id }, 'Course type updated successfully.')
+    const objectId = new ObjectId(id);
+    const courseType = await this.em.findOneOrFail(CourseType, {
+      _id: objectId,
+    });
+    this.em.assign(courseType, data);
+    await this.em.flush();
 
-    return courseType
+    this.logger.info({ courseTypeId: id }, 'Course type updated successfully.');
+
+    return courseType;
   }
 
   /**
@@ -71,20 +86,23 @@ export class CourseTypeService {
    * @returns {Promise<void>} A promise that resolves when the deletion is complete.
    */
   public async remove(id: string): Promise<void> {
-    this.logger.info({ courseTypeId: id }, 'Deleting course type.')
+    this.logger.info({ courseTypeId: id }, 'Deleting course type.');
 
-    const objectId = new ObjectId(id)
-    const courseType = this.em.getReference(CourseType, objectId)
-    await this.em.removeAndFlush(courseType)
+    const objectId = new ObjectId(id);
+    const courseType = this.em.getReference(CourseType, objectId);
+    await this.em.removeAndFlush(courseType);
 
-    this.logger.info({ courseTypeId: id }, 'Course type deleted successfully.')
+    this.logger.info({ courseTypeId: id }, 'Course type deleted successfully.');
   }
 
   /**
-   * Retrieves all course types from the database.
-   * @returns {Promise<CourseType[]>} A promise that resolves to an array of all course types.
+   * Retrieves all course types for public filter/dropdown.
+   * Returns only id and name - NO sensitive data.
+   * @returns {Promise<{ courseTypes: CourseTypeFilterResponse[], total: number }>} Filtered course types and total count.
    */
-  public async findAll(query: SearchCourseTypesQuery): Promise<{ courseTypes: CourseType[], total: number }> {
+  public async findAll(
+    query: SearchCourseTypesQuery
+  ): Promise<{ courseTypes: CourseTypeFilterResponse[]; total: number }> {
     this.logger.info({ query }, 'Fetching all course types with filters.');
 
     const where: FilterQuery<CourseType> = {};
@@ -94,13 +112,16 @@ export class CourseTypeService {
     }
 
     const [courseTypes, total] = await this.em.findAndCount(CourseType, where, {
-      populate: ['courses'],
       orderBy: { [query.sortBy]: query.sortOrder },
       limit: query.limit,
       offset: query.offset,
     });
 
-    return { courseTypes, total };
+    const filteredCourseTypes = courseTypes.map((ct) =>
+      mapCourseTypeToFilter(ct)
+    );
+
+    return { courseTypes: filteredCourseTypes, total };
   }
 
   /**
@@ -109,9 +130,13 @@ export class CourseTypeService {
    * @returns {Promise<CourseType | null>} A promise that resolves to the course type or null if not found.
    */
   public async findOne(id: string): Promise<CourseType | null> {
-    this.logger.info({ courseTypeId: id }, 'Fetching course type.')
+    this.logger.info({ courseTypeId: id }, 'Fetching course type.');
 
-    const objectId = new ObjectId(id)
-    return this.em.findOneOrFail(CourseType, { _id: objectId }, { populate: ['courses'] })
+    const objectId = new ObjectId(id);
+    return this.em.findOneOrFail(
+      CourseType,
+      { _id: objectId },
+      { populate: ['courses'] }
+    );
   }
 }

@@ -17,6 +17,8 @@ import { Enrollement } from '../Enrollement/enrollement.entity.js';
 import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
 import { Course, status } from '../course/course.entity.js';
 import { Earning, EarningType } from '../payment/earning.entity.js';
+import { mapProfessorToFilter } from './professor.mappers.js';
+import type { ProfessorFilterResponse } from './professor.dtos.js';
 
 /**
  * Provides methods for CRUD operations on Professor entities.
@@ -54,18 +56,20 @@ export class ProfessorService {
   }
 
   /**
-   * Retrieves all professor profiles from the database.
-   * Populates related courses, institution, and managed institution data.
-   * @returns {Promise<Professor[]>} A promise resolving to an array of professors.
+   * Retrieves all professor profiles for public filter/dropdown.
+   * Returns only id, name, surname, profilePicture - NO sensitive data.
+   * @returns {Promise<ProfessorFilterResponse[]>} A promise resolving to an array of filtered professors.
    */
-  public async findAll(): Promise<Professor[]> {
-    this.logger.info('Fetching all professors.');
+  public async findAll(): Promise<ProfessorFilterResponse[]> {
+    this.logger.info('Fetching all professors for filter.');
 
-    return this.em.find(
+    const professors = await this.em.find(
       Professor,
       {},
-      { populate: ['courses', 'institution', 'managedInstitution','user'] }
+      { populate: ['user'] }
     );
+
+    return professors.map((prof) => mapProfessorToFilter(prof));
   }
 
   /**
@@ -90,13 +94,20 @@ export class ProfessorService {
    * @param {string} userId - The ID of the user who is a professor.
    * @returns {Promise<Enrollement[]>} A promise resolving to an array of recent enrollments.
    */
-  public async findRecentEnrollmentsForMyCourses(userId: string): Promise<Enrollement[]> {
-    this.logger.info({ userId }, 'Fetching recent enrollments for professor courses.');
+  public async findRecentEnrollmentsForMyCourses(
+    userId: string
+  ): Promise<Enrollement[]> {
+    this.logger.info(
+      { userId },
+      'Fetching recent enrollments for professor courses.'
+    );
 
     const professorId = await getProfessorIdFromUserId(this.em, userId);
 
-    const professorCourses = await this.em.find(Course, { professor: new ObjectId(professorId) });
-    const courseIds = professorCourses.map(course => new ObjectId(course.id));
+    const professorCourses = await this.em.find(Course, {
+      professor: new ObjectId(professorId),
+    });
+    const courseIds = professorCourses.map((course) => new ObjectId(course.id));
 
     if (courseIds.length === 0) {
       return [];
@@ -105,15 +116,16 @@ export class ProfessorService {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const recentEnrollments = await this.em.find(Enrollement, 
+    const recentEnrollments = await this.em.find(
+      Enrollement,
       {
         course: { $in: courseIds },
-        enrolledAt: { $gte: sevenDaysAgo }
+        enrolledAt: { $gte: sevenDaysAgo },
       },
       {
         populate: ['student.user', 'course'],
         orderBy: { enrolledAt: 'DESC' },
-        limit: 5
+        limit: 5,
       }
     );
 
@@ -127,12 +139,17 @@ export class ProfessorService {
    * @returns {Promise<object>} An object containing analytics data.
    */
   public async getAnalyticsForProfessor(userId: string): Promise<object> {
-    this.logger.info({ userId }, "Fetching analytics for professor's dashboard.");
+    this.logger.info(
+      { userId },
+      "Fetching analytics for professor's dashboard."
+    );
 
     const professorId = await getProfessorIdFromUserId(this.em, userId);
 
-    const professorCourses = await this.em.find(Course, { professor: new ObjectId(professorId) });
-    const courseIds = professorCourses.map(course => new ObjectId(course.id));
+    const professorCourses = await this.em.find(Course, {
+      professor: new ObjectId(professorId),
+    });
+    const courseIds = professorCourses.map((course) => new ObjectId(course.id));
 
     if (courseIds.length === 0) {
       return {
@@ -143,12 +160,16 @@ export class ProfessorService {
       };
     }
 
-    const publishedCoursesCount = professorCourses.filter(course => course.status === status.PUBLISHED).length;
+    const publishedCoursesCount = professorCourses.filter(
+      (course) => course.status === status.PUBLISHED
+    ).length;
 
     const enrollments = await this.em.find(Enrollement, {
-      course: { $in: courseIds }
+      course: { $in: courseIds },
     });
-    const distinctStudentIds = [...new Set(enrollments.map(enrollment => enrollment.student.id))];
+    const distinctStudentIds = [
+      ...new Set(enrollments.map((enrollment) => enrollment.student.id)),
+    ];
     const totalStudentsCount = distinctStudentIds.length;
 
     // Fetch real earnings data for this professor
@@ -157,23 +178,35 @@ export class ProfessorService {
       type: EarningType.PROFESSOR_SHARE,
     });
 
-    const totalEarningsInCents = professorEarnings.reduce((sum, earning) => sum + earning.amountInCents, 0);
+    const totalEarningsInCents = professorEarnings.reduce(
+      (sum, earning) => sum + earning.amountInCents,
+      0
+    );
 
     // Calculate monthly earnings for the last 6 months
     const now = new Date();
     const monthlyEarnings = [];
-    
+
     for (let i = 5; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const nextMonthDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
-      const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
+      const nextMonthDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - i + 1,
+        1
+      );
+      const monthKey = `${monthDate.getFullYear()}-${String(
+        monthDate.getMonth() + 1
+      ).padStart(2, '0')}`;
 
-      const monthEarnings = professorEarnings.filter(earning => {
+      const monthEarnings = professorEarnings.filter((earning) => {
         const earningDate = new Date(earning.createdAt);
         return earningDate >= monthDate && earningDate < nextMonthDate;
       });
 
-      const monthTotalInCents = monthEarnings.reduce((sum, earning) => sum + earning.amountInCents, 0);
+      const monthTotalInCents = monthEarnings.reduce(
+        (sum, earning) => sum + earning.amountInCents,
+        0
+      );
 
       monthlyEarnings.push({
         month: monthKey,
@@ -251,7 +284,10 @@ export class ProfessorService {
     const user = await this.em.findOne(User, { _id: userObjectId });
 
     if (!user || !user.professorProfile) {
-      this.logger.warn({ userId }, 'User not found or has no professor profile linked.');
+      this.logger.warn(
+        { userId },
+        'User not found or has no professor profile linked.'
+      );
       return null;
     }
 
