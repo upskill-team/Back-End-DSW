@@ -11,12 +11,14 @@ import { HttpResponse } from '../shared/response/http.response.js'
  * Helper to set the Refresh Token as an HttpOnly cookie.
  */
 const setRefreshTokenCookie = (res: Response, token: string) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+
   const cookieOptions = {
     httpOnly: true,
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     path: '/',
-    secure: true, 
-    sameSite: 'lax' as const, 
+    secure: isProduction, 
+    sameSite: isProduction ? 'none' as const : 'lax' as const,
   };
   
   res.cookie('refreshToken', token, cookieOptions);
@@ -36,14 +38,24 @@ async function register(req: Request, res: Response, next: NextFunction) {
 // Logs in a user and sets refresh cookie
 async function login(req: Request, res: Response, next: NextFunction) {
   try {
-    const authService = new AuthService(orm.em.fork(), req.log)
-    const { accessToken, refreshToken } = await authService.login(req.body)
+    const authService = new AuthService(orm.em.fork(), req.log);
+
+    const { mail, password_plaintext, rememberMe } = req.body;
+
+    const { accessToken, refreshToken } = await authService.login({
+      mail,
+      password_plaintext,
+      rememberMe: !!rememberMe, 
+    });
     
-    // Send Refresh Token in HttpOnly Cookie
-    setRefreshTokenCookie(res, refreshToken);
+    if (refreshToken) {
+      setRefreshTokenCookie(res, refreshToken);
+    } else {
+      res.clearCookie('refreshToken');
+    }
 
     // Send Access Token in Body
-    return HttpResponse.Ok(res, { token: accessToken })
+    return HttpResponse.Ok(res, { token: accessToken });
   } catch (error: any) {
     if (error.message === 'Credenciales inválidas.') {
       return HttpResponse.Unauthorized(res, error.message)
