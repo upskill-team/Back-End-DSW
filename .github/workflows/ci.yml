@@ -20,6 +20,22 @@ jobs:
     name: Lint, Test & Coverage
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: test
+      JWT_SECRET: 'ci-secret-key'
+      MONGO_USER: 'dummy_user'
+      MONGO_PASS: 'dummy_pass'
+      MONGO_CLUSTER: 'dummy_cluster'
+      MONGO_DB_NAME: 'test_db'
+      CLOUDINARY_CLOUD_NAME: 'dummy_cloud'
+      CLOUDINARY_API_KEY: '123456789'
+      CLOUDINARY_API_SECRET: 'dummy_secret'
+      MP_ACCESS_TOKEN: 'dummy_mp_token'
+      EMAIL_HOST: 'smtp.ethereal.email'
+      EMAIL_PORT: '587'
+      EMAIL_USER: 'test@upskill.com'
+      EMAIL_PASS: 'test'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

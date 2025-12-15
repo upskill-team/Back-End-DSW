@@ -5,8 +5,6 @@
 
 import { Course } from './course.entity.js';
 import { Professor } from '../professor/professor.entity.js';
-import { User } from '../user/user.entity.js';
-import { Enrollement } from '../Enrollement/enrollement.entity.js';
 import { wrap } from '@mikro-orm/core';
 import {
   CoursePublicResponse,
