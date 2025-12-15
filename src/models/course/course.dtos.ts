@@ -66,7 +66,8 @@ export const CoursePublicSchema = v.object({
   status: v.string(),
   createdAt: v.optional(v.date()),
   studentsCount: v.number(),
-  units: v.array(UnitPreviewSchema),
+  units: v.optional(v.array(UnitPreviewSchema)),
+  unitsCount: v.optional(v.number()),
   courseType: v.object({
     id: v.string(),
     name: v.string(),

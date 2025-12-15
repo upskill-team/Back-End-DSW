@@ -23,6 +23,7 @@ import {
   mapCourseToPublic,
   mapCourseToEnrolled,
   mapCourseToProfessor,
+  mapCourseToPublicTrending
 } from './course.mappers.js';
 import {
   CoursePublicResponse,
@@ -246,16 +247,19 @@ export class CourseService {
     );
 
     // Map to public data with student counts
-    const coursesWithCounts = await Promise.all(
-      courses.map(async (course) => {
-        const studentsCount = await this.em.count(Enrollement, {
-          course: new ObjectId(course.id),
-        });
-        return mapCourseToPublic(course, studentsCount);
-      })
-    );
+      const coursesWithCounts = await Promise.all(
+        courses.map(async (course) => {
+          const studentsCount = await this.em.count(Enrollement, {
+            course: new ObjectId(course.id),
+          });
+          const unitsCount = Array.isArray(course.units) ? course.units.length : 0
+          return {
+            ...mapCourseToPublicTrending(course, studentsCount, unitsCount),
+          };
+        })
+      );
 
-    return coursesWithCounts;
+    return coursesWithCounts; 
   }
 
   /**
