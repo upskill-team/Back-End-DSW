@@ -83,6 +83,44 @@ export function mapCourseToPublic(
 }
 
 /**
+ * Maps a course to public view in trending list
+ * Includes a counter for units
+ */
+export function mapCourseToPublicTrending(
+  course: Course,
+  studentsCount: number,
+  unitsCount: number
+): CoursePublicResponse {
+  const wrappedCourse = wrap(course).toObject();
+  const courseType = wrappedCourse.courseType as any;
+  const professor = course.professor as Professor;
+
+  return {
+    id: course.id!,
+    name: course.name,
+    description: course.description,
+    imageUrl: course.imageUrl,
+    isFree: course.isFree,
+    priceInCents: course.priceInCents,
+    status: course.status,
+    createdAt: course.createdAt,
+    studentsCount: studentsCount,
+    unitsCount: unitsCount,
+    courseType: {
+      id: courseType?.id || '',
+      name: courseType?.name || '',
+    },
+    professor: mapProfessorToPublic(professor),
+    institution: course.institution
+      ? {
+          name: course.institution.name,
+          aliases: course.institution.aliases || [],
+        }
+      : undefined,
+  };
+}
+
+/**
  * Maps a course to enrolled student view
  * Includes unit content, materials, and questions (without correctAnswer)
  */

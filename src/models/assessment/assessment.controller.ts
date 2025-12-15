@@ -9,6 +9,7 @@ import { AssessmentService } from './assessment.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
 import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
 import { getStudentIdFromUserId } from '../../shared/utils/student.helper.js';
+import { AssessmentMapper } from './assessment.mapper.js';
 
 /**
  * Handles the creation of a new assessment.
@@ -298,7 +299,9 @@ async function getAssessmentsByCourse(req: Request, res: Response) {
       )
     );
     
-    return HttpResponse.Ok(res, assessmentsWithMetadata);
+    const filteredAssessments = AssessmentMapper.toResponseDtoList(assessmentsWithMetadata);
+    
+    return HttpResponse.Ok(res, filteredAssessments);
 
   } catch (error: any) {
     req.log.error({ error }, 'Error getting assessments by course');

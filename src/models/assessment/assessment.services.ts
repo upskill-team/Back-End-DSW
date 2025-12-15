@@ -1081,9 +1081,7 @@ export class AssessmentService {
    */
   public async findAllByCourse(courseId: string): Promise<Assessment[]> {
     this.logger.info({ courseId }, 'Fetching all assessments for a specific course.');
-    return this.em.find(Assessment, { course: new ObjectId(courseId) }, {
-        populate: ['course', 'questions'],
-    });
+    return this.em.find(Assessment, { course: new ObjectId(courseId) });
   }
 
   /**
