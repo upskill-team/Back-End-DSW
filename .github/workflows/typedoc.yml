@@ -1,5 +1,3 @@
-# .github/workflows/typedoc.yml
-
 name: Generar y Desplegar TypeDoc
 
 on:
@@ -9,41 +7,37 @@ on:
   pull_request:
     branches:
       - develop
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
     permissions:
-      contents: write # Otorga permisos para escribir en el repositorio (necesario para hacer push a gh-pages)
+      contents: write
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.9.0'
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22' # Usa la misma versión que en tu otro action
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: Install Dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Generate TypeDoc documentation
-        run: pnpm run tdocs # Usamos pnpm para correr el script
+        run: pnpm run tdocs
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs # Asegúrate que este sea el directorio de salida de TypeDoc
+          publish_dir: ./docs
