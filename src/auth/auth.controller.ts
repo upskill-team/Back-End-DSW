@@ -18,7 +18,7 @@ const setRefreshTokenCookie = (res: Response, token: string) => {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     path: '/',
     secure: isProduction, 
-    sameSite: isProduction ? 'none' as const : 'lax' as const,
+    sameSite: isProduction ? 'none' as const : 'lax' as const, 
   };
   
   res.cookie('refreshToken', token, cookieOptions);
@@ -38,24 +38,24 @@ async function register(req: Request, res: Response, next: NextFunction) {
 // Logs in a user and sets refresh cookie
 async function login(req: Request, res: Response, next: NextFunction) {
   try {
-    const authService = new AuthService(orm.em.fork(), req.log);
-
+    const authService = new AuthService(orm.em.fork(), req.log)
+    
     const { mail, password_plaintext, rememberMe } = req.body;
 
     const { accessToken, refreshToken } = await authService.login({
-      mail,
-      password_plaintext,
-      rememberMe: !!rememberMe, 
-    });
+        mail,
+        password_plaintext,
+        rememberMe: !!rememberMe
+    })
     
     if (refreshToken) {
-      setRefreshTokenCookie(res, refreshToken);
+        setRefreshTokenCookie(res, refreshToken);
     } else {
-      res.clearCookie('refreshToken');
+        res.clearCookie('refreshToken');
     }
 
     // Send Access Token in Body
-    return HttpResponse.Ok(res, { token: accessToken });
+    return HttpResponse.Ok(res, { token: accessToken })
   } catch (error: any) {
     if (error.message === 'Credenciales inválidas.') {
       return HttpResponse.Unauthorized(res, error.message)
@@ -71,7 +71,7 @@ async function refresh(req: Request, res: Response, _next: NextFunction) {
     const refreshToken = req.cookies.refreshToken;
     
     if (!refreshToken) {
-      return HttpResponse.Unauthorized(res, 'Refresh token not found');
+      return res.status(204).send();
     }
 
     const authService = new AuthService(orm.em.fork(), req.log);
@@ -82,9 +82,8 @@ async function refresh(req: Request, res: Response, _next: NextFunction) {
 
     return HttpResponse.Ok(res, { token: tokens.accessToken });
   } catch { 
-    // If refresh fails (expired/revoked), clear cookie
     res.clearCookie('refreshToken');
-    return HttpResponse.Unauthorized(res, 'Invalid or expired refresh token');
+    return res.status(204).send();
   }
 }
 
