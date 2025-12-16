@@ -7,15 +7,15 @@ import { status } from './course.entity.js';
 import { QuestionType } from '../question/question.entity.js';
 
 const NumericString = v.pipe(
-  v.string('El valor debe ser un string.'),
-  v.regex(/^\d+$/, 'Debe contener solo dígitos.'),
-  v.transform(Number)
+  v.union([v.string(), v.number()]), 
+  v.transform((input) => Number(input)),
+  v.integer('El valor debe ser un entero.'),
+  v.minValue(0, 'El valor no puede ser negativo.')
 );
 
 const BooleanString = v.pipe(
-  v.string('El valor debe ser un string.'),
-  v.regex(/^(true|false)$/, 'El valor debe ser "true" o "false".'),
-  v.transform((val) => val === 'true')
+  v.union([v.string(), v.boolean()]),
+  v.transform((val) => val === 'true' || val === true)
 );
 
 const QuestionUpdateSchema = v.object({
@@ -56,21 +56,13 @@ export const CreateCourseSchema = v.object({
     v.string(),
     v.minLength(1, 'Course description is required.')
   ),
-  priceInCents: v.optional(
-    v.pipe(
-      v.number('Price must be a number.'),
-      v.integer('Price in cents must be an integer.'),
-      v.minValue(0, 'Price cannot be negative.')
-    )
-  ),
-  isFree: v.optional(v.boolean()),
-  
+  priceInCents: v.optional(NumericString), 
+  isFree: v.optional(BooleanString),
   courseTypeId: v.pipe(
     v.string(),
     v.minLength(1, 'Course type ID is required.')
   ),
   units: v.optional(v.array(UnitSchema)),
-
   useInstitution: v.optional(BooleanString),
   status: v.optional(
     v.picklist(Object.values(status), 'The provided status is not valid.')
