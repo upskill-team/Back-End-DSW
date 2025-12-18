@@ -47,6 +47,17 @@ export const CreateQuestionSchema = v.object({
  */
 export const UpdateQuestionSchema = v.partial(CreateQuestionSchema);
 
+/**
+ * Schema for validating a student's answer to a question.
+ */
+export const ValidateAnswerSchema = v.object({
+  answer: v.union([
+    v.pipe(v.number(), v.integer('Answer must be an integer.')),
+    v.string(),
+  ], 'Answer must be a number or string.'),
+});
+
 // Infer TypeScript types from the schemas for strong typing.
 export type CreateQuestionType = v.InferOutput<typeof CreateQuestionSchema>;
 export type UpdateQuestionType = v.InferOutput<typeof UpdateQuestionSchema>;
+export type ValidateAnswerType = v.InferOutput<typeof ValidateAnswerSchema>;

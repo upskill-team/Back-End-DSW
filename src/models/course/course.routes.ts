@@ -18,6 +18,7 @@ import {
 import {
   CreateQuestionSchema,
   UpdateQuestionSchema,
+  ValidateAnswerSchema,
 } from '../question/question.schemas.js';
 import {
   authMiddleware,
@@ -114,6 +115,14 @@ courseRouter.get(
   '/:courseId/questions/:id',
   authMiddleware,
   questionController.findOne
+);
+
+// Validate student's answer to a question (students and professors)
+courseRouter.post(
+  '/:courseId/questions/:id/validate',
+  authMiddleware,
+  validationMiddleware(ValidateAnswerSchema),
+  questionController.validateAnswer
 );
 
 courseRouter.put(

@@ -5,7 +5,7 @@
 
 import { EntityManager } from '@mikro-orm/core';
 import { Question } from './question.entity.js';
-import { CreateQuestionType, UpdateQuestionType } from './question.schemas.js';
+import { CreateQuestionType, UpdateQuestionType, ValidateAnswerType } from './question.schemas.js';
 import { Course } from '../course/course.entity.js';
 import { Logger } from 'pino';
 import { ObjectId } from '@mikro-orm/mongodb';
@@ -21,6 +21,48 @@ export class QuestionService {
   constructor(em: EntityManager, logger: Logger) {
     this.em = em;
     this.logger = logger.child({ context: { service: 'QuestionService' } });
+  }
+
+  /**
+   * Validates a student's answer to a question.
+   * @param {string} questionId - The ID of the question.
+   * @param {ValidateAnswerType} answerData - The answer to validate.
+   * @returns {Promise<{ isCorrect: boolean }>} Whether the answer is correct.
+   */
+  async validateAnswer(
+    questionId: string,
+    answerData: ValidateAnswerType
+  ): Promise<{ isCorrect: boolean }> {
+    this.logger.info({ questionId }, 'Validating answer for question');
+
+    const question = await this.em.findOneOrFail(Question, {
+      _id: new ObjectId(questionId),
+    });
+
+    const { answer } = answerData;
+    const correctAnswer = question.payload.correctAnswer;
+
+    let isCorrect = false;
+
+    // For multiple choice, compare numbers or indices
+    if (typeof correctAnswer === 'number' && typeof answer === 'number') {
+      isCorrect = answer === correctAnswer;
+    }
+    // For string answers, case-insensitive comparison
+    else if (typeof correctAnswer === 'string' && typeof answer === 'string') {
+      isCorrect = answer.toLowerCase().trim() === correctAnswer.toLowerCase().trim();
+    }
+    // Mixed types comparison
+    else {
+      isCorrect = String(answer) === String(correctAnswer);
+    }
+
+    this.logger.info(
+      { questionId, isCorrect },
+      'Answer validation completed'
+    );
+
+    return { isCorrect };
   }
 
   /**
@@ -243,6 +285,27 @@ export class QuestionService {
       'Professor questions retrieved'
     );
     return questions;
+  }
+
+  /**
+   * Checks if a professor is the owner of a course.
+   * @param {string} courseId - The ID of the course.
+   * @param {string} professorId - The ID of the professor.
+   * @returns {Promise<boolean>} True if the professor owns the course.
+   */
+  async isProfessorOwnerOfCourse(
+    courseId: string,
+    professorId: string
+  ): Promise<boolean> {
+    try {
+      const course = await this.em.findOne(Course, {
+        _id: new ObjectId(courseId),
+        professor: new ObjectId(professorId),
+      });
+      return course !== null;
+    } catch {
+      return false;
+    }
   }
 
   /**
