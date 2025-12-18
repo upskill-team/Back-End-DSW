@@ -10,11 +10,38 @@ import jwt from 'jsonwebtoken';
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
 
+jest.mock('../shared/services/email.service.js', () => ({
+  sendEmail: jest.fn().mockResolvedValue(true),
+}));
+
+let capturedProps: any = null;
+
+jest.mock('../emails/templates/ResetPasswordEmail.js', () => ({
+  ResetPasswordEmail: jest.fn((props) => {
+    capturedProps = props;
+    return { type: 'ResetPasswordEmail', props };
+  }),
+}));
+
+jest.mock('@react-email/render', () => ({
+  render: jest.fn().mockReturnValue('<html>Mocked Email</html>'),
+}));
+
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
   return {
     ...actual,
-    randomBytes: jest.fn().mockReturnValue({ toString: () => 'mockRefreshToken' }),
+    randomBytes: jest.fn((size) => {
+      // Return different values based on context (32 bytes for reset token, 40 for refresh)
+      if (size === 32) {
+        return { toString: () => 'mockresettoken12345' };
+      }
+      return { toString: () => 'mockRefreshToken' };
+    }),
+    createHash: jest.fn(() => ({
+      update: jest.fn().mockReturnThis(),
+      digest: jest.fn(() => 'mockedHashedToken'),
+    })),
   };
 });
 
@@ -48,7 +75,7 @@ describe('AuthService - Unit Tests', () => {
       const hashedPassword = '$2a$10$hashedPasswordExample';
       mockEm.findOne.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
-      
+
       mockEm.create.mockImplementation((entity, data) => data as any);
 
       const registerData = {
@@ -119,23 +146,25 @@ describe('AuthService - Unit Tests', () => {
       } as User;
 
       mockEm.findOne.mockResolvedValue(mockUser);
-      mockEm.create.mockImplementation((entity, data) => ({ ...data, id: 'rt_123' }) as any);
-      
+      mockEm.create.mockImplementation(
+        (entity, data) => ({ ...data, id: 'rt_123' } as any)
+      );
+
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (jwt.sign as jest.Mock).mockReturnValue('jwt.access.token');
 
       const result = await authService.login({
         mail: 'test@test.com',
         password_plaintext: 'correctPassword',
-        rememberMe: true, 
+        rememberMe: true,
       });
 
       expect(result).toHaveProperty('accessToken');
       expect(result.accessToken).toBe('jwt.access.token');
-      
+
       expect(result).toHaveProperty('refreshToken');
       expect(result.refreshToken).toBe('mockRefreshToken');
-      
+
       expect(mockEm.persistAndFlush).toHaveBeenCalled();
     });
 
@@ -177,7 +206,7 @@ describe('AuthService - Unit Tests', () => {
       const existingToken = {
         token: 'oldToken',
         user: mockUser,
-        expiresAt: new Date(Date.now() + 10000), 
+        expiresAt: new Date(Date.now() + 10000),
         revoked: false,
       } as RefreshToken;
 
@@ -189,14 +218,19 @@ describe('AuthService - Unit Tests', () => {
 
       expect(result.accessToken).toBe('new.access.token');
       expect(result.refreshToken).toBe('mockRefreshToken');
-      
-      expect(existingToken.revoked).toBe(true); 
-      expect(existingToken.replacedByToken).toBe('mockRefreshToken'); 
-      
-      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({ token: 'oldToken', revoked: true }),
-        expect.objectContaining({ token: 'mockRefreshToken', revoked: false })
-      ]));
+
+      expect(existingToken.revoked).toBe(true);
+      expect(existingToken.replacedByToken).toBe('mockRefreshToken');
+
+      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ token: 'oldToken', revoked: true }),
+          expect.objectContaining({
+            token: 'mockRefreshToken',
+            revoked: false,
+          }),
+        ])
+      );
     });
 
     it('should detect reuse of revoked token and trigger security breach (revoke all)', async () => {
@@ -204,13 +238,14 @@ describe('AuthService - Unit Tests', () => {
       const stolenToken = {
         token: 'stolenToken',
         user: mockUser,
-        revoked: true, 
+        revoked: true,
       } as RefreshToken;
 
       mockEm.findOne.mockResolvedValue(stolenToken);
 
-      await expect(authService.refreshToken('stolenToken'))
-        .rejects.toThrow('Security breach detected. Please login again.');
+      await expect(authService.refreshToken('stolenToken')).rejects.toThrow(
+        'Security breach detected. Please login again.'
+      );
 
       expect(mockEm.nativeUpdate).toHaveBeenCalledWith(
         RefreshToken,
@@ -226,14 +261,16 @@ describe('AuthService - Unit Tests', () => {
       const tokenString = 'valid-refresh-token';
       const mockTokenEntity = {
         token: tokenString,
-        revoked: false
+        revoked: false,
       } as RefreshToken;
 
       mockEm.findOne.mockResolvedValue(mockTokenEntity);
 
       await authService.logout(tokenString);
 
-      expect(mockEm.findOne).toHaveBeenCalledWith(RefreshToken, { token: tokenString });
+      expect(mockEm.findOne).toHaveBeenCalledWith(RefreshToken, {
+        token: tokenString,
+      });
       expect(mockTokenEntity.revoked).toBe(true);
       expect(mockEm.flush).toHaveBeenCalled();
     });
@@ -244,6 +281,139 @@ describe('AuthService - Unit Tests', () => {
       await authService.logout('non-existent-token');
 
       expect(mockEm.flush).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('forgotPassword', () => {
+    let sendEmail: jest.Mock;
+    let render: jest.Mock;
+
+    beforeEach(async () => {
+      const emailService = await import('../shared/services/email.service.js');
+      const reactEmail = await import('@react-email/render');
+      sendEmail = emailService.sendEmail as jest.Mock;
+      render = reactEmail.render as jest.Mock;
+
+      jest.clearAllMocks();
+      capturedProps = null;
+      sendEmail.mockResolvedValue(true);
+      render.mockReturnValue('<html>Mocked Email</html>');
+    });
+
+    it('should set reset token expiration to 15 minutes (900000 ms)', async () => {
+      // Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      const startTime = Date.now();
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(mockUser.resetPasswordExpires).toBeDefined();
+      const expirationTime = mockUser.resetPasswordExpires!.getTime();
+      const expectedTime = startTime + 900000; // 15 minutes in milliseconds
+
+      // Allow 1 second tolerance for test execution time
+      expect(expirationTime).toBeGreaterThanOrEqual(expectedTime - 1000);
+      expect(expirationTime).toBeLessThanOrEqual(expectedTime + 1000);
+    });
+
+    it('should use production URL when NODE_ENV is production', async () => {
+      // Arrange
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps.resetUrl).toContain(
+        'https://up-skill.app/reset-password?token='
+      );
+      expect(capturedProps.resetUrl).toContain('mockresettoken12345');
+
+      // Cleanup
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should use localhost URL when NODE_ENV is not production', async () => {
+      // Arrange
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps.resetUrl).toContain(
+        'https://localhost:5173/reset-password?token='
+      );
+      expect(capturedProps.resetUrl).toContain('mockresettoken12345');
+
+      // Cleanup
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should generate reset token and send email successfully', async () => {
+      // Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(mockUser.resetPasswordToken).toBeDefined();
+      expect(mockUser.resetPasswordToken).toBe('mockedHashedToken');
+      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(mockUser);
+      expect(sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'test@example.com',
+          subject: 'Restablecimiento de Contraseña - UpSkill',
+          html: '<html>Mocked Email</html>',
+        })
+      );
+    });
+
+    it('should not send email if user does not exist', async () => {
+      // Arrange
+      mockEm.findOne.mockResolvedValue(null);
+
+      // Act
+      await authService.forgotPassword('nonexistent@example.com');
+
+      // Assert
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
     });
   });
 });

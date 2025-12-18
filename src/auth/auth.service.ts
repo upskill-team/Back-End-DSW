@@ -210,11 +210,14 @@ export class AuthService {
         .digest('hex')
 
       user.resetPasswordToken = passwordResetToken
-      user.resetPasswordExpires = new Date(Date.now() + 3600000) // 1 hour
+      user.resetPasswordExpires = new Date(Date.now() + 900000) // 15 minutes
 
       await this.em.persistAndFlush(user)
 
-      const resetUrl = `http://localhost:5173/reset-password?token=${resetToken}`
+      const resetUrl = process.env.NODE_ENV === 'production'
+        ? `https://up-skill.app/reset-password?token=${resetToken}`
+        : `https://localhost:5173/reset-password?token=${resetToken}`
+      
       const emailHtml = await render(
         ResetPasswordEmail({ name: user.name, resetUrl })
       )
