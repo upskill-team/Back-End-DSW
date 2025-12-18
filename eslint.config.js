@@ -25,6 +25,12 @@ export default [
     },
   },
   {
-    ignores: ['dist/', 'coverage/', 'eslint.config.js', './docs/','jest.config.ts'],
+    ignores: [
+      'dist/',
+      'coverage/',
+      'eslint.config.js',
+      './docs/',
+      'jest.config.ts',
+    ],
   },
 ];

@@ -29,11 +29,11 @@ const config = {
   testMatch: ['**/*.spec.ts', '**/*.integration.spec.ts'],
 
   coverageProvider: 'v8',
-  
+
   coverageDirectory: '<rootDir>/coverage',
-  
+
   coverageReporters: ['text', 'lcov', 'clover', 'json'],
-  
+
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',

@@ -75,7 +75,7 @@ describe('AuthService - Unit Tests', () => {
       const hashedPassword = '$2a$10$hashedPasswordExample';
       mockEm.findOne.mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
-      
+
       mockEm.create.mockImplementation((entity, data) => data as any);
 
       const registerData = {
@@ -146,23 +146,25 @@ describe('AuthService - Unit Tests', () => {
       } as User;
 
       mockEm.findOne.mockResolvedValue(mockUser);
-      mockEm.create.mockImplementation((entity, data) => ({ ...data, id: 'rt_123' }) as any);
-      
+      mockEm.create.mockImplementation(
+        (entity, data) => ({ ...data, id: 'rt_123' } as any)
+      );
+
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       (jwt.sign as jest.Mock).mockReturnValue('jwt.access.token');
 
       const result = await authService.login({
         mail: 'test@test.com',
         password_plaintext: 'correctPassword',
-        rememberMe: true, 
+        rememberMe: true,
       });
 
       expect(result).toHaveProperty('accessToken');
       expect(result.accessToken).toBe('jwt.access.token');
-      
+
       expect(result).toHaveProperty('refreshToken');
       expect(result.refreshToken).toBe('mockRefreshToken');
-      
+
       expect(mockEm.persistAndFlush).toHaveBeenCalled();
     });
 
@@ -204,7 +206,7 @@ describe('AuthService - Unit Tests', () => {
       const existingToken = {
         token: 'oldToken',
         user: mockUser,
-        expiresAt: new Date(Date.now() + 10000), 
+        expiresAt: new Date(Date.now() + 10000),
         revoked: false,
       } as RefreshToken;
 
@@ -216,14 +218,19 @@ describe('AuthService - Unit Tests', () => {
 
       expect(result.accessToken).toBe('new.access.token');
       expect(result.refreshToken).toBe('mockRefreshToken');
-      
-      expect(existingToken.revoked).toBe(true); 
-      expect(existingToken.replacedByToken).toBe('mockRefreshToken'); 
-      
-      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(expect.arrayContaining([
-        expect.objectContaining({ token: 'oldToken', revoked: true }),
-        expect.objectContaining({ token: 'mockRefreshToken', revoked: false })
-      ]));
+
+      expect(existingToken.revoked).toBe(true);
+      expect(existingToken.replacedByToken).toBe('mockRefreshToken');
+
+      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ token: 'oldToken', revoked: true }),
+          expect.objectContaining({
+            token: 'mockRefreshToken',
+            revoked: false,
+          }),
+        ])
+      );
     });
 
     it('should detect reuse of revoked token and trigger security breach (revoke all)', async () => {
@@ -231,13 +238,14 @@ describe('AuthService - Unit Tests', () => {
       const stolenToken = {
         token: 'stolenToken',
         user: mockUser,
-        revoked: true, 
+        revoked: true,
       } as RefreshToken;
 
       mockEm.findOne.mockResolvedValue(stolenToken);
 
-      await expect(authService.refreshToken('stolenToken'))
-        .rejects.toThrow('Security breach detected. Please login again.');
+      await expect(authService.refreshToken('stolenToken')).rejects.toThrow(
+        'Security breach detected. Please login again.'
+      );
 
       expect(mockEm.nativeUpdate).toHaveBeenCalledWith(
         RefreshToken,
@@ -253,14 +261,16 @@ describe('AuthService - Unit Tests', () => {
       const tokenString = 'valid-refresh-token';
       const mockTokenEntity = {
         token: tokenString,
-        revoked: false
+        revoked: false,
       } as RefreshToken;
 
       mockEm.findOne.mockResolvedValue(mockTokenEntity);
 
       await authService.logout(tokenString);
 
-      expect(mockEm.findOne).toHaveBeenCalledWith(RefreshToken, { token: tokenString });
+      expect(mockEm.findOne).toHaveBeenCalledWith(RefreshToken, {
+        token: tokenString,
+      });
       expect(mockTokenEntity.revoked).toBe(true);
       expect(mockEm.flush).toHaveBeenCalled();
     });
@@ -283,7 +293,7 @@ describe('AuthService - Unit Tests', () => {
       const reactEmail = await import('@react-email/render');
       sendEmail = emailService.sendEmail as jest.Mock;
       render = reactEmail.render as jest.Mock;
-      
+
       jest.clearAllMocks();
       capturedProps = null;
       sendEmail.mockResolvedValue(true);
@@ -308,7 +318,7 @@ describe('AuthService - Unit Tests', () => {
       expect(mockUser.resetPasswordExpires).toBeDefined();
       const expirationTime = mockUser.resetPasswordExpires!.getTime();
       const expectedTime = startTime + 900000; // 15 minutes in milliseconds
-      
+
       // Allow 1 second tolerance for test execution time
       expect(expirationTime).toBeGreaterThanOrEqual(expectedTime - 1000);
       expect(expirationTime).toBeLessThanOrEqual(expectedTime + 1000);
@@ -332,7 +342,9 @@ describe('AuthService - Unit Tests', () => {
 
       // Assert
       expect(capturedProps).not.toBeNull();
-      expect(capturedProps.resetUrl).toContain('https://up-skill.app/reset-password?token=');
+      expect(capturedProps.resetUrl).toContain(
+        'https://up-skill.app/reset-password?token='
+      );
       expect(capturedProps.resetUrl).toContain('mockresettoken12345');
 
       // Cleanup
@@ -357,7 +369,9 @@ describe('AuthService - Unit Tests', () => {
 
       // Assert
       expect(capturedProps).not.toBeNull();
-      expect(capturedProps.resetUrl).toContain('https://localhost:5173/reset-password?token=');
+      expect(capturedProps.resetUrl).toContain(
+        'https://localhost:5173/reset-password?token='
+      );
       expect(capturedProps.resetUrl).toContain('mockresettoken12345');
 
       // Cleanup

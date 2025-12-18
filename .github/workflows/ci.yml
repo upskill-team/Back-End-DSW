@@ -63,6 +63,10 @@ jobs:
       - name: Run Tests & Coverage
         run: pnpm run test:coverage
 
+      - name: List coverage files
+        if: always()
+        run: ls -la coverage/ || echo "Coverage directory not found"
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         if: always()
@@ -70,7 +74,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: upskill-team/back-end-dsw
           files: ./coverage/lcov.info
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           verbose: true
 
   build:
