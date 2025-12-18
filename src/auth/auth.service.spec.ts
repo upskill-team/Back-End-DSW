@@ -29,11 +29,9 @@ jest.mock('@react-email/render', () => ({
 
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
-  let callCount = 0;
   return {
     ...actual,
     randomBytes: jest.fn((size) => {
-      callCount++;
       // Return different values based on context (32 bytes for reset token, 40 for refresh)
       if (size === 32) {
         return { toString: () => 'mockresettoken12345' };
@@ -277,10 +275,15 @@ describe('AuthService - Unit Tests', () => {
   });
 
   describe('forgotPassword', () => {
-    const { sendEmail } = require('../shared/services/email.service.js');
-    const { render } = require('@react-email/render');
+    let sendEmail: jest.Mock;
+    let render: jest.Mock;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+      const emailService = await import('../shared/services/email.service.js');
+      const reactEmail = await import('@react-email/render');
+      sendEmail = emailService.sendEmail as jest.Mock;
+      render = reactEmail.render as jest.Mock;
+      
       jest.clearAllMocks();
       capturedProps = null;
       sendEmail.mockResolvedValue(true);
