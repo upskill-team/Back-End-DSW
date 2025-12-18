@@ -10,11 +10,40 @@ import jwt from 'jsonwebtoken';
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
 
+jest.mock('../shared/services/email.service.js', () => ({
+  sendEmail: jest.fn().mockResolvedValue(true),
+}));
+
+let capturedProps: any = null;
+
+jest.mock('../emails/templates/ResetPasswordEmail.js', () => ({
+  ResetPasswordEmail: jest.fn((props) => {
+    capturedProps = props;
+    return { type: 'ResetPasswordEmail', props };
+  }),
+}));
+
+jest.mock('@react-email/render', () => ({
+  render: jest.fn().mockReturnValue('<html>Mocked Email</html>'),
+}));
+
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
+  let callCount = 0;
   return {
     ...actual,
-    randomBytes: jest.fn().mockReturnValue({ toString: () => 'mockRefreshToken' }),
+    randomBytes: jest.fn((size) => {
+      callCount++;
+      // Return different values based on context (32 bytes for reset token, 40 for refresh)
+      if (size === 32) {
+        return { toString: () => 'mockresettoken12345' };
+      }
+      return { toString: () => 'mockRefreshToken' };
+    }),
+    createHash: jest.fn(() => ({
+      update: jest.fn().mockReturnThis(),
+      digest: jest.fn(() => 'mockedHashedToken'),
+    })),
   };
 });
 
@@ -244,6 +273,130 @@ describe('AuthService - Unit Tests', () => {
       await authService.logout('non-existent-token');
 
       expect(mockEm.flush).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('forgotPassword', () => {
+    const { sendEmail } = require('../shared/services/email.service.js');
+    const { render } = require('@react-email/render');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      capturedProps = null;
+      sendEmail.mockResolvedValue(true);
+      render.mockReturnValue('<html>Mocked Email</html>');
+    });
+
+    it('should set reset token expiration to 15 minutes (900000 ms)', async () => {
+      // Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      const startTime = Date.now();
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(mockUser.resetPasswordExpires).toBeDefined();
+      const expirationTime = mockUser.resetPasswordExpires!.getTime();
+      const expectedTime = startTime + 900000; // 15 minutes in milliseconds
+      
+      // Allow 1 second tolerance for test execution time
+      expect(expirationTime).toBeGreaterThanOrEqual(expectedTime - 1000);
+      expect(expirationTime).toBeLessThanOrEqual(expectedTime + 1000);
+    });
+
+    it('should use production URL when NODE_ENV is production', async () => {
+      // Arrange
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps.resetUrl).toContain('https://up-skill.app/reset-password?token=');
+      expect(capturedProps.resetUrl).toContain('mockresettoken12345');
+
+      // Cleanup
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should use localhost URL when NODE_ENV is not production', async () => {
+      // Arrange
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(capturedProps).not.toBeNull();
+      expect(capturedProps.resetUrl).toContain('https://localhost:5173/reset-password?token=');
+      expect(capturedProps.resetUrl).toContain('mockresettoken12345');
+
+      // Cleanup
+      process.env.NODE_ENV = originalEnv;
+    });
+
+    it('should generate reset token and send email successfully', async () => {
+      // Arrange
+      const mockUser = {
+        id: '123',
+        mail: 'test@example.com',
+        name: 'Test User',
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+
+      // Act
+      await authService.forgotPassword('test@example.com');
+
+      // Assert
+      expect(mockUser.resetPasswordToken).toBeDefined();
+      expect(mockUser.resetPasswordToken).toBe('mockedHashedToken');
+      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(mockUser);
+      expect(sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'test@example.com',
+          subject: 'Restablecimiento de Contraseña - UpSkill',
+          html: '<html>Mocked Email</html>',
+        })
+      );
+    });
+
+    it('should not send email if user does not exist', async () => {
+      // Arrange
+      mockEm.findOne.mockResolvedValue(null);
+
+      // Act
+      await authService.forgotPassword('nonexistent@example.com');
+
+      // Assert
+      expect(sendEmail).not.toHaveBeenCalled();
+      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
     });
   });
 });
