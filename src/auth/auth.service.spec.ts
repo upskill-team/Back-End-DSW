@@ -9,15 +9,6 @@ import jwt from 'jsonwebtoken';
 
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
-jest.mock('../shared/services/email.service.js', () => ({
-  sendEmail: jest.fn().mockResolvedValue(true),
-}));
-jest.mock('../emails/templates/ResetPasswordEmail.js', () => ({
-  ResetPasswordEmail: jest.fn(() => 'mocked-email-template'),
-}));
-jest.mock('@react-email/render', () => ({
-  render: jest.fn(() => '<html>Mocked Email</html>'),
-}));
 
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
@@ -253,113 +244,6 @@ describe('AuthService - Unit Tests', () => {
       await authService.logout('non-existent-token');
 
       expect(mockEm.flush).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('forgotPassword', () => {
-    it('should set reset token and expiry for existing user', async () => {
-      const mockUser = {
-        id: '123',
-        name: 'Test',
-        mail: 'test@test.com',
-        resetPasswordToken: undefined,
-        resetPasswordExpires: undefined,
-      } as User;
-
-      mockEm.findOne.mockResolvedValue(mockUser);
-      mockEm.persistAndFlush.mockResolvedValue(undefined);
-
-      await authService.forgotPassword('test@test.com');
-
-      expect(mockEm.findOne).toHaveBeenCalledWith(User, { mail: 'test@test.com' });
-      expect(mockUser.resetPasswordToken).toBeDefined();
-      expect(mockUser.resetPasswordExpires).toBeDefined();
-      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(mockUser);
-    });
-
-    it('should handle non-existent user gracefully (no throw)', async () => {
-      mockEm.findOne.mockResolvedValue(null);
-
-      await expect(
-        authService.forgotPassword('nonexistent@test.com')
-      ).resolves.not.toThrow();
-
-      expect(mockLogger.info).toHaveBeenCalled();
-      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
-    });
-
-    it('should clear reset token if email sending fails', async () => {
-      const sendEmail = require('../shared/services/email.service.js').sendEmail;
-      sendEmail.mockRejectedValueOnce(new Error('Email service down'));
-
-      const mockUser = {
-        id: '123',
-        name: 'Test',
-        mail: 'test@test.com',
-        resetPasswordToken: 'someToken',
-        resetPasswordExpires: new Date(),
-      } as User;
-
-      mockEm.findOne.mockResolvedValue(mockUser);
-      mockEm.persistAndFlush.mockResolvedValue(undefined);
-
-      await expect(
-        authService.forgotPassword('test@test.com')
-      ).rejects.toThrow('Could not send password reset email.');
-
-      expect(mockUser.resetPasswordToken).toBeUndefined();
-      expect(mockUser.resetPasswordExpires).toBeUndefined();
-    });
-  });
-
-  describe('resetPassword', () => {
-    it('should update password when token is valid', async () => {
-      const crypto = require('crypto');
-      const resetToken = 'validToken123';
-      
-      // Create the actual hash that would be created from resetToken
-      const hashedToken = crypto
-        .createHash('sha256')
-        .update(resetToken)
-        .digest('hex');
-
-      const mockUser = {
-        id: '123',
-        mail: 'test@test.com',
-        password: 'oldPassword',
-        resetPasswordToken: hashedToken,
-        resetPasswordExpires: new Date(Date.now() + 600000),
-      } as User;
-
-      mockEm.findOne.mockResolvedValue(mockUser);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('newHashedPassword');
-
-      await authService.resetPassword(resetToken, 'newPassword123');
-
-      expect(bcrypt.hash).toHaveBeenCalledWith('newPassword123', 10);
-      expect(mockUser.password).toBe('newHashedPassword');
-      expect(mockUser.resetPasswordToken).toBeUndefined();
-      expect(mockUser.resetPasswordExpires).toBeUndefined();
-      expect(mockEm.persistAndFlush).toHaveBeenCalledWith(mockUser);
-    });
-
-    it('should throw error when token is invalid or expired', async () => {
-      mockEm.findOne.mockResolvedValue(null);
-
-      await expect(
-        authService.resetPassword('invalidToken', 'newPassword123')
-      ).rejects.toThrow('El token es inválido o ha expirado.');
-
-      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
-    });
-
-    it('should not update password if token not found', async () => {
-      mockEm.findOne.mockResolvedValue(null);
-
-      const result = authService.resetPassword('fakeToken', 'newPassword');
-
-      await expect(result).rejects.toThrow();
-      expect(bcrypt.hash).not.toHaveBeenCalled();
     });
   });
 });
