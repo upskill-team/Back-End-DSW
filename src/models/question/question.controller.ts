@@ -8,8 +8,9 @@ import { Request, Response } from 'express';
 import { orm } from '../../shared/db/orm.js';
 import { QuestionService } from './question.services.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
-import { CreateQuestionType, UpdateQuestionType } from './question.schemas.js';
+import { CreateQuestionType, UpdateQuestionType, ValidateAnswerType } from './question.schemas.js';
 import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js';
+import { UserRole } from '../user/user.entity.js';
 import {
   mapQuestionToStudent,
   mapQuestionToProfessor,
@@ -139,26 +140,30 @@ async function findOne(req: Request, res: Response) {
     const questionService = new QuestionService(orm.em.fork(), req.log);
     const { id, courseId } = req.params;
     const userId = req.user!.id;
+    const userRole = req.user!.role;
 
-    // Check if user is a professor
-    let isProfessor = false;
-    let professorId: string | null = null;
-    try {
-      professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
-      isProfessor = true;
-    } catch {
-      // User is not a professor - will receive filtered question
-      isProfessor = false;
+    const question = await questionService.findOne(id, courseId, null);
+
+    // Check if user is professor/admin AND owns this specific course
+    let isProfessorOwner = false;
+    if (userRole === UserRole.PROFESSOR || userRole === UserRole.ADMIN) {
+      try {
+        const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+        isProfessorOwner = await questionService.isProfessorOwnerOfCourse(
+          courseId,
+          professorId
+        );
+      } catch {
+        isProfessorOwner = false;
+      }
     }
 
-    const question = await questionService.findOne(id, courseId, professorId);
-
-    // Filter response based on role
-    if (isProfessor && professorId) {
-      // Professor gets full question with correct answers
+    // Filter response: only show correct answer if user is the course owner
+    if (isProfessorOwner) {
+      // Professor/Admin who owns the course gets full question with correct answers
       return HttpResponse.Ok(res, mapQuestionToProfessor(question));
     } else {
-      // Student gets question without correct answers
+      // Everyone else (students, or professors in other courses) gets filtered question
       return HttpResponse.Ok(res, mapQuestionToStudent(question));
     }
   } catch (error: any) {
@@ -381,18 +386,9 @@ async function findOneFromUnit(req: Request, res: Response) {
     const questionService = new QuestionService(orm.em.fork(), req.log);
     const { id, courseId, unitNumber } = req.params;
     const userId = req.user!.id;
+    const userRole = req.user!.role;
 
-    // Check if user is a professor
-    let isProfessor = false;
-    let professorId: string | null = null;
-    try {
-      professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
-      isProfessor = true;
-    } catch {
-      isProfessor = false;
-    }
-
-    const question = await questionService.findOne(id, courseId, professorId);
+    const question = await questionService.findOne(id, courseId, null);
 
     // Verify the question belongs to the specified unit
     if (question.unitNumber !== parseInt(unitNumber)) {
@@ -402,8 +398,22 @@ async function findOneFromUnit(req: Request, res: Response) {
       );
     }
 
-    // Filter response based on role
-    if (isProfessor && professorId) {
+    // Check if user is professor/admin AND owns this specific course
+    let isProfessorOwner = false;
+    if (userRole === UserRole.PROFESSOR || userRole === UserRole.ADMIN) {
+      try {
+        const professorId = await getProfessorIdFromUserId(orm.em.fork(), userId);
+        isProfessorOwner = await questionService.isProfessorOwnerOfCourse(
+          courseId,
+          professorId
+        );
+      } catch {
+        isProfessorOwner = false;
+      }
+    }
+
+    // Filter response: only show correct answer if user is the course owner
+    if (isProfessorOwner) {
       return HttpResponse.Ok(res, mapQuestionToProfessor(question));
     } else {
       return HttpResponse.Ok(res, mapQuestionToStudent(question));
@@ -518,6 +528,30 @@ async function removeFromUnit(req: Request, res: Response) {
   }
 }
 
+/**
+ * Validates a student's answer to a question.
+ * Returns only whether the answer is correct, without revealing the correct answer.
+ * @param {Request} req - The Express request object, with answer in the body and question ID in params.
+ * @param {Response} res - The Express response object.
+ * @returns {Promise<Response>} Object with isCorrect boolean.
+ */
+async function validateAnswer(req: Request, res: Response) {
+  try {
+    const questionService = new QuestionService(orm.em.fork(), req.log);
+    const { id, courseId } = req.params;
+    const answerData = req.body as ValidateAnswerType;
+
+    const result = await questionService.validateAnswer(id, answerData);
+
+    return HttpResponse.Ok(res, result);
+  } catch (error: any) {
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Question not found.');
+    }
+    throw error;
+  }
+}
+
 export {
   add,
   findByCourse,
@@ -531,4 +565,5 @@ export {
   findOneFromUnit,
   updateFromUnit,
   removeFromUnit,
+  validateAnswer,
 };
