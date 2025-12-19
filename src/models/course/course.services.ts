@@ -448,8 +448,7 @@ export class CourseService {
    * and in-memory filtering for complex text searches across related entities.
    * @param {SearchCoursesQuery} query - The search filters and pagination options.
    * @returns {Promise<{courses: CoursePublicResponse[], total: number}>} A promise that resolves to an object containing the array of matching courses and the total count.
-   * @remarks Text search (q parameter) matches against: course name, professor name/surname, institution name, and course type name.
-   * @remarks When text search or institution filter is present, all matching courses are loaded and filtered in memory for accurate results.
+   * @remarks Text search (q parameter) matches against: course name, professor name/surname, institution name, and course type name. When text search or institution filter is present, all matching courses are loaded and filtered in memory for accurate results.
    */
   async searchCourses(
     query: SearchCoursesQuery
