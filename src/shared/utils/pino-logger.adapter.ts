@@ -7,18 +7,16 @@ import { Logger as MikroOrmLogger, LogContext, LoggerOptions } from '@mikro-orm/
 import { logger as pinoLogger } from './logger.js';
 
 /**
- * @class PinoLogger
- * @implements {MikroOrmLogger}
- * @remarks This class implements the MikroORM Logger interface and redirects
- * its log output to our centralized Pino logger instance. This ensures that all
- * logs, whether from our application logic or from the ORM (like database queries),
+ * Adapter class that implements the MikroORM Logger interface.
+ * @remarks Redirects MikroORM log output to our centralized Pino logger instance.
+ * This ensures that all logs, whether from application logic or from the ORM (like database queries),
  * share the same structured format.
  */
 export class PinoLogger implements MikroOrmLogger {
   private readonly logger = pinoLogger.child({ context: 'mikro-orm' })
 
   /**
-   * @constructor
+   * Creates a new PinoLogger instance.
    * @param {LoggerOptions} _options - MikroORM logger options (unused in this implementation).
    */
   constructor(_options: LoggerOptions) {

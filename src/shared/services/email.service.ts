@@ -1,6 +1,6 @@
 /**
  * @module Shared/Service
- * @description Hybrid email service: Uses Nodemailer for Dev/Test and Resend for Production.
+ * @remarks Hybrid email service that uses Nodemailer for development/testing environments and Resend for production.
  */
 
 import 'dotenv/config';
@@ -8,7 +8,10 @@ import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 import { logger } from '../utils/logger.js';
 
-interface MailOptions {
+/**
+ * Email message options for sending emails.
+ */
+export interface MailOptions {
   to: string;
   subject: string;
   html: string;
