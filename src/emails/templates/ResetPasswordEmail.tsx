@@ -57,12 +57,12 @@ export const ResetPasswordEmail = ({
             <div style={securityIconStyle}>🔐</div>
             <Heading style={securityTitleStyle}>Solicitud de Restablecimiento</Heading>
             <Text style={securityTextStyle}>
-              Este enlace es válido por 1 hora y solo se puede usar una vez.
+              Este enlace es válido por 15 minutos y solo se puede usar una vez.
             </Text>
           </Section>
 
           <Text style={styles.content.paragraph}>
-            Para continuar, haz clic en el botón de abajo. Este enlace expirará en <Text style={styles.content.strong}>1 hora</Text>.
+            Para continuar, haz clic en el botón de abajo. Este enlace expirará en <Text style={styles.content.strong}>15 minutos</Text>.
           </Text>
 
           <Section style={styles.buttons.section}>
@@ -89,7 +89,7 @@ export const ResetPasswordEmail = ({
                     <span style={warningNumberStyle}>2</span>
                   </td>
                   <td style={styles.table.textCell}>
-                    <Text style={styles.tableElements.text}>El enlace expira en 1 hora</Text>
+                    <Text style={styles.tableElements.text}>El enlace expira en 15 minutos</Text>
                   </td>
                 </tr>
                 <tr>

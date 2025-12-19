@@ -538,7 +538,7 @@ async function removeFromUnit(req: Request, res: Response) {
 async function validateAnswer(req: Request, res: Response) {
   try {
     const questionService = new QuestionService(orm.em.fork(), req.log);
-    const { id, courseId } = req.params;
+    const { id } = req.params;
     const answerData = req.body as ValidateAnswerType;
 
     const result = await questionService.validateAnswer(id, answerData);

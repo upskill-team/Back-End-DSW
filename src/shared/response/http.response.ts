@@ -60,10 +60,13 @@ export class HttpResponse {
    * @returns {Response} The Express response object.
    */
   public static BadRequest(res: Response, errors?: any): Response {
+    const isProduction = process.env.NODE_ENV === 'production'
     return res.status(HttpStatus.BAD_REQUEST).json({
       status: HttpStatus.BAD_REQUEST,
       message: 'Bad Request',
-      errors: errors,
+      errors: isProduction && typeof errors !== 'string' 
+        ? 'La solicitud contiene datos inválidos.' 
+        : errors,
     });
   }
 
@@ -102,10 +105,13 @@ export class HttpResponse {
    * @returns {Response} The Express response object.
    */
   public static InternalServerError(res: Response, errors?: any): Response {
+    const isProduction = process.env.NODE_ENV === 'production'
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       status: HttpStatus.INTERNAL_SERVER_ERROR,
       message: 'Internal Server Error',
-      errors: errors,
+      errors: isProduction 
+        ? 'Ocurrió un error interno en el servidor. Por favor, contacte al soporte.' 
+        : errors,
     });
   }
 }
