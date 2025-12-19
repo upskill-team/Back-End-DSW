@@ -41,11 +41,11 @@ export const createApp = (): Express => {
   const app = express();
 
   const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10,
   message: {
     status: 429,
-    errors: 'Demasiados intentos. Por favor, intente de nuevo en 15 minutos.'
+    errors: 'Demasiados intentos. Por favor, intente de nuevo en 5 minutos.'
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -99,8 +99,6 @@ export const createApp = (): Express => {
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
       connectSrc: ["'self'", "https://api.cloudinary.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
