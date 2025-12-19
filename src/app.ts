@@ -11,11 +11,12 @@ import pinoHttp from 'pino-http';
 import { randomUUID } from 'crypto';
 import swaggerUi from 'swagger-ui-express';
 import cookieParser from 'cookie-parser';
+import { rateLimit } from 'express-rate-limit';
 
 // Database & Config
 import { orm } from './shared/db/orm.js';
 import { swaggerSpec } from './docs/swagger.config.js';
-import { corsOptions, authLimiter, apiLimiter } from './shared/config/security.config.js';
+import { corsOptions, apiLimiter } from './shared/config/security.config.js';
 import { logger } from './shared/utils/logger.js';
 import { errorHandler } from './shared/middlewares/error.middleware.js';
 
@@ -38,6 +39,17 @@ import { contactRouter } from './models/contact/contact.routes.js';
 
 export const createApp = (): Express => {
   const app = express();
+
+  const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: {
+    status: 429,
+    errors: 'Demasiados intentos. Por favor, intente de nuevo en 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
 
   app.set('trust proxy', 1);
 
@@ -83,7 +95,23 @@ export const createApp = (): Express => {
   );
 
   // Security Middlewares
-  app.use(helmet());
+  app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+      connectSrc: ["'self'", "https://api.cloudinary.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  frameguard: { action: 'deny' },
+  hidePoweredBy: true,
+}))
+
   app.use(cors(corsOptions));
   app.use(cookieParser());
 
@@ -101,6 +129,9 @@ export const createApp = (): Express => {
 
   // Route Registration
   app.use('/api/auth', authLimiter, authRouter);
+  app.use('/api/auth/login', authLimiter);
+  app.use('/api/auth/forgot-password', authLimiter);
+  app.use('/api/auth/reset-password', authLimiter);
   app.use('/api/users', apiLimiter, userRouter);
   app.use('/api/courseTypes', apiLimiter, courseTypeRouter);
   app.use('/api/institutions', apiLimiter, institutionRouter);

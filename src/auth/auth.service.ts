@@ -263,7 +263,7 @@ export class AuthService {
       throw new Error('El token es inválido o ha expirado.')
     }
 
-    const SALT_ROUNDS = 10
+    const SALT_ROUNDS = 12
     user.password = await bcrypt.hash(password_plaintext, SALT_ROUNDS)
     user.resetPasswordToken = undefined
     user.resetPasswordExpires = undefined
