@@ -1,0 +1,169 @@
+# Enrollments Module
+
+paths:
+  /enrollments:
+    get:
+      tags:
+        - Enrollments
+      summary: Get all enrollments
+      description: Retrieves enrollments for the authenticated student
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          description: Filter by enrollment state
+          schema:
+            type: string
+            enum: [enrolled, completed, dropped]
+            example: 'enrolled'
+      responses:
+        '200':
+          description: List of enrollments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    course:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439012'
+                        name:
+                          type: string
+                          example: 'Fundamentals of the Force'
+                        imageUrl:
+                          type: string
+                          example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/force.jpg'
+                    state:
+                      type: string
+                      enum: [enrolled, completed, dropped]
+                      example: 'enrolled'
+                    progress:
+                      type: number
+                      example: 65
+                    enrolledAt:
+                      type: string
+                      format: date-time
+                      example: '2024-01-15T10:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Enrollments
+      summary: Enroll in a course
+      description: Enrolls the authenticated student in a course
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - courseId
+              properties:
+                courseId:
+                  type: string
+                  description: ID of the course to enroll in
+                  example: '507f1f77bcf86cd799439012'
+      responses:
+        '201':
+          description: Enrollment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  course:
+                    type: string
+                    example: '507f1f77bcf86cd799439012'
+                  student:
+                    type: string
+                    example: '507f1f77bcf86cd799439013'
+                  state:
+                    type: string
+                    enum: [enrolled, completed, dropped]
+                    example: 'enrolled'
+                  progress:
+                    type: number
+                    example: 0
+                  enrolledAt:
+                    type: string
+                    format: date-time
+                    example: '2024-12-19T10:30:00.000Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Already enrolled in this course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                message: 'Conflict'
+                errors: 'Already enrolled in this course'
+
+  /enrollments/{id}:
+    get:
+      tags:
+        - Enrollments
+      summary: Get enrollment by ID
+      description: Retrieves details of a specific enrollment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Enrollment details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  course:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: 'Lightsaber Combat Basics'
+                  student:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: 'Ben'
+                            surname:
+                              type: string
+                              example: 'Solo'
+                  state:
+                    type: string
+                    enum: [enrolled, completed, dropped]
+                    example: 'enrolled'
+                  progress:
+                    type: number
+                    example: 45
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

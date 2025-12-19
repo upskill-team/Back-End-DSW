@@ -15,7 +15,6 @@ import {
   CoursePurchaseEmailData,
   CourseEnrollmentEmailData,
   NewAssessmentEmailData,
-  PendingAppealsReminderEmailData,
   ContactSupportEmailData,
 } from '../types/email-types.js';
 
@@ -108,14 +107,6 @@ export class EmailNotificationService {
   ): Promise<EmailResult> {
     return this.sendEmail(EmailType.NEW_ASSESSMENT, data);
   }
-  /**
-   * Sends a pending appeals reminder email to admins.
-   */
-  async sendPendingAppealsReminderEmail(
-    data: PendingAppealsReminderEmailData
-  ): Promise<EmailResult> {
-    return this.sendEmail(EmailType.PENDING_APPEALS_REMINDER, data);
-  }
 
   /**
    * Sends a contact support notification email (to support team).
@@ -137,10 +128,7 @@ export class EmailNotificationService {
     type: EmailType,
     dataList: T[]
   ): Promise<EmailResult[]> {
-    this.logger.info(
-      { type, count: dataList.length },
-      'Sending bulk emails'
-    );
+    this.logger.info({ type, count: dataList.length }, 'Sending bulk emails');
 
     const results = await Promise.allSettled(
       dataList.map((data) => this.sendEmail(type, data))

@@ -1,0 +1,320 @@
+# Authentication Module
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register new user
+      description: Creates a new user account on the UpSkill platform
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - lastName
+                - mail
+                - password_plaintext
+                - role
+              properties:
+                name:
+                  type: string
+                  description: User's first name
+                  example: 'Anakin'
+                surname:
+                  type: string
+                  description: User's surname
+                  example: 'Skywalker'
+                mail:
+                  type: string
+                  format: email
+                  description: Unique email address
+                  example: 'anakin.skywalker@jedi.academy'
+                password_plaintext:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: Password (minimum 8 characters)
+                  example: 'ChosenOne123!'
+                role:
+                  type: string
+                  enum: [student, professor]
+                  description: User role
+                  example: 'student'
+            examples:
+              student:
+                summary: Student registration
+                value:
+                  name: 'Ahsoka'
+                  surname: 'Tano'
+                  mail: 'ahsoka.tano@jedi.academy'
+                  password_plaintext: 'TogrataJedi123!'
+                  role: 'student'
+              professor:
+                summary: Professor registration
+                value:
+                  name: 'Obi-Wan'
+                  surname: 'Kenobi'
+                  mail: 'obiwan.kenobi@jedi.academy'
+                  password_plaintext: 'HelloThere123!'
+                  role: 'professor'
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Anakin'
+                  surname:
+                    type: string
+                    example: 'Skywalker'
+                  mail:
+                    type: string
+                    example: 'anakin.skywalker@jedi.academy'
+                  role:
+                    type: string
+                    example: 'student'
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: '2024-12-19T10:30:00.000Z'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                message: 'Conflict'
+                errors: 'Email already registered'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: User login
+      description: Authenticates user and returns a JWT access token. Optionally sets a refresh token cookie.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mail
+                - password_plaintext
+              properties:
+                mail:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: 'luke.skywalker@jedi.academy'
+                password_plaintext:
+                  type: string
+                  format: password
+                  description: User's password
+                  example: 'UseTheForce123!'
+                rememberMe:
+                  type: boolean
+                  description: If true, sets a refresh token in HttpOnly cookie
+                  example: true
+            examples:
+              withRememberMe:
+                summary: Login with "Remember me"
+                value:
+                  mail: 'luke.skywalker@jedi.academy'
+                  password_plaintext: 'UseTheForce123!'
+                  rememberMe: true
+              withoutRememberMe:
+                summary: Login without "Remember me"
+                value:
+                  mail: 'leia.organa@rebellion.gov'
+                  password_plaintext: 'Resistance123!'
+                  rememberMe: false
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Refresh token cookie (only if rememberMe is true)
+              schema:
+                type: string
+                example: 'refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; HttpOnly; Secure; SameSite=None'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT Access Token
+                    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzYzZTA4ZDg4MmQ3ZTJmNDIwZTY3ZjYiLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTczNDYyMjc5NywiZXhwIjoxNzM0NjI2Mzk3fQ.dQw4w9WgXcQ'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 401
+                message: 'Unauthorized'
+                errors: 'Invalid credentials.'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Refresh access token
+      description: Generates a new access token using the refresh token stored in cookie. Also rotates the refresh token.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              description: New rotated refresh token
+              schema:
+                type: string
+                example: 'refreshToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; HttpOnly; Secure; SameSite=None'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: New JWT Access Token
+                    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzYzZTA4ZDg4MmQ3ZTJmNDIwZTY3ZjYiLCJyb2xlIjoic3R1ZGVudCIsImlhdCI6MTczNDYyMzEwMCwiZXhwIjoxNzM0NjI2NzAwfQ.abc123xyz'
+        '204':
+          description: No refresh token or invalid. Client should login again.
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout user
+      description: Revokes the current refresh token and clears the cookie
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          headers:
+            Set-Cookie:
+              description: Refresh token cookie cleared
+              schema:
+                type: string
+                example: 'refreshToken=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Logged out successfully'
+        '500':
+          $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/forgot-password:
+    post:
+      tags:
+        - Auth
+      summary: Request password reset
+      description: Sends an email with a link to reset the password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - mail
+              properties:
+                mail:
+                  type: string
+                  format: email
+                  description: User's email address
+                  example: 'han.solo@falcon.com'
+      responses:
+        '200':
+          description: Reset email sent (always returns 200 for security)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'If the email exists, you will receive a recovery link'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Reset password
+      description: Resets user's password using the token received via email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - newPassword
+              properties:
+                token:
+                  type: string
+                  description: Reset token received via email
+                  example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzYzZTA4ZDg4MmQ3ZTJmNDIwZTY3ZjYiLCJpYXQiOjE3MzQ2MjI3OTcsImV4cCI6MTczNDYyNjM5N30.resettoken123'
+                newPassword:
+                  type: string
+                  format: password
+                  minLength: 8
+                  description: New password (minimum 8 characters)
+                  example: 'NewForce456!'
+            example:
+              token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              newPassword: 'RebelAlliance789!'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Password reset successfully'
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 400
+                message: 'Bad Request'
+                errors: 'Invalid or expired token'

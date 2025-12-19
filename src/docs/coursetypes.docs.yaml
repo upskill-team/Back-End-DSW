@@ -1,0 +1,154 @@
+# Course Types Module
+
+paths:
+  /courseTypes:
+    get:
+      tags:
+        - Course Types
+      summary: Get all course types
+      description: Retrieves a list of all course categories/types
+      security: []
+      responses:
+        '200':
+          description: List of course types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    name:
+                      type: string
+                      example: 'Jedi Arts'
+                    description:
+                      type: string
+                      example: 'Courses related to Jedi training and Force usage'
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: '2024-01-01T00:00:00.000Z'
+
+    post:
+      tags:
+        - Course Types
+      summary: Create course type
+      description: Creates a new course category (Admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+              properties:
+                name:
+                  type: string
+                  description: Course type name
+                  example: 'Starship Engineering'
+                description:
+                  type: string
+                  description: Course type description
+                  example: 'Courses about spacecraft design, maintenance, and piloting'
+      responses:
+        '201':
+          description: Course type created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Starship Engineering'
+                  description:
+                    type: string
+                    example: 'Courses about spacecraft design, maintenance, and piloting'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /courseTypes/{id}:
+    get:
+      tags:
+        - Course Types
+      summary: Get course type by ID
+      description: Retrieves a specific course type
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Course type details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Sith Studies'
+                  description:
+                    type: string
+                    example: 'Academic exploration of Sith history and philosophy'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Course Types
+      summary: Update course type
+      description: Updates a course type (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Sith Studies - Updated'
+                description:
+                  type: string
+                  example: 'Updated description'
+      responses:
+        '200':
+          description: Course type updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Sith Studies - Updated'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

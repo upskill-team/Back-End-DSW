@@ -1,0 +1,149 @@
+# Students Module
+
+paths:
+  /students:
+    get:
+      tags:
+        - Students
+      summary: Get all students
+      description: Retrieves a list of all students
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+      responses:
+        '200':
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439011'
+                        user:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: 'Luke'
+                            surname:
+                              type: string
+                              example: 'Skywalker'
+                            mail:
+                              type: string
+                              example: 'luke.skywalker@jedi.academy'
+                            profile_picture:
+                              type: string
+                              example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/luke.jpg'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        example: 150
+                      page:
+                        type: number
+                        example: 1
+                      limit:
+                        type: number
+                        example: 10
+                      totalPages:
+                        type: number
+                        example: 15
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /students/profile:
+    get:
+      tags:
+        - Students
+      summary: Get student profile
+      description: Retrieves the authenticated student's profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: 'Anakin'
+                      surname:
+                        type: string
+                        example: 'Skywalker'
+                      mail:
+                        type: string
+                        example: 'anakin.skywalker@jedi.academy'
+                  enrollements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        course:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: 'Fundamentals of the Force'
+                        state:
+                          type: string
+                          enum: [enrolled, completed, dropped]
+                          example: 'enrolled'
+                        progress:
+                          type: number
+                          example: 75
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /students/{id}:
+    get:
+      tags:
+        - Students
+      summary: Get student by ID
+      description: Retrieves public information about a specific student
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Student information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: 'Padmé'
+                      surname:
+                        type: string
+                        example: 'Amidala'
+                      profile_picture:
+                        type: string
+                        example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/padme.jpg'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
