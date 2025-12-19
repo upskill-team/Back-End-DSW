@@ -41,7 +41,7 @@ jest.mock('./shared/utils/logger.js', () => ({
 }));
 
 jest.mock('./shared/middlewares/error.middleware.js', () => ({
-  errorHandler: jest.fn((err, req, res, next) => {
+  errorHandler: jest.fn((err, req, res, _next) => {
     res.status(500).json({ error: err.message });
   }),
 }));
@@ -370,7 +370,7 @@ describe('App - Unit Tests', () => {
 
   describe('Helmet Configuration', () => {
     it('should configure Content Security Policy directives', async () => {
-      const response = await request(app).get('/api/test');
+      await request(app).get('/api/test');
       
       // Helmet should be applied
       expect(app).toBeDefined();
