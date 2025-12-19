@@ -12,7 +12,6 @@ import {
   CoursePurchaseEmailStrategy,
   CourseEnrollmentEmailStrategy,
   NewAssessmentEmailStrategy,
-  PendingAppealsReminderEmailStrategy,
   ContactSupportEmailStrategy,
 } from '../strategies/email-strategies.js';
 import { EmailType, EmailData } from '../types/email-types.js';
@@ -56,10 +55,6 @@ export class EmailStrategyFactory {
     this.strategies.set(
       EmailType.NEW_ASSESSMENT,
       new NewAssessmentEmailStrategy(this.logger)
-    );
-    this.strategies.set(
-      EmailType.PENDING_APPEALS_REMINDER,
-      new PendingAppealsReminderEmailStrategy(this.logger)
     );
     this.strategies.set(
       EmailType.CONTACT_SUPPORT,
