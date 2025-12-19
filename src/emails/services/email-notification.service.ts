@@ -1,6 +1,6 @@
 /**
- * @module Emails/Services
- * @description Main email notification service that orchestrates email sending.
+ * @module Emails/Services/Notification
+ * @remarks Main email notification service that orchestrates email sending.
  * Implements Facade Pattern to provide a simple interface to the complex email system.
  */
 

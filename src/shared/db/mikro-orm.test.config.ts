@@ -1,3 +1,8 @@
+/**
+ * @module Shared/DB/TestConfig
+ * @remarks MikroORM configuration for test environment using MongoDB Memory Server.
+ */
+
 import { defineConfig } from '@mikro-orm/mongodb';
 import { User } from '../../models/user/user.entity.js';
 import { Student } from '../../models/student/student.entity.js';

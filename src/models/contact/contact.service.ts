@@ -1,5 +1,5 @@
 /**
- * @module Models/Contact
+ * @module Models/Contact/Service
  * @remarks Service for handling contact/support messages.
  */
 

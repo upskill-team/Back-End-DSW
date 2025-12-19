@@ -1,6 +1,6 @@
 /**
- * @module Emails/Services
- * @description Factory Pattern implementation for creating email strategies.
+ * @module Emails/Services/Factory
+ * @remarks Factory Pattern implementation for creating email strategies.
  */
 
 import { Logger } from 'pino';

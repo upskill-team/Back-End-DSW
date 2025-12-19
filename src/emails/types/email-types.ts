@@ -1,6 +1,6 @@
 /**
  * @module Emails/Types
- * @description Type definitions for the email notification system.
+ * @remarks Type definitions for the email notification system.
  */
 
 /**

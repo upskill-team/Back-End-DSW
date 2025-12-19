@@ -1,3 +1,8 @@
+/**
+ * @module Models/Course/Embeddables/Material/Routes
+ * @remarks Defines routes for course material file uploads.
+ */
+
 import { Router } from 'express';
 import { authMiddleware } from '../../../auth/auth.middleware.js';
 import { uploadMaterialToCloudinary } from '../../../shared/middlewares/file-upload.middleware.js';

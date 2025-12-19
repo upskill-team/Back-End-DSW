@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Testing/Factories/User
+ * @remarks Factory for creating test user entities.
+ */
+
 import { EntityManager } from '@mikro-orm/core';
 import { User, UserRole } from '../../../models/user/user.entity.js';
 import bcrypt from 'bcryptjs';

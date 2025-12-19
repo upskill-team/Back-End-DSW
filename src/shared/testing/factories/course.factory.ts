@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Testing/Factories/Course
+ * @remarks Factory for creating test course entities.
+ */
+
 import { EntityManager } from '@mikro-orm/core';
 import { Course, status } from '../../../models/course/course.entity.js';
 import { professorFactory } from './professor.factory.js';
