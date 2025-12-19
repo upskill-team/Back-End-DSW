@@ -1,78 +1,52 @@
-tags:
-  - name: Users
-    description: Operations related to user management and profiles.
-
-components:
-  schemas:
-    User:
-      type: object
-      properties:
-        id:
-          type: string
-          description: The unique identifier for the user.
-        name:
-          type: string
-          description: User's first name.
-        surname:
-          type: string
-          description: User's last name.
-        mail:
-          type: string
-          format: email
-          description: User's email address.
-        role:
-          type: string
-          enum: [student, professor, admin]
-          description: The role of the user.
-        phone:
-          type: string
-          nullable: true
-          description: User's phone number.
-        location:
-          type: string
-          nullable: true
-          description: User's location (e.g., City, Country).
-        birthdate:
-          type: string
-          format: date
-          nullable: true
-          description: User's date of birth.
-
-    UpdateProfileInput:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The new first name for the user.
-          example: 'Anakin'
-        surname:
-          type: string
-          description: The new last name for the user.
-          example: 'Skywalker'
-        mail:
-          type: string
-          format: email
-          description: The new email address for the user.
-          example: 'vader@empire.com'
-        phone:
-          type: string
-          description: The user's phone number.
-          example: '+123456789'
-        location:
-          type: string
-          description: The user's location.
-          example: 'Tatooine'
-        birthdate:
-          type: string
-          format: date
-          description: The user's date of birth in YYYY-MM-DD format.
-          example: '1977-05-25'
+# Users Module
 
 paths:
-  /users/me:
-    patch:
-      summary: Update authenticated user's profile and/or avatar
-      tags: [Users]
+  /users/profile:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      description: Retrieves the authenticated user's profile information
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Rey'
+                  surname:
+                    type: string
+                    example: 'Skywalker'
+                  mail:
+                    type: string
+                    example: 'rey.skywalker@jedi.academy'
+                  role:
+                    type: string
+                    example: 'student'
+                  profile_picture:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/rey-avatar.jpg'
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: '2024-01-15T10:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Updates the authenticated user's profile
       security:
         - bearerAuth: []
       requestBody:
@@ -82,22 +56,72 @@ paths:
             schema:
               type: object
               properties:
-                profilePicture:
+                name:
+                  type: string
+                  example: 'Rey'
+                surname:
+                  type: string
+                  example: 'Palpatine'
+                profile_picture:
                   type: string
                   format: binary
-                  description: The new profile picture file to upload.
-                profileData:
-                  type: string
-                  description: A JSON string containing the user profile fields to update.
-                  example: '{"name": "Anakin", "surname": "Skywalker", "mail": "vader@empire.com", "phone": "555-DARK-SIDE", "location": "Death Star", "birthdate": "1977-05-25"}'
+                  description: Profile picture image
       responses:
         '200':
-          description: Profile updated successfully.
+          description: Profile updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/ValidationError'
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Rey'
+                  surname:
+                    type: string
+                    example: 'Palpatine'
+                  profile_picture:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/rey-updated.jpg'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /users/{id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Retrieves public information about a specific user
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Lando'
+                  surname:
+                    type: string
+                    example: 'Calrissian'
+                  profile_picture:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/lando-avatar.jpg'
+                  role:
+                    type: string
+                    example: 'professor'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

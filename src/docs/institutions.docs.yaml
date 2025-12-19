@@ -1,169 +1,221 @@
-tags:
-  - name: Institutions
-    description: Operations to manage educational institutions.
-
-components:
-  schemas:
-    Institution:
-      type: object
-      properties:
-        id:
-          type: string
-          description: The unique, auto-generated ID of the institution.
-          example: '507f1f77bcf86cd799439011'
-        name:
-          type: string
-          description: The official name of the institution.
-          example: 'University of Technology'
-        description:
-          type: string
-          description: A brief description of the institution.
-          example: 'A leading institution for technology and innovation.'
-        professors:
-          type: array
-          items:
-            type: string
-            example: '507f191e810c19729de860ea'
-          description: List of professor profile IDs associated with this institution.
-
-    CreateInstitutionInput:
-      type: object
-      required:
-        - name
-        - description
-      properties:
-        name:
-          type: string
-          description: The name of the new institution.
-          example: 'Technical Institute'
-        description:
-          type: string
-          description: The description for the new institution.
-          example: 'An advanced technical education institution.'
+# Institutions Module
 
 paths:
   /institutions:
     get:
+      tags:
+        - Institutions
       summary: Get all institutions
-      tags: [Institutions]
-      description: Returns a list of all registered institutions.
-      responses:
-        '200':
-          description: A list of institutions was successfully retrieved.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Institution'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-
-    post:
-      summary: Create a new institution (Admin Only)
-      tags: [Institutions]
-      description: Registers a new institution in the system. Requires administrator privileges.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateInstitutionInput'
-      responses:
-        '201':
-          description: Institution created successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Institution'
-        '400':
-          description: Validation Error. The request body is invalid.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-
-  /institutions/{id}:
-    get:
-      summary: Get an institution by its ID
-      tags: [Institutions]
-      description: Finds and returns a specific institution using its unique ID.
+      description: Retrieves a list of all educational institutions
+      security: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: ID of the institution to retrieve.
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - name: search
+          in: query
+          description: Search term for institution name
           schema:
             type: string
+            example: 'Jedi'
       responses:
         '200':
-          description: The institution's data.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Institution'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-    put:
-      summary: Update an institution (Admin Only)
-      tags: [Institutions]
-      description: Fully updates an institution's data. Requires administrator privileges.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: ID of the institution to update.
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateInstitutionInput'
-      responses:
-        '200':
-          description: Institution updated successfully.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Institution'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
-    delete:
-      summary: Decommission an institution (Admin Only)
-      tags: [Institutions]
-      description: Permanently deletes an institution from the system. Requires administrator privileges.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: ID of the institution to delete.
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Institution deleted successfully.
+          description: List of institutions
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  message:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439011'
+                        name:
+                          type: string
+                          example: 'Jedi Academy of Coruscant'
+                        description:
+                          type: string
+                          example: 'Main Jedi training center in the galaxy'
+                        manager:
+                          type: object
+                          properties:
+                            user:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                  example: 'Mace'
+                                surname:
+                                  type: string
+                                  example: 'Windu'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        example: 15
+                      page:
+                        type: number
+                        example: 1
+                      limit:
+                        type: number
+                        example: 10
+                      totalPages:
+                        type: number
+                        example: 2
+
+    post:
+      tags:
+        - Institutions
+      summary: Create institution
+      description: Creates a new educational institution (Professor only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+              properties:
+                name:
+                  type: string
+                  description: Institution name
+                  example: 'Sith Academy of Korriban'
+                description:
+                  type: string
+                  description: Institution description
+                  example: 'Ancient Sith training facility on the red planet'
+                aliases:
+                  type: array
+                  items:
                     type: string
-                    example: 'Institution deleted successfully'
+                  description: Alternative names
+                  example: ['Korriban Academy', 'Sith Temple']
+      responses:
+        '201':
+          description: Institution created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Sith Academy of Korriban'
+                  description:
+                    type: string
+                    example: 'Ancient Sith training facility on the red planet'
+                  normalizedName:
+                    type: string
+                    example: 'sithacademyofkorriban'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /institutions/{id}:
+    get:
+      tags:
+        - Institutions
+      summary: Get institution by ID
+      description: Retrieves detailed information about a specific institution
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Institution details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Jedi Academy of Coruscant'
+                  description:
+                    type: string
+                    example: 'Main Jedi training center in the galaxy'
+                  aliases:
+                    type: array
+                    items:
+                      type: string
+                    example: ['Jedi Temple', 'Coruscant Temple']
+                  manager:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: '507f1f77bcf86cd799439012'
+                      user:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: 'Yoda'
+                          surname:
+                            type: string
+                            example: 'Master'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Institutions
+      summary: Update institution
+      description: Updates an institution (Manager or Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Jedi Academy of Coruscant - Updated'
+                description:
+                  type: string
+                  example: 'Updated description of the academy'
+                aliases:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    ['Jedi Temple', 'Coruscant Temple', 'Temple of Light']
+      responses:
+        '200':
+          description: Institution updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Jedi Academy of Coruscant - Updated'
         '401':
           $ref: '#/components/responses/UnauthorizedError'
         '403':
