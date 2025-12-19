@@ -30,3 +30,4 @@ ignore:
   - 'src/shared/testing/**'
   - 'src/server.ts'
   - '**/*.d.ts'
+  - 'src/docs/**'
