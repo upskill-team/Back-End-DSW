@@ -7,7 +7,6 @@
 import { createApp } from './app.js';
 import { orm } from './shared/db/orm.js';
 import { logger } from './shared/utils/logger.js';
-import { ScheduledNotificationService } from './shared/services/scheduled-notification.service.js';
 
 /**
  * Bootstraps the application.
@@ -34,14 +33,6 @@ async function startServer() {
     const server = app.listen(PORT, () => {
       logger.info(`Server running on http://localhost:${PORT}/`);
       logger.info(`API docs available at http://localhost:${PORT}/api-docs`);
-
-      // Initialize scheduled notifications
-      const scheduledNotificationService = new ScheduledNotificationService(
-        orm.em,
-        logger
-      );
-      scheduledNotificationService.scheduleDailyReminder();
-      logger.info('Scheduled notification service initialized');
     });
 
     // Graceful Shutdown handling
