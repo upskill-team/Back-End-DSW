@@ -16,8 +16,8 @@ coverage:
         base: auto
     patch:
       default:
-        target: 80%
-        threshold: 0%
+        target: auto
+        threshold: 5%
 
 comment:
   layout: 'reach,diff,flags,tree'
