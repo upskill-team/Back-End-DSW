@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Testing/Helpers
+ * @remarks Helper functions for test setup and teardown.
+ */
+
 import { MikroORM } from '@mikro-orm/core';
 import { MongoDriver } from '@mikro-orm/mongodb';
 import config from '../db/mikro-orm.test.config.js';

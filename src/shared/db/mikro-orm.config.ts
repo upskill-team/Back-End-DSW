@@ -22,7 +22,7 @@ const connectionString = `mongodb+srv://${MONGO_USER}:${MONGO_PASS}@${MONGO_CLUS
 
 /**
  * MikroORM configuration object.
- * @const {object}
+ * Defines database connection, entity locations, and logging settings.
  */
 export default defineConfig({
   entities: ['dist/**/*.entity.js'],

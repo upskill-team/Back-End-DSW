@@ -1,4 +1,9 @@
 /**
+ * @module Shared/Testing/Teardown
+ * @remarks Global teardown for Jest tests - stops MongoDB Memory Server.
+ */
+
+/**
  * Global Teardown for Jest
  * Stops MongoDB Memory Server after running all tests
  */

@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Testing/Factories/Student
+ * @remarks Factory for creating test student entities.
+ */
+
 import { EntityManager } from '@mikro-orm/core';
 import { Student } from '../../../models/student/student.entity.js';
 import { userFactory } from './user.factory.js';

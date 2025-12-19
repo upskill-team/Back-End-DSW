@@ -1,6 +1,6 @@
 /**
- * Índice de factories para tests
- * Exporta todos los factories disponibles
+ * @module Shared/Testing/Factories
+ * @remarks Index of all test data factories.
  */
 export { userFactory } from './user.factory.js';
 export { studentFactory } from './student.factory.js';

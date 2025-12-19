@@ -20,7 +20,10 @@ import {
 } from '../../shared/utils/currency.js';
 import { EmailNotificationService } from '../../emails/services/email-notification.service.js';
 
-interface PreferenceResponse {
+/**
+ * Response structure for Mercado Pago preference creation.
+ */
+export interface PreferenceResponse {
   preferenceId: string;
   initPoint: string;
 }

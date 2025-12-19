@@ -10,6 +10,6 @@ import config from './mikro-orm.config.js'
 
 /**
  * The initialized MikroORM instance.
- * @const {Promise<MikroORM<MongoDriver>>} orm
+ * This singleton instance is used throughout the application for database operations.
  */
 export const orm = await MikroORM.init<MongoDriver>(config)

@@ -33,7 +33,7 @@ pnpm install
 
 3. Create a `.env` file in the root directory with the following variables:
 
-```env
+```bash
 PORT=3000
 NODE_ENV=development
 
@@ -151,7 +151,7 @@ pnpm install
 
 3. Crear un archivo `.env` en el directorio raiz con las siguientes variables:
 
-```env
+```bash
 PORT=3000
 NODE_ENV=development
 

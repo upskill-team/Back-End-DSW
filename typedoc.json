@@ -2,6 +2,7 @@
   "entryPoints": [
     "src/app.ts",
     "src/auth/**/*.ts",
+    "src/emails/**/*.ts",
     "src/models/**/*.ts",
     "src/shared/**/*.ts",
   ],
@@ -12,7 +13,8 @@
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/node_modules/**",
-    "**/dist/**"
+    "**/dist/**",
+    "**/seeders/**"
   ],
   "includeVersion": true,
   "theme": "default"

@@ -1,9 +1,7 @@
 /**
  * @module Models/Appeal/Routes
  * @remarks Defines the API routes for the Appeal module.
- * @requires express
- * @requires AppealController
- * @requires authMiddleware
+ * Routes handle CRUD operations for professor appeals and provide role-based access control.
  */
 
 import {Router} from 'express'

@@ -1,5 +1,5 @@
 /**
- * @module Models/Contact
+ * @module Models/Contact/Controller
  * @remarks HTTP handlers for contact form endpoints.
  */
 

@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Middleware/EnrollmentCheck
+ * @remarks Middleware to verify user enrollment in courses.
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import { orm } from '../db/orm.js';
 import { HttpResponse } from '../response/http.response.js';

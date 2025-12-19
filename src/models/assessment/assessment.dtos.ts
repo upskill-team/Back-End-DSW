@@ -1,3 +1,8 @@
+/**
+ * @module Models/Assessment/DTOs
+ * @remarks Data Transfer Objects for Assessment responses.
+ */
+
 export interface AssessmentPublicSchema {
   id: string;
   title: string;

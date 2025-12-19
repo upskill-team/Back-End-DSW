@@ -1,6 +1,6 @@
 /**
  * @module Emails/Strategies
- * @description Strategy Pattern implementation for email sending.
+ * @remarks Strategy Pattern implementation for email sending.
  * Each strategy knows how to render and send a specific type of email.
  */
 

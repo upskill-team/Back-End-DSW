@@ -1,5 +1,5 @@
 /**
- * @module Models/AttemptAnswer/Entity
+ * @module Models/Assessment/AttemptAnswer
  * @remarks Defines the database schema for the AttemptAnswer entity.
  */
 
