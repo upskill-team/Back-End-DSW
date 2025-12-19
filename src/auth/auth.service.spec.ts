@@ -168,6 +168,32 @@ describe('AuthService - Unit Tests', () => {
       expect(mockEm.persistAndFlush).toHaveBeenCalled();
     });
 
+    it('should return only access token when rememberMe is false', async () => {
+      const mockUser = {
+        id: '123',
+        mail: 'test@test.com',
+        password: 'hashedPassword',
+        role: UserRole.STUDENT,
+      } as User;
+
+      mockEm.findOne.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (jwt.sign as jest.Mock).mockReturnValue('jwt.access.token');
+
+      const result = await authService.login({
+        mail: 'test@test.com',
+        password_plaintext: 'correctPassword',
+        rememberMe: false,
+      });
+
+      expect(result).toHaveProperty('accessToken');
+      expect(result.accessToken).toBe('jwt.access.token');
+
+      expect(result.refreshToken).toBeUndefined();
+
+      expect(mockEm.persistAndFlush).not.toHaveBeenCalled();
+    });
+
     it('should throw error when user does not exist', async () => {
       mockEm.findOne.mockResolvedValue(null);
 
