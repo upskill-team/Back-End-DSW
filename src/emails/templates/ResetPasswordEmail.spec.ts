@@ -20,7 +20,6 @@ describe('ResetPasswordEmail Component', () => {
       // Assert
       expect(component).toBeDefined();
       expect(component.props).toBeDefined();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((component.props as any).children).toBeDefined();
     });
 
