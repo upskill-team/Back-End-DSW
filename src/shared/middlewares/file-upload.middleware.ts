@@ -29,8 +29,7 @@ const cvStorage = new CloudinaryStorage({
 
 /**
  * Multer middleware instance configured to handle CV uploads to Cloudinary.
- * It accepts a single file with the field name 'document' and imposes a 10MB size limit.
- * @const {multer.Instance} uploadCvToCloudinary
+ * Accepts a single file with the field name 'document' and imposes a 10MB size limit.
  */
 export const uploadCvToCloudinary = multer({
   storage: cvStorage,
@@ -49,8 +48,7 @@ const imageStorage = new CloudinaryStorage({
 
 /**
  * Multer middleware instance configured to handle course image uploads to Cloudinary.
- * It accepts a single file with the field name 'image' and imposes a 5MB size limit.
- * @const {multer.Instance} uploadCourseImage
+ * Accepts a single file with the field name 'image' and imposes a 5MB size limit.
  */
 export const uploadCourseImage = multer({
   storage: imageStorage,
@@ -98,10 +96,8 @@ export const uploadMaterialToCloudinary = multer({
 })
 
 /**
- * Multer middleware to handle the upload of complete course data:
- * - A single image file for the course (field ‘image’).
- * - Multiple course material files (field ‘materials’).
- * @const {multer.Instance} uploadCourseData
+ * Multer middleware to handle the upload of complete course data.
+ * Handles both image files (field 'image') and multiple course material files (field 'materials').
  */
 export const uploadCourseData = multer({
   storage: courseDataStorage,
@@ -145,8 +141,8 @@ const profilePictureStorage = new CloudinaryStorage({
 
 /**
  * Multer middleware to handle the upload of a single profile photo.
- * Accepts a file in the ‘profilePicture’ field with a limit of 5MB.
- * @const {multer.Instance} uploadProfilePicture
+ * Accepts a file in the 'profilePicture' field with a limit of 5MB.
+ * Images are automatically resized to 500x500 pixels.
  */
 export const uploadProfilePicture = multer({
   storage: profilePictureStorage,

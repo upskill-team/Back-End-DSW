@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Testing/Factories/Enrollement
+ * @remarks Factory for creating test enrollement entities.
+ */
+
 import { EntityManager } from '@mikro-orm/core';
 import {
   Enrollement,

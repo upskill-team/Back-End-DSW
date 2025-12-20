@@ -1,4 +1,9 @@
 /**
+ * @module Shared/Testing/Setup
+ * @remarks Global setup for Jest tests - starts MongoDB Memory Server.
+ */
+
+/**
  * Global Setup for Jest
  * Starts MongoDB Memory Server before running tests
  * Uses CommonJS because Jest doesn't support ESM in global hooks

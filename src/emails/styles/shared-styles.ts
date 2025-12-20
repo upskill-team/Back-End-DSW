@@ -1,13 +1,7 @@
 /**
  * @module Emails/Styles
- * @description Shared responsive styles for all email templates
- * 
- * Design System:
- * - Mobile-first approach
- * - Consistent spacing (8px grid)
- * - Typography scale
- * - Color palette
- * - Reusable components
+ * @remarks Shared responsive styles for all email templates.
+ * Design System: Mobile-first approach, consistent spacing (8px grid), typography scale, color palette, and reusable components.
  */
 
 // ==================== BASE STYLES ====================

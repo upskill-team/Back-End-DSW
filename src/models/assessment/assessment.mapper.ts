@@ -1,3 +1,8 @@
+/**
+ * @module Models/Assessment/Mappers
+ * @remarks Mapper functions to convert Assessment entities to DTOs.
+ */
+
 import { AssessmentPublicSchema } from './assessment.dtos';
 
 export const AssessmentMapper = {

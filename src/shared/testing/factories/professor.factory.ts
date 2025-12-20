@@ -1,3 +1,8 @@
+/**
+ * @module Shared/Testing/Factories/Professor
+ * @remarks Factory for creating test professor entities.
+ */
+
 import { EntityManager } from '@mikro-orm/core';
 import { Professor } from '../../../models/professor/professor.entity.js';
 import { userFactory } from './user.factory.js';

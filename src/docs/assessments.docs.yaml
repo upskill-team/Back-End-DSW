@@ -1,0 +1,367 @@
+# Assessments Module
+
+paths:
+  /assessments:
+    get:
+      tags:
+        - Assessments
+      summary: Get all assessments
+      description: Retrieves all assessments (Professor and Admin can see all, Students see only assessments from enrolled courses)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: courseId
+          in: query
+          description: Filter by course ID
+          schema:
+            type: string
+            example: '507f1f77bcf86cd799439012'
+      responses:
+        '200':
+          description: List of assessments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    title:
+                      type: string
+                      example: 'Force Fundamentals Quiz'
+                    description:
+                      type: string
+                      example: 'Test your knowledge of basic Force principles'
+                    durationMinutes:
+                      type: number
+                      example: 30
+                    passingScore:
+                      type: number
+                      example: 70
+                    maxAttempts:
+                      type: number
+                      example: 3
+                    isActive:
+                      type: boolean
+                      example: true
+                    course:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439012'
+                        name:
+                          type: string
+                          example: 'Fundamentals of the Force'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Assessments
+      summary: Create assessment
+      description: Creates a new assessment for a course (Professor only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - courseId
+              properties:
+                title:
+                  type: string
+                  description: Assessment title
+                  example: 'Lightsaber Combat Final Exam'
+                description:
+                  type: string
+                  description: Assessment description
+                  example: 'Final evaluation of lightsaber combat techniques'
+                courseId:
+                  type: string
+                  description: Course ID this assessment belongs to
+                  example: '507f1f77bcf86cd799439012'
+                durationMinutes:
+                  type: number
+                  description: Time limit in minutes (null for unlimited)
+                  example: 45
+                passingScore:
+                  type: number
+                  description: Passing score percentage
+                  example: 75
+                  minimum: 0
+                  maximum: 100
+                maxAttempts:
+                  type: number
+                  description: Maximum attempts allowed (null for unlimited)
+                  example: 2
+                questionIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of question IDs to include
+                  example:
+                    ['507f1f77bcf86cd799439013', '507f1f77bcf86cd799439014']
+      responses:
+        '201':
+          description: Assessment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  title:
+                    type: string
+                    example: 'Lightsaber Combat Final Exam'
+                  description:
+                    type: string
+                    example: 'Final evaluation of lightsaber combat techniques'
+                  durationMinutes:
+                    type: number
+                    example: 45
+                  passingScore:
+                    type: number
+                    example: 75
+                  maxAttempts:
+                    type: number
+                    example: 2
+                  isActive:
+                    type: boolean
+                    example: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /assessments/{id}:
+    get:
+      tags:
+        - Assessments
+      summary: Get assessment by ID
+      description: Retrieves a specific assessment with questions (if student is enrolled or user is professor/admin)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Assessment details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  title:
+                    type: string
+                    example: 'Force Fundamentals Quiz'
+                  description:
+                    type: string
+                    example: 'Test your knowledge of basic Force principles'
+                  durationMinutes:
+                    type: number
+                    example: 30
+                  passingScore:
+                    type: number
+                    example: 70
+                  maxAttempts:
+                    type: number
+                    example: 3
+                  isActive:
+                    type: boolean
+                    example: true
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439013'
+                        questionText:
+                          type: string
+                          example: 'What is the Jedi Code?'
+                        type:
+                          type: string
+                          example: 'multiple-choice'
+                  course:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: 'Fundamentals of the Force'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Assessments
+      summary: Update assessment
+      description: Updates an assessment (Professor only, must own the course)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: 'Force Fundamentals Quiz - Updated'
+                description:
+                  type: string
+                  example: 'Updated description'
+                durationMinutes:
+                  type: number
+                  example: 40
+                passingScore:
+                  type: number
+                  example: 80
+                maxAttempts:
+                  type: number
+                  example: 5
+                isActive:
+                  type: boolean
+                  example: false
+                questionIds:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    ['507f1f77bcf86cd799439015', '507f1f77bcf86cd799439016']
+      responses:
+        '200':
+          description: Assessment updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  title:
+                    type: string
+                    example: 'Force Fundamentals Quiz - Updated'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /assessments/{id}/attempts:
+    get:
+      tags:
+        - Assessments
+      summary: Get assessment attempts
+      description: Retrieves all attempts for an assessment by the authenticated student
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: List of attempts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439017'
+                    attemptNumber:
+                      type: number
+                      example: 1
+                    score:
+                      type: number
+                      example: 85
+                    passed:
+                      type: boolean
+                      example: true
+                    startedAt:
+                      type: string
+                      format: date-time
+                      example: '2024-12-19T10:00:00.000Z'
+                    completedAt:
+                      type: string
+                      format: date-time
+                      example: '2024-12-19T10:25:00.000Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Assessments
+      summary: Start assessment attempt
+      description: Starts a new attempt for an assessment (Student only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '201':
+          description: Attempt started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439017'
+                  attemptNumber:
+                    type: number
+                    example: 1
+                  startedAt:
+                    type: string
+                    format: date-time
+                    example: '2024-12-19T10:00:00.000Z'
+                  questions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        questionId:
+                          type: string
+                          example: '507f1f77bcf86cd799439013'
+                        questionText:
+                          type: string
+                          example: 'What is the Jedi Code?'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          description: Maximum attempts reached or assessment not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'

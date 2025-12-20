@@ -1,6 +1,6 @@
 /**
  * @module Emails/Types
- * @description Type definitions for the email notification system.
+ * @remarks Type definitions for the email notification system.
  */
 
 /**
@@ -13,7 +13,6 @@ export enum EmailType {
   COURSE_PURCHASE = 'course_purchase',
   COURSE_ENROLLMENT = 'course_enrollment',
   NEW_ASSESSMENT = 'new_assessment',
-  PENDING_APPEALS_REMINDER = 'pending_appeals_reminder',
   CONTACT_SUPPORT = 'contact_support',
   ASSESSMENT_GRADED = 'assessment_graded',
   COURSE_COMPLETED = 'course_completed',
@@ -78,25 +77,16 @@ export interface NewAssessmentEmailData extends BaseEmailData {
 }
 
 /**
- * Data required for pending appeals reminder emails (to admins).
- */
-export interface PendingAppealsReminderEmailData extends BaseEmailData {
-  pendingCount: number;
-  appealsUrl: string;
-  oldestAppealDate: Date;
-}
-
-/**
  * Data required for contact support notification emails (internal).
  */
 export interface ContactSupportEmailData {
   recipientEmail: string; // Support team email
-  name: string;           // User's name
-  email: string;          // User's email
-  subject: string;        // Message subject
-  message: string;        // Message content
-  submittedAt: Date;      // Submission timestamp
-  ticketId?: string;      // Optional ticket ID
+  name: string; // User's name
+  email: string; // User's email
+  subject: string; // Message subject
+  message: string; // Message content
+  submittedAt: Date; // Submission timestamp
+  ticketId?: string; // Optional ticket ID
 }
 
 /**
@@ -128,7 +118,6 @@ export type EmailData =
   | CoursePurchaseEmailData
   | CourseEnrollmentEmailData
   | NewAssessmentEmailData
-  | PendingAppealsReminderEmailData
   | ContactSupportEmailData
   | AssessmentGradedEmailData
   | CourseCompletedEmailData;

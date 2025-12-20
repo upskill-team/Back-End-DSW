@@ -1,3 +1,8 @@
+/**
+ * @module Models/Course/Embeddables/Material/Controller
+ * @remarks Handles HTTP requests for course material uploads.
+ */
+
 import { Request, Response, NextFunction } from 'express';
 import { HttpResponse } from '../../../shared/response/http.response.js';
 

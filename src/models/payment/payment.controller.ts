@@ -8,9 +8,8 @@ import { PaymentService } from './payment.service.js';
 import { HttpResponse } from '../../shared/response/http.response.js';
 
 /**
- * @function createPreference
- * @description Handles the request to create a Mercado Pago payment preference.
- * It validates that the user has a student profile before proceeding.
+ * Handles the request to create a Mercado Pago payment preference.
+ * Validates that the user has a student profile before proceeding.
  * @param {Request} req - The Express request object, containing courseId in the body and userId in req.user.
  * @param {Response} res - The Express response object.
  * @param {NextFunction} next - The Express next middleware function.
@@ -35,9 +34,8 @@ async function createPreference(req: Request, res: Response, next: NextFunction)
 }
 
 /**
- * @function receiveWebhook
- * @description Handles incoming webhook notifications from Mercado Pago.
- * It processes payment events to create enrollments accordingly.
+ * Handles incoming webhook notifications from Mercado Pago.
+ * Processes payment events to create enrollments accordingly.
  * @param {Request} req - The Express request object, containing the webhook payload from Mercado Pago.
  * @param {Response} res - The Express response object.
  * @returns {Promise<void>} A 200 OK response to acknowledge receipt of the webhook.

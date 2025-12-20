@@ -1,7 +1,7 @@
 /**
  * @module Models/User/Service
  * @remarks Encapsulates the business logic for managing user profiles.
- * @see {@link UserController}
+ * @see {@link Models/User/Controller} for HTTP request handlers.
  */
 import { EntityManager } from '@mikro-orm/core'
 import { User } from './user.entity.js'

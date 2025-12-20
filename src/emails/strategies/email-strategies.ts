@@ -1,6 +1,6 @@
 /**
  * @module Emails/Strategies
- * @description Strategy Pattern implementation for email sending.
+ * @remarks Strategy Pattern implementation for email sending.
  * Each strategy knows how to render and send a specific type of email.
  */
 
@@ -16,7 +16,6 @@ import {
   CoursePurchaseEmailData,
   CourseEnrollmentEmailData,
   NewAssessmentEmailData,
-  PendingAppealsReminderEmailData,
   ContactSupportEmailData,
 } from '../types/email-types.js';
 import { sendEmail } from '../../shared/services/email.service.js';
@@ -124,7 +123,9 @@ export class ResetPasswordEmailStrategy extends EmailStrategy<ResetPasswordEmail
   }
 
   async renderHtml(data: ResetPasswordEmailData): Promise<string> {
-    const { ResetPasswordEmail } = await import('../templates/ResetPasswordEmail.js');
+    const { ResetPasswordEmail } = await import(
+      '../templates/ResetPasswordEmail.js'
+    );
     return render(
       ResetPasswordEmail({
         name: data.recipientName,
@@ -207,7 +208,9 @@ export class CoursePurchaseEmailStrategy extends EmailStrategy<CoursePurchaseEma
     const CoursePurchaseEmailModule = await import(
       '../templates/CoursePurchaseEmail.js'
     );
-    const CoursePurchaseEmail = CoursePurchaseEmailModule.default || CoursePurchaseEmailModule.CoursePurchaseEmail;
+    const CoursePurchaseEmail =
+      CoursePurchaseEmailModule.default ||
+      CoursePurchaseEmailModule.CoursePurchaseEmail;
     return render(
       CoursePurchaseEmail({
         name: data.recipientName,
@@ -245,7 +248,9 @@ export class CourseEnrollmentEmailStrategy extends EmailStrategy<CourseEnrollmen
     const CourseEnrollmentEmailModule = await import(
       '../templates/CourseEnrollmentEmail.js'
     );
-    const CourseEnrollmentEmail = CourseEnrollmentEmailModule.default || CourseEnrollmentEmailModule.CourseEnrollmentEmail;
+    const CourseEnrollmentEmail =
+      CourseEnrollmentEmailModule.default ||
+      CourseEnrollmentEmailModule.CourseEnrollmentEmail;
     return render(
       CourseEnrollmentEmail({
         name: data.recipientName,
@@ -282,7 +287,9 @@ export class NewAssessmentEmailStrategy extends EmailStrategy<NewAssessmentEmail
     const NewAssessmentEmailModule = await import(
       '../templates/NewAssessmentEmail.js'
     );
-    const NewAssessmentEmail = NewAssessmentEmailModule.default || NewAssessmentEmailModule.NewAssessmentEmail;
+    const NewAssessmentEmail =
+      NewAssessmentEmailModule.default ||
+      NewAssessmentEmailModule.NewAssessmentEmail;
     return render(
       NewAssessmentEmail({
         name: data.recipientName,
@@ -304,41 +311,6 @@ export class NewAssessmentEmailStrategy extends EmailStrategy<NewAssessmentEmail
 }
 
 /**
- * Strategy for pending appeals reminder emails (to admins).
- */
-export class PendingAppealsReminderEmailStrategy extends EmailStrategy<PendingAppealsReminderEmailData> {
-  getType(): EmailType {
-    return EmailType.PENDING_APPEALS_REMINDER;
-  }
-
-  getSubject(data: PendingAppealsReminderEmailData): string {
-    return `Recordatorio: ${data.pendingCount} solicitudes pendientes - UpSkill`;
-  }
-
-  async renderHtml(data: PendingAppealsReminderEmailData): Promise<string> {
-    const PendingAppealsReminderEmailModule = await import(
-      '../templates/PendingAppealsReminderEmail.js'
-    );
-    const PendingAppealsReminderEmail = PendingAppealsReminderEmailModule.default || PendingAppealsReminderEmailModule.PendingAppealsReminderEmail;
-    return render(
-      PendingAppealsReminderEmail({
-        name: data.recipientName,
-        pendingCount: data.pendingCount,
-        appealsUrl: data.appealsUrl,
-        oldestAppealDate: data.oldestAppealDate,
-      })
-    );
-  }
-
-  protected validate(data: PendingAppealsReminderEmailData): void {
-    super.validate(data);
-    if (!data.pendingCount || !data.appealsUrl) {
-      throw new Error('Pending count and appeals URL are required');
-    }
-  }
-}
-
-/**
  * Strategy for contact support notification emails (internal).
  */
 export class ContactSupportEmailStrategy extends EmailStrategy<ContactSupportEmailData> {
@@ -347,14 +319,18 @@ export class ContactSupportEmailStrategy extends EmailStrategy<ContactSupportEma
   }
 
   getSubject(data: ContactSupportEmailData): string {
-    return `[Soporte] ${data.subject}${data.ticketId ? ` - Ticket #${data.ticketId}` : ''}`;
+    return `[Soporte] ${data.subject}${
+      data.ticketId ? ` - Ticket #${data.ticketId}` : ''
+    }`;
   }
 
   async renderHtml(data: ContactSupportEmailData): Promise<string> {
     const ContactSupportEmailModule = await import(
       '../templates/ContactSupportEmail.js'
     );
-    const ContactSupportEmail = ContactSupportEmailModule.default || ContactSupportEmailModule.ContactSupportEmail;
+    const ContactSupportEmail =
+      ContactSupportEmailModule.default ||
+      ContactSupportEmailModule.ContactSupportEmail;
     return render(
       ContactSupportEmail({
         name: data.name,
@@ -368,7 +344,13 @@ export class ContactSupportEmailStrategy extends EmailStrategy<ContactSupportEma
   }
 
   protected validate(data: ContactSupportEmailData): void {
-    if (!data.recipientEmail || !data.name || !data.email || !data.subject || !data.message) {
+    if (
+      !data.recipientEmail ||
+      !data.name ||
+      !data.email ||
+      !data.subject ||
+      !data.message
+    ) {
       throw new Error('All contact support fields are required');
     }
   }

@@ -1,0 +1,384 @@
+# Additional Modules
+
+paths:
+  # Contact endpoints
+  /contact:
+    post:
+      tags:
+        - Contact
+      summary: Send contact message
+      description: Sends a contact message to the platform administrators
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - message
+              properties:
+                name:
+                  type: string
+                  description: Sender's name
+                  example: 'Chewbacca'
+                email:
+                  type: string
+                  format: email
+                  description: Sender's email
+                  example: 'chewie@millennium-falcon.com'
+                subject:
+                  type: string
+                  description: Message subject
+                  example: 'Question about Force courses'
+                message:
+                  type: string
+                  description: Message content
+                  example: 'I am interested in learning more about the Force. Do you have beginner courses?'
+      responses:
+        '200':
+          description: Message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Message sent successfully'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  # Admin endpoints
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: Get all users
+      description: Retrieves all users in the system (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - name: role
+          in: query
+          description: Filter by user role
+          schema:
+            type: string
+            enum: [admin, professor, student]
+            example: 'student'
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439011'
+                        name:
+                          type: string
+                          example: 'Leia'
+                        surname:
+                          type: string
+                          example: 'Organa'
+                        mail:
+                          type: string
+                          example: 'leia.organa@rebellion.gov'
+                        role:
+                          type: string
+                          example: 'student'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        example: 500
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  # Join Requests endpoints
+  /join-requests:
+    get:
+      tags:
+        - Join Requests
+      summary: Get join requests
+      description: Retrieves join requests for the professor's institution
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by request status
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+            example: 'pending'
+      responses:
+        '200':
+          description: List of join requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    professor:
+                      type: object
+                      properties:
+                        user:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: 'Count'
+                            surname:
+                              type: string
+                              example: 'Dooku'
+                    status:
+                      type: string
+                      example: 'pending'
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: '2024-12-18T10:00:00.000Z'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+    post:
+      tags:
+        - Join Requests
+      summary: Create join request
+      description: Request to join an institution (Professor only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - institutionId
+              properties:
+                institutionId:
+                  type: string
+                  description: ID of the institution to join
+                  example: '507f1f77bcf86cd799439012'
+      responses:
+        '201':
+          description: Join request created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  institution:
+                    type: string
+                    example: '507f1f77bcf86cd799439012'
+                  professor:
+                    type: string
+                    example: '507f1f77bcf86cd799439013'
+                  status:
+                    type: string
+                    example: 'pending'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Request already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                message: 'Conflict'
+                errors: 'Join request already exists'
+
+  /join-requests/{id}/approve:
+    patch:
+      tags:
+        - Join Requests
+      summary: Approve join request
+      description: Approves a professor's request to join the institution (Institution manager only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Request approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Request approved successfully'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /join-requests/{id}/reject:
+    patch:
+      tags:
+        - Join Requests
+      summary: Reject join request
+      description: Rejects a professor's request to join the institution (Institution manager only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Request rejected successfully'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # Materials endpoints
+  /materials/{id}:
+    get:
+      tags:
+        - Materials
+      summary: Get material by ID
+      description: Retrieves a specific learning material (requires enrollment)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Material details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'The Jedi Code Explained'
+                  content:
+                    type: string
+                    example: 'There is no emotion, there is peace...'
+                  type:
+                    type: string
+                    example: 'text'
+                  order:
+                    type: number
+                    example: 1
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  # Payments endpoints
+  /payments/create-payment:
+    post:
+      tags:
+        - Payments
+      summary: Create payment
+      description: Initiates a payment for a paid course
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - courseId
+              properties:
+                courseId:
+                  type: string
+                  description: ID of the course to purchase
+                  example: '507f1f77bcf86cd799439012'
+      responses:
+        '200':
+          description: Payment initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  paymentUrl:
+                    type: string
+                    description: URL to complete payment
+                    example: 'https://payment-gateway.com/checkout/abc123'
+                  paymentId:
+                    type: string
+                    example: 'pay_507f1f77bcf86cd799439011'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '400':
+          description: Course is free or user already enrolled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /payments/webhook:
+    post:
+      tags:
+        - Payments
+      summary: Payment webhook
+      description: Webhook endpoint for payment provider notifications (internal use)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payment provider webhook payload
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Webhook processed successfully'

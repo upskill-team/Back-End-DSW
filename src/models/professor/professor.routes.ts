@@ -2,7 +2,7 @@
  * @module Models/Professor/Routes
  * @remarks Defines the API routes for the professor module.
  * All routes are protected by authentication.
- * @see {@link ProfessorController}
+ * @see {@link Models/Professor/Controller} for request handlers.
  */
 import { Router } from 'express'
 import { findAll, findOne, getMe, update, remove, getMyRecentEnrollments, getMyAnalytics } from './professor.controller.js'

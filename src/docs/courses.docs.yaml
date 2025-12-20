@@ -1,0 +1,414 @@
+# Courses Module
+
+paths:
+  /courses:
+    get:
+      tags:
+        - Courses
+      summary: Get all courses with pagination
+      description: Retrieves a paginated list of all published courses
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PageParameter'
+        - $ref: '#/components/parameters/LimitParameter'
+        - name: search
+          in: query
+          description: Search term for course name or description
+          schema:
+            type: string
+            example: 'Force'
+        - name: courseType
+          in: query
+          description: Filter by course type ID
+          schema:
+            type: string
+            example: '507f1f77bcf86cd799439011'
+        - name: isFree
+          in: query
+          description: Filter by free/paid courses
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: List of courses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439011'
+                        name:
+                          type: string
+                          example: 'Fundamentals of the Force'
+                        description:
+                          type: string
+                          example: 'Learn the basic principles of the Force with the best Jedi masters.'
+                        isFree:
+                          type: boolean
+                          example: true
+                        imageUrl:
+                          type: string
+                          example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/jedi-course.jpg'
+                        enrollmentCount:
+                          type: number
+                          example: 150
+                        professor:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: '507f1f77bcf86cd799439012'
+                            user:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                  example: 'Yoda'
+                                surname:
+                                  type: string
+                                  example: 'Master'
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        example: 42
+                      page:
+                        type: number
+                        example: 1
+                      limit:
+                        type: number
+                        example: 10
+                      totalPages:
+                        type: number
+                        example: 5
+
+    post:
+      tags:
+        - Courses
+      summary: Create a new course
+      description: Creates a new course (Professor only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - courseType
+              properties:
+                name:
+                  type: string
+                  description: Course name
+                  example: 'Advanced Lightsaber Combat'
+                description:
+                  type: string
+                  description: Course description
+                  example: 'Master the art of lightsaber dueling with advanced techniques and forms.'
+                courseType:
+                  type: string
+                  description: Course type ID
+                  example: '507f1f77bcf86cd799439011'
+                isFree:
+                  type: boolean
+                  description: Whether the course is free
+                  example: false
+                priceInCents:
+                  type: number
+                  description: Price in cents (required if isFree is false)
+                  example: 250000
+                image:
+                  type: string
+                  format: binary
+                  description: Course cover image
+      responses:
+        '201':
+          description: Course created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Advanced Lightsaber Combat'
+                  description:
+                    type: string
+                    example: 'Master the art of lightsaber dueling with advanced techniques and forms.'
+                  status:
+                    type: string
+                    example: 'en-desarrollo'
+                  imageUrl:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/lightsaber-course.jpg'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /courses/trending:
+    get:
+      tags:
+        - Courses
+      summary: Get trending courses
+      description: Retrieves the most popular courses based on enrollment count
+      security: []
+      parameters:
+        - name: limit
+          in: query
+          description: Number of trending courses to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 6
+            example: 6
+      responses:
+        '200':
+          description: List of trending courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    name:
+                      type: string
+                      example: 'Piloting the Millennium Falcon'
+                    imageUrl:
+                      type: string
+                      example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/falcon.jpg'
+                    enrollmentCount:
+                      type: number
+                      example: 1138
+
+  /courses/my-courses:
+    get:
+      tags:
+        - Courses
+      summary: Get my courses
+      description: Retrieves courses created by the authenticated professor
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of professor's courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    name:
+                      type: string
+                      example: 'Jedi Philosophy 101'
+                    status:
+                      type: string
+                      example: 'publicado'
+                    enrollmentCount:
+                      type: number
+                      example: 45
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /courses/{id}:
+    get:
+      tags:
+        - Courses
+      summary: Get course by ID
+      description: Retrieves detailed information about a specific course. Content visibility depends on user authentication and enrollment.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Course details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Fundamentals of the Force'
+                  description:
+                    type: string
+                    example: 'Learn the basic principles of the Force with the best Jedi masters.'
+                  isFree:
+                    type: boolean
+                    example: true
+                  status:
+                    type: string
+                    example: 'publicado'
+                  imageUrl:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/force-course.jpg'
+                  professor:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        example: '507f1f77bcf86cd799439012'
+                      user:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: 'Qui-Gon'
+                          surname:
+                            type: string
+                            example: 'Jinn'
+                  units:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: 'Introduction to the Living Force'
+                        order:
+                          type: number
+                          example: 1
+                        materials:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                example: 'The Jedi Code'
+                              type:
+                                type: string
+                                example: 'text'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Courses
+      summary: Update course
+      description: Updates an existing course (Professor only, must own the course)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: 'Advanced Lightsaber Combat - Updated'
+                description:
+                  type: string
+                  example: 'Updated course description'
+                status:
+                  type: string
+                  enum: [en-desarrollo, bloqueado, publicado, pausado]
+                  example: 'publicado'
+                image:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Course updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  name:
+                    type: string
+                    example: 'Advanced Lightsaber Combat - Updated'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /courses/{id}/units:
+    post:
+      tags:
+        - Courses
+      summary: Add unit to course
+      description: Adds a new unit to a course (Professor only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Unit name
+                  example: 'Advanced Force Techniques'
+      responses:
+        '201':
+          description: Unit added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  units:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: 'Advanced Force Techniques'
+                        order:
+                          type: number
+                          example: 2
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'

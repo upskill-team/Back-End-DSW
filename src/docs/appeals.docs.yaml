@@ -1,0 +1,271 @@
+# Appeals Module
+
+paths:
+  /appeals/me:
+    get:
+      tags:
+        - Appeals
+      summary: Get my appeals
+      description: Retrieves all appeals submitted by the authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user's appeals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    date:
+                      type: string
+                      format: date-time
+                      example: '2024-12-15T10:00:00.000Z'
+                    state:
+                      type: string
+                      enum: [pending, accepted, rejected]
+                      example: 'pending'
+                    expertise:
+                      type: string
+                      example: 'Force Philosophy and Lightsaber Combat'
+                    experienceMotivation:
+                      type: string
+                      example: 'I have been studying the Force for over 10 years and wish to share my knowledge with young Padawans.'
+                    documentUrl:
+                      type: string
+                      example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/cv-jedi-master.pdf'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /appeals:
+    get:
+      tags:
+        - Appeals
+      summary: Get all appeals
+      description: Retrieves all appeals in the system (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: state
+          in: query
+          description: Filter by appeal state
+          schema:
+            type: string
+            enum: [pending, accepted, rejected]
+            example: 'pending'
+      responses:
+        '200':
+          description: List of all appeals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    _id:
+                      type: string
+                      example: '507f1f77bcf86cd799439011'
+                    date:
+                      type: string
+                      format: date-time
+                      example: '2024-12-15T10:00:00.000Z'
+                    state:
+                      type: string
+                      enum: [pending, accepted, rejected]
+                      example: 'pending'
+                    expertise:
+                      type: string
+                      example: 'Starship Engineering'
+                    experienceMotivation:
+                      type: string
+                      example: 'Former mechanic on the Death Star, now seeking to teach the next generation.'
+                    documentUrl:
+                      type: string
+                      example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/cv.pdf'
+                    user:
+                      type: object
+                      properties:
+                        _id:
+                          type: string
+                          example: '507f1f77bcf86cd799439012'
+                        name:
+                          type: string
+                          example: 'Galen'
+                        surname:
+                          type: string
+                          example: 'Erso'
+                        mail:
+                          type: string
+                          example: 'galen.erso@empire.com'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    post:
+      tags:
+        - Appeals
+      summary: Submit appeal
+      description: Submit an appeal to become a professor (Student only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - expertise
+                - experienceMotivation
+              properties:
+                expertise:
+                  type: string
+                  description: Area of expertise
+                  example: 'Advanced Force Techniques'
+                experienceMotivation:
+                  type: string
+                  description: Experience and motivation text
+                  example: 'I have trained under Master Yoda for 5 years and completed advanced Force training. I am passionate about teaching young students the ways of the Jedi.'
+                document:
+                  type: string
+                  format: binary
+                  description: Supporting document (CV, certificates, etc.)
+      responses:
+        '201':
+          description: Appeal submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  date:
+                    type: string
+                    format: date-time
+                    example: '2024-12-19T10:30:00.000Z'
+                  state:
+                    type: string
+                    example: 'pending'
+                  expertise:
+                    type: string
+                    example: 'Advanced Force Techniques'
+                  experienceMotivation:
+                    type: string
+                    example: 'I have trained under Master Yoda for 5 years...'
+                  documentUrl:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/cv-luke.pdf'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /appeals/{id}:
+    get:
+      tags:
+        - Appeals
+      summary: Get appeal by ID
+      description: Retrieves a specific appeal (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      responses:
+        '200':
+          description: Appeal details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  date:
+                    type: string
+                    format: date-time
+                    example: '2024-12-15T10:00:00.000Z'
+                  state:
+                    type: string
+                    enum: [pending, accepted, rejected]
+                    example: 'pending'
+                  expertise:
+                    type: string
+                    example: 'Droid Programming'
+                  experienceMotivation:
+                    type: string
+                    example: 'Creator of R2-D2 and C-3PO, with 30 years of experience.'
+                  documentUrl:
+                    type: string
+                    example: 'https://res.cloudinary.com/upskill/image/upload/v1234567890/cv-anakin.pdf'
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: 'Anakin'
+                      surname:
+                        type: string
+                        example: 'Skywalker'
+                      mail:
+                        type: string
+                        example: 'anakin.skywalker@jedi.academy'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    put:
+      tags:
+        - Appeals
+      summary: Update appeal
+      description: Updates an appeal's state (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum: [pending, accepted, rejected]
+                  description: New state for the appeal
+                  example: 'accepted'
+      responses:
+        '200':
+          description: Appeal updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    example: '507f1f77bcf86cd799439011'
+                  state:
+                    type: string
+                    example: 'accepted'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'

@@ -17,7 +17,6 @@ import { getProfessorIdFromUserId } from '../../shared/utils/professor.helper.js
  * Handles the retrieval of courses for the currently authenticated professor.
  * @param {Request} req The Express request object, containing the user payload from auth.
  * @param {Response} res The Express response object.
- * @param {NextFunction} next The next middleware function.
  * @returns {Promise<Response>} A list of the professor's courses.
  */
 async function findMyCourses(req: Request, res: Response) {
@@ -47,7 +46,6 @@ async function findAll(req: Request, res: Response) {
  * Returns filtered data based on user authentication and enrollment status.
  * @param {Request} req The Express request object, containing the course ID in params.
  * @param {Response} res The Express response object.
- * @param {NextFunction} next The next middleware function.
  * @returns {Promise<Response>} The requested course data (filtered based on user context).
  */
 async function findOne(req: Request, res: Response) {
@@ -83,7 +81,6 @@ async function findOne(req: Request, res: Response) {
  * Handles the creation of a new course.
  * @param {Request} req The Express request object, with course data in the body and user info from auth.
  * @param {Response} res The Express response object.
- * @param {NextFunction} next The next middleware function.
  * @returns {Promise<Response>} The newly created course.
  */
 async function add(req: Request, res: Response) {
@@ -116,7 +113,6 @@ async function add(req: Request, res: Response) {
  * Handles updating an existing course.
  * @param {Request} req The Express request object, with course ID in params and update data in body.
  * @param {Response} res The Express response object.
- * @param {NextFunction} next The next middleware function.
  * @returns {Promise<Response>} The updated course data.
  */
 async function update(req: Request, res: Response) {
@@ -183,7 +179,6 @@ async function update(req: Request, res: Response) {
  * Handles the deletion of a course.
  * @param {Request} req The Express request object, with course ID in params.
  * @param {Response} res The Express response object.
- * @param {NextFunction} next The next middleware function.
  * @returns {Promise<Response>} A confirmation message.
  */
 async function remove(req: Request, res: Response) {

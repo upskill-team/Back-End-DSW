@@ -1,5 +1,5 @@
 /**
- * @module Models/User
+ * @module Models/User/Entity
  * @remarks Defines the database schema for the core User entity.
  */
 
