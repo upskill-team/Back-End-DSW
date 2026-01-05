@@ -16,5 +16,6 @@ export function mapInstitutionToFilter(
   return {
     id: institution.id!,
     name: institution.name,
+    description: institution.description,
   };
 }

@@ -11,6 +11,7 @@ import * as v from 'valibot';
 export const CourseTypeFilterSchema = v.object({
   id: v.string(),
   name: v.string(),
+  description: v.string()
 });
 
 export type CourseTypeFilterResponse = v.InferOutput<
