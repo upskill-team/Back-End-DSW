@@ -16,5 +16,6 @@ export function mapCourseTypeToFilter(
   return {
     id: courseType.id!,
     name: courseType.name,
+    description: courseType.description,
   };
 }
