@@ -4,7 +4,6 @@
  */
 import { EntityManager } from '@mikro-orm/core';
 import { Logger } from 'pino';
-import { MercadoPagoConfig, Preference, Payment as MPPayment } from 'mercadopago';
 import { ObjectId } from '@mikro-orm/mongodb';
 import { Course } from '../course/course.entity.js';
 import EnrollementService from '../Enrollement/enrollement.service.js';
@@ -19,6 +18,7 @@ import {
   calculatePlatformFee 
 } from '../../shared/utils/currency.js';
 import { EmailNotificationService } from '../../emails/services/email-notification.service.js';
+import { MercadoPagoClient } from '../../shared/services/mercadopago.client.js';
 
 /**
  * Response structure for Mercado Pago preference creation.
@@ -29,7 +29,7 @@ export interface PreferenceResponse {
 }
 
 export class PaymentService {
-  private readonly client: MercadoPagoConfig;
+  private readonly mpClient: MercadoPagoClient;
   private emailService: EmailNotificationService;
 
   constructor(
@@ -42,9 +42,7 @@ export class PaymentService {
       throw new Error('Mercado Pago Access Token is not configured.');
     }
 
-    this.client = new MercadoPagoConfig({ 
-        accessToken: accessToken 
-    });
+    this.mpClient = new MercadoPagoClient(accessToken, logger);
     this.emailService = new EmailNotificationService(logger);
   }
 
@@ -115,14 +113,13 @@ export class PaymentService {
 
       this.logger.info({ preferenceData }, 'Sending the following data to Mercado Pago...');
 
-      const preference = new Preference(this.client);
-      const result = await preference.create({ body: preferenceData });
+      const result = await this.mpClient.createPreference(preferenceData);
       
       this.logger.info({ preferenceId: result.id }, 'Preference created successfully');
       
       return {
-        preferenceId: result.id!,
-        initPoint: result.init_point!,
+        preferenceId: result.id,
+        initPoint: result.init_point,
       };
     } catch (err: any) {
       this.logger.error({ err: err.cause ?? err, courseId, userId }, 'PaymentService.createPreference - error');
@@ -141,8 +138,7 @@ export class PaymentService {
     this.logger.info({ paymentId }, 'PaymentService.handleWebhook - start');
     
     try {
-      const paymentController = new MPPayment(this.client);
-      const mpPayment = await paymentController.get({ id: paymentId });
+      const mpPayment = await this.mpClient.getPayment(paymentId);
       
       this.logger.info({ paymentStatus: mpPayment.status }, 'Payment status received');
       
@@ -197,7 +193,7 @@ export class PaymentService {
 
           // Create Payment entity
           const payment = em.create(Payment, {
-            mercadoPagoId: paymentId,
+            mercadoPagoId: String(mpPayment.id),
             amountInCents: totalAmountInCents,
             status: PaymentStatus.APPROVED,
             course: course,
