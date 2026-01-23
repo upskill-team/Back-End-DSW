@@ -65,30 +65,30 @@ async function login(req: Request, res: Response, next: NextFunction) {
 }
 
 // Refreshes the Access Token using the cookie
-// Fix: Renamed next to _next to avoid unused-vars warning
 async function refresh(req: Request, res: Response, _next: NextFunction) {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies?.refreshToken;
     
     if (!refreshToken) {
-      return res.status(204).send();
+      return HttpResponse.Unauthorized(res, 'No refresh token provided');
     }
 
     const authService = new AuthService(orm.em.fork(), req.log);
+    
     const tokens = await authService.refreshToken(refreshToken);
 
-    // Rotate the refresh token in the cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
     return HttpResponse.Ok(res, { token: tokens.accessToken });
-  } catch { 
+  } catch (error: any) {
+    req.log.warn({ msg: error.message }, 'Refresh token failed');
     res.clearCookie('refreshToken');
-    return res.status(204).send();
+    return HttpResponse.Unauthorized(res, 'Session expired or invalid');
   }
 }
 
 // Logs out the user (revokes token and clears cookie)
-async function logout(req: Request, res: Response, next: NextFunction) {
+async function logout(req: Request, res: Response, _next: NextFunction) {
   try {
     const refreshToken = req.cookies.refreshToken;
     const authService = new AuthService(orm.em.fork(), req.log);
@@ -97,8 +97,9 @@ async function logout(req: Request, res: Response, next: NextFunction) {
     
     res.clearCookie('refreshToken');
     return HttpResponse.Ok(res, { message: 'Logged out successfully' });
-  } catch (error) {
-    next(error);
+  } catch {
+    res.clearCookie('refreshToken');
+    return HttpResponse.Ok(res, { message: 'Logged out' });
   }
 }
 
