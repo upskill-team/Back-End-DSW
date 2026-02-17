@@ -274,8 +274,9 @@ export class AssessmentService {
 
   /**
    * Starts a new attempt for a student on an assessment.
+   * This method is idempotent - it will return an existing active attempt if one exists.
    * @param {StartAttemptType} data - The attempt start data.
-   * @returns {Promise<any>} The created attempt with questions (without correct answers).
+   * @returns {Promise<any>} The created or existing attempt with questions (without correct answers).
    */
   public async startAttempt(
     data: { assessmentId: string; studentId: string }
@@ -319,26 +320,81 @@ export class AssessmentService {
       throw new Error('Assessment is not active.');
     }
 
-    // Count existing attempts
-    const attemptCount = await this.em.count(AssessmentAttempt, {
-      assessment: assessment._id,
-      student: student._id,
-    });
+    // Check for existing IN_PROGRESS attempt
+    const existingAttempt = await this.em.findOne(
+      AssessmentAttempt,
+      {
+        assessment: assessment._id,
+        student: student._id,
+        status: AttemptStatus.IN_PROGRESS,
+      },
+      { orderBy: { startedAt: 'DESC' } }
+    );
 
-    // Check max attempts
-    if (assessment.maxAttempts && attemptCount >= assessment.maxAttempts) {
-      throw new Error('Maximum number of attempts reached.');
+    let attempt: AssessmentAttempt;
+
+    if (existingAttempt) {
+      // Validate if the attempt has expired based on duration
+      if (assessment.durationMinutes) {
+        const elapsedMs = now.getTime() - existingAttempt.startedAt.getTime();
+        const elapsedMinutes = elapsedMs / (1000 * 60);
+
+        if (elapsedMinutes > assessment.durationMinutes) {
+          // Time expired - mark as ABANDONED
+          this.logger.warn(
+            { attemptId: existingAttempt.id, elapsedMinutes, durationMinutes: assessment.durationMinutes },
+            'Existing attempt has expired. Marking as abandoned.'
+          );
+          existingAttempt.status = AttemptStatus.ABANDONED;
+          await this.em.flush();
+          
+          // Continue to create a new attempt below
+        } else {
+          // Valid attempt exists - return it
+          this.logger.info(
+            { attemptId: existingAttempt.id },
+            'Returning existing active attempt.'
+          );
+          attempt = existingAttempt;
+        }
+      } else {
+        // No time limit - return existing attempt
+        this.logger.info(
+          { attemptId: existingAttempt.id },
+          'Returning existing active attempt (no time limit).'
+        );
+        attempt = existingAttempt;
+      }
     }
 
-    // Create new attempt
-    const attempt = new AssessmentAttempt();
-    attempt.assessment = assessment;
-    attempt.student = student;
-    attempt.attemptNumber = attemptCount + 1;
-    attempt.status = AttemptStatus.IN_PROGRESS;
-    attempt.startedAt = new Date();
+    // Create new attempt if no valid existing one
+    if (!attempt!) {
+      // Count existing attempts (including ABANDONED ones)
+      const attemptCount = await this.em.count(AssessmentAttempt, {
+        assessment: assessment._id,
+        student: student._id,
+      });
 
-    await this.em.persistAndFlush(attempt);
+      // Check max attempts
+      if (assessment.maxAttempts && attemptCount >= assessment.maxAttempts) {
+        throw new Error('Maximum number of attempts reached.');
+      }
+
+      // Create new attempt
+      attempt = new AssessmentAttempt();
+      attempt.assessment = assessment;
+      attempt.student = student;
+      attempt.attemptNumber = attemptCount + 1;
+      attempt.status = AttemptStatus.IN_PROGRESS;
+      attempt.startedAt = new Date();
+
+      await this.em.persistAndFlush(attempt);
+
+      this.logger.info(
+        { attemptId: attempt.id },
+        'New assessment attempt created.'
+      );
+    }
 
     // Load any existing answers for this attempt (for auto-save recovery)
     const existingAnswers = await this.em.find(
@@ -401,11 +457,25 @@ export class AssessmentService {
     const attempt = await this.em.findOneOrFail(
       AssessmentAttempt,
       { _id: new ObjectId(attemptId) },
-      { populate: ['assessment.questions'] }
+      { populate: ['assessment.questions', 'assessment'] }
     );
 
     if (attempt.status !== AttemptStatus.IN_PROGRESS) {
       throw new Error('Attempt is not in progress.');
+    }
+
+    // Check if attempt has expired
+    if (attempt.assessment.durationMinutes) {
+      const now = new Date();
+      const elapsedMs = now.getTime() - attempt.startedAt.getTime();
+      const elapsedMinutes = elapsedMs / (1000 * 60);
+
+      if (elapsedMinutes > attempt.assessment.durationMinutes) {
+        // Mark as abandoned
+        attempt.status = AttemptStatus.ABANDONED;
+        await this.em.flush();
+        throw new Error('Time limit exceeded. The attempt has been marked as abandoned.');
+      }
     }
 
     const question = await this.em.findOneOrFail(Question, {
@@ -467,6 +537,24 @@ export class AssessmentService {
 
     if (attempt.status !== AttemptStatus.IN_PROGRESS) {
       throw new Error('Attempt is not in progress.');
+    }
+
+    // Check if attempt has expired
+    if (attempt.assessment.durationMinutes) {
+      const now = new Date();
+      const elapsedMs = now.getTime() - attempt.startedAt.getTime();
+      const elapsedMinutes = elapsedMs / (1000 * 60);
+
+      if (elapsedMinutes > attempt.assessment.durationMinutes) {
+        // Mark as abandoned and allow submission of existing answers
+        this.logger.warn(
+          { attemptId, elapsedMinutes, durationMinutes: attempt.assessment.durationMinutes },
+          'Attempt submitted after time limit. Marking as abandoned.'
+        );
+        attempt.status = AttemptStatus.ABANDONED;
+        await this.em.flush();
+        throw new Error('Time limit exceeded. The attempt has been marked as abandoned.');
+      }
     }
 
     // Submit all answers
@@ -541,6 +629,97 @@ export class AssessmentService {
   }
 
   /**
+   * Retrieves the active (in-progress) attempt for a student on an assessment.
+   * Returns null if no active attempt exists or if it has expired.
+   * @param {string} assessmentId - The assessment ID.
+   * @param {string} studentId - The student ID.
+   * @returns {Promise<any | null>} The active attempt or null.
+   */
+  public async getActiveAttempt(
+    assessmentId: string,
+    studentId: string
+  ): Promise<any | null> {
+    this.logger.info({ assessmentId, studentId }, 'Checking for active attempt.');
+
+    const assessment = await this.em.findOneOrFail(
+      Assessment,
+      { _id: new ObjectId(assessmentId) },
+      { populate: ['questions'] }
+    );
+
+    const attempt = await this.em.findOne(
+      AssessmentAttempt,
+      {
+        assessment: assessment._id,
+        student: new ObjectId(studentId),
+        status: AttemptStatus.IN_PROGRESS,
+      },
+      { orderBy: { startedAt: 'DESC' } }
+    );
+
+    if (!attempt) {
+      this.logger.info('No active attempt found.');
+      return null;
+    }
+
+    // Check if attempt has expired
+    if (assessment.durationMinutes) {
+      const now = new Date();
+      const elapsedMs = now.getTime() - attempt.startedAt.getTime();
+      const elapsedMinutes = elapsedMs / (1000 * 60);
+
+      if (elapsedMinutes > assessment.durationMinutes) {
+        this.logger.warn(
+          { attemptId: attempt.id, elapsedMinutes, durationMinutes: assessment.durationMinutes },
+          'Active attempt has expired.'
+        );
+        return null;
+      }
+    }
+
+    // Load existing answers
+    const existingAnswers = await this.em.find(
+      AttemptAnswer,
+      { attempt: attempt._id },
+      { populate: ['question'] }
+    );
+
+    // Filter questions to remove correct answers
+    const questionsForStudent = this.filterQuestionsForStudent(
+      assessment.questions.getItems()
+    );
+
+    // Calculate time spent
+    const timeSpent = Math.floor((new Date().getTime() - attempt.startedAt.getTime()) / 1000);
+
+    this.logger.info({ attemptId: attempt.id }, 'Active attempt found.');
+
+    return {
+      id: attempt.id,
+      assessment: {
+        id: assessment.id,
+        title: assessment.title,
+        durationMinutes: assessment.durationMinutes,
+        passingScore: assessment.passingScore,
+        questions: questionsForStudent,
+      },
+      student: studentId,
+      startedAt: attempt.startedAt,
+      submittedAt: attempt.submittedAt || null,
+      score: attempt.score || null,
+      passed: attempt.passed || null,
+      answers: existingAnswers.map(ans => ({
+        id: ans.id,
+        question: { id: (ans.question as Question).id },
+        answer: ans.answer,
+        answeredAt: ans.answeredAt,
+      })),
+      status: attempt.status,
+      timeSpent,
+    };
+  }
+
+  /**
    * Retrieves a single attempt with all its answers.
    * @param {string} attemptId - The attempt ID.
    * @returns {Promise<AssessmentAttempt & { answers: AttemptAnswer[] }>} The attempt with answers.
@@ -571,16 +750,9 @@ export class AssessmentService {
       );
     }
 
-    let timeSpent = 0;
-    if (attempt.submittedAt) {
-      const diffMs = attempt.submittedAt.getTime() - attempt.startedAt.getTime();
-      timeSpent = Math.floor(diffMs / 60000); 
-    }
-
     return {
       ...attemptPOJO,
       answers: answersPOJO,
-      timeSpent: timeSpent,
     };
   }
 
@@ -797,6 +969,26 @@ export class AssessmentService {
     const bestAttempt = bestAttempts[0];
     const now = new Date();
 
+    // Check for active attempt
+    const activeAttempt = await this.em.findOne(
+      AssessmentAttempt,
+      {
+        student: new ObjectId(studentId),
+        assessment: new ObjectId(assessmentId),
+        status: AttemptStatus.IN_PROGRESS,
+      },
+      { orderBy: { startedAt: 'DESC' } }
+    );
+
+    let hasActiveAttempt = false;
+    if (activeAttempt && assessment.durationMinutes) {
+      const elapsedMs = now.getTime() - activeAttempt.startedAt.getTime();
+      const elapsedMinutes = elapsedMs / (1000 * 60);
+      hasActiveAttempt = elapsedMinutes <= assessment.durationMinutes;
+    } else if (activeAttempt && !assessment.durationMinutes) {
+      hasActiveAttempt = true;
+    }
+
     // Determine status
     let status = 'available';
     if (assessment.availableUntil && now > assessment.availableUntil) {
@@ -812,6 +1004,7 @@ export class AssessmentService {
 
     return {
       ...assessmentPOJO,
+      questionsCount: assessment.questions.length,
       attemptsCount,
       attemptsRemaining: assessment.maxAttempts
         ? assessment.maxAttempts - attemptsCount
@@ -819,6 +1012,7 @@ export class AssessmentService {
       bestScore: bestAttempt?.score,
       lastAttemptDate: bestAttempt?.submittedAt,
       status,
+      hasActiveAttempt,
     };
   }
 
