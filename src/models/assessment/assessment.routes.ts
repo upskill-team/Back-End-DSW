@@ -61,6 +61,13 @@ assessmentRouter.patch(
 assessmentRouter.delete('/:id', professorOrAdmin, assessmentController.remove);
 
 // Attempt routes (Students & Professors)
+// GET /api/assessments/:assessmentId/active-attempt - Check for active attempt
+assessmentRouter.get(
+  '/:assessmentId/active-attempt',
+  studentOrProfessor,
+  assessmentController.getActiveAttempt
+);
+
 // POST /api/assessments/:assessmentId/attempts - Start new attempt
 assessmentRouter.post(
   '/:assessmentId/attempts',

@@ -66,7 +66,7 @@ export class ProfessorService {
     const professors = await this.em.find(
       Professor,
       {},
-      { populate: ['user'] }
+      { populate: ['user'] },
     );
 
     return professors.map((prof) => mapProfessorToFilter(prof));
@@ -85,7 +85,7 @@ export class ProfessorService {
     return this.em.findOneOrFail(
       Professor,
       { _id: objectId },
-      { populate: ['courses', 'institution', 'managedInstitution'] }
+      { populate: ['courses', 'institution', 'managedInstitution'] },
     );
   }
 
@@ -95,11 +95,11 @@ export class ProfessorService {
    * @returns {Promise<Enrollement[]>} A promise resolving to an array of recent enrollments.
    */
   public async findRecentEnrollmentsForMyCourses(
-    userId: string
+    userId: string,
   ): Promise<Enrollement[]> {
     this.logger.info(
       { userId },
-      'Fetching recent enrollments for professor courses.'
+      'Fetching recent enrollments for professor courses.',
     );
 
     const professorId = await getProfessorIdFromUserId(this.em, userId);
@@ -126,7 +126,7 @@ export class ProfessorService {
         populate: ['student.user', 'course'],
         orderBy: { enrolledAt: 'DESC' },
         limit: 5,
-      }
+      },
     );
 
     return recentEnrollments;
@@ -141,7 +141,7 @@ export class ProfessorService {
   public async getAnalyticsForProfessor(userId: string): Promise<object> {
     this.logger.info(
       { userId },
-      "Fetching analytics for professor's dashboard."
+      "Fetching analytics for professor's dashboard.",
     );
 
     const professorId = await getProfessorIdFromUserId(this.em, userId);
@@ -161,7 +161,7 @@ export class ProfessorService {
     }
 
     const publishedCoursesCount = professorCourses.filter(
-      (course) => course.status === status.PUBLISHED
+      (course) => course.status === status.PUBLISHED,
     ).length;
 
     const enrollments = await this.em.find(Enrollement, {
@@ -180,8 +180,10 @@ export class ProfessorService {
 
     const totalEarningsInCents = professorEarnings.reduce(
       (sum, earning) => sum + earning.amountInCents,
-      0
+      0,
     );
+
+    const totalSales = professorEarnings.length;
 
     // Calculate monthly earnings for the last 6 months
     const now = new Date();
@@ -192,10 +194,10 @@ export class ProfessorService {
       const nextMonthDate = new Date(
         now.getFullYear(),
         now.getMonth() - i + 1,
-        1
+        1,
       );
       const monthKey = `${monthDate.getFullYear()}-${String(
-        monthDate.getMonth() + 1
+        monthDate.getMonth() + 1,
       ).padStart(2, '0')}`;
 
       const monthEarnings = professorEarnings.filter((earning) => {
@@ -205,12 +207,13 @@ export class ProfessorService {
 
       const monthTotalInCents = monthEarnings.reduce(
         (sum, earning) => sum + earning.amountInCents,
-        0
+        0,
       );
 
       monthlyEarnings.push({
         month: monthKey,
         earningsInCents: monthTotalInCents,
+        salesCount: monthEarnings.length,
       });
     }
 
@@ -218,6 +221,7 @@ export class ProfessorService {
       totalStudents: totalStudentsCount,
       publishedCourses: publishedCoursesCount,
       totalEarningsInCents,
+      totalSales,
       monthlyEarnings,
     };
   }
@@ -233,7 +237,7 @@ export class ProfessorService {
    */
   public async update(
     id: string,
-    data: UpdateProfessorType
+    data: UpdateProfessorType,
   ): Promise<Professor> {
     this.logger.info({ professorId: id, data: data }, 'Updating professor.');
 
@@ -241,7 +245,7 @@ export class ProfessorService {
     if (!result.success) {
       this.logger.error(
         { issues: result.issues },
-        'Validation failed for professor update.'
+        'Validation failed for professor update.',
       );
       throw new Error('Invalid data for professor update.');
     }
@@ -286,7 +290,7 @@ export class ProfessorService {
     if (!user || !user.professorProfile) {
       this.logger.warn(
         { userId },
-        'User not found or has no professor profile linked.'
+        'User not found or has no professor profile linked.',
       );
       return null;
     }
@@ -296,7 +300,7 @@ export class ProfessorService {
     return this.em.findOne(
       Professor,
       { _id: professorProfileId },
-      { populate: ['institution', 'managedInstitution', 'courses'] }
+      { populate: ['institution', 'managedInstitution', 'courses'] },
     );
   }
 }

@@ -24,6 +24,7 @@ export const AssessmentMapper = {
         ? new Date(assessment.availableUntil).toISOString() 
         : undefined,
 
+      questionsCount: assessment.questionsCount || 0,
       attemptsCount: assessment.attemptsCount || 0,
       attemptsRemaining: assessment.attemptsRemaining,
       bestScore: assessment.bestScore,
@@ -31,6 +32,7 @@ export const AssessmentMapper = {
         ? new Date(assessment.lastAttemptDate).toISOString() 
         : undefined,
       status: assessment.status || 'available',
+      hasActiveAttempt: assessment.hasActiveAttempt || false,
     };
   },
 
