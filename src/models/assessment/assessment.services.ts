@@ -525,10 +525,11 @@ export class AssessmentService {
   public async submitAttempt(
     data: SubmitAttemptType
   ): Promise<AssessmentAttempt> {
-    this.logger.info({ data }, 'Submitting attempt.');
+    this.logger.info({ data }, 'Submitting attempt (batch optimized).');
 
     const { attemptId, answers } = data;
 
+    // 1. Fetch Attempt with Assessment and Questions in one go
     const attempt = await this.em.findOneOrFail(
       AssessmentAttempt,
       { _id: new ObjectId(attemptId) },
@@ -539,14 +540,14 @@ export class AssessmentService {
       throw new Error('Attempt is not in progress.');
     }
 
-    // Check if attempt has expired
+    // 2. Validate Time Limit
     if (attempt.assessment.durationMinutes) {
       const now = new Date();
       const elapsedMs = now.getTime() - attempt.startedAt.getTime();
       const elapsedMinutes = elapsedMs / (1000 * 60);
-
-      if (elapsedMinutes > attempt.assessment.durationMinutes) {
-        // Mark as abandoned and allow submission of existing answers
+      
+      // Allow a small grace period (e.g., 1 minute) for network latency
+      if (elapsedMinutes > attempt.assessment.durationMinutes + 1) {
         this.logger.warn(
           { attemptId, elapsedMinutes, durationMinutes: attempt.assessment.durationMinutes },
           'Attempt submitted after time limit. Marking as abandoned.'
@@ -557,35 +558,77 @@ export class AssessmentService {
       }
     }
 
-    // Submit all answers
+    // 3. Prepare Bulk Data
+    const questionIds = answers.map((a) => new ObjectId(a.questionId));
+    
+    // Fetch all relevant questions in one query
+    const questions = await this.em.find(Question, {
+      _id: { $in: questionIds },
+    });
+    const questionMap = new Map(questions.map((q) => [q.id, q]));
+
+    // Fetch existing answers to update them instead of creating duplicates
+    const existingAnswers = await this.em.find(AttemptAnswer, {
+      attempt: attempt._id,
+      question: { $in: questionIds },
+    });
+    const answerMap = new Map(existingAnswers.map((a) => [(a.question as Question).id, a]));
+
+    const now = new Date();
+
+    // 4. Process Answers in Memory
     for (const answerData of answers) {
-      await this.submitAnswer({
-        attemptId,
-        questionId: answerData.questionId,
-        answer: answerData.answer,
-      });
+      const question = questionMap.get(answerData.questionId);
+      if (!question) continue; // Skip invalid question IDs
+
+      const isCorrect = this.checkAnswer(question, answerData.answer);
+      let attemptAnswer = answerMap.get(answerData.questionId);
+
+      if (attemptAnswer) {
+        // Update existing answer
+        attemptAnswer.answer = answerData.answer;
+        attemptAnswer.isCorrect = isCorrect;
+        attemptAnswer.answeredAt = now;
+      } else {
+        // Create new answer
+        attemptAnswer = new AttemptAnswer();
+        attemptAnswer.attempt = attempt;
+        attemptAnswer.question = question;
+        attemptAnswer.answer = answerData.answer;
+        attemptAnswer.isCorrect = isCorrect;
+        attemptAnswer.answeredAt = now;
+        this.em.persist(attemptAnswer);
+      }
     }
 
-    // Calculate score
+    // 5. Calculate Score
+    // We need all answers (including those not in the current submission payload)
+    // So we fetch fresh state or use loaded entities. 
+    // Ideally, we persist first to ensure consistency, but we can calculate in memory for speed.
+    
+    // Flush answers to DB first to ensure we count everything correctly
+    await this.em.flush();
+
+    // Fetch ALL answers for the attempt to calculate final score
     const allAnswers = await this.em.find(AttemptAnswer, {
       attempt: attempt._id,
     });
+
     const correctAnswers = allAnswers.filter((a) => a.isCorrect).length;
     const totalQuestions = attempt.assessment.questions.length;
-    const score =
-      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+    const score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
 
-    // Update attempt
+    // 6. Update Attempt Status
     attempt.status = AttemptStatus.SUBMITTED;
-    attempt.submittedAt = new Date();
-    attempt.score = Math.round(score * 100) / 100; // Round to 2 decimal places
+    attempt.submittedAt = now;
+    attempt.score = Math.round(score * 100) / 100;
     attempt.passed = score >= attempt.assessment.passingScore;
 
     await this.em.flush();
 
     this.logger.info(
       { attemptId, score, passed: attempt.passed },
-      'Attempt submitted successfully.'
+      'Attempt submitted successfully (batch).'
     );
     return attempt;
   }
@@ -900,9 +943,10 @@ export class AssessmentService {
   ): Promise<void> {
     this.logger.info(
       { attemptId, answersCount: answers.length },
-      'Saving multiple answers.'
+      'Saving multiple answers (batch optimized).'
     );
 
+    // 1. Fetch Attempt
     const attempt = await this.em.findOneOrFail(AssessmentAttempt, {
       _id: new ObjectId(attemptId),
     });
@@ -911,16 +955,55 @@ export class AssessmentService {
       throw new Error('Attempt is not in progress.');
     }
 
-    // Save each answer
+    if (answers.length === 0) return;
+
+    // 2. Bulk Fetch Questions and Existing Answers
+    const questionIds = answers.map(a => new ObjectId(a.questionId));
+    
+    // Fetch all questions to verify and check correctness
+    const questions = await this.em.find(Question, {
+      _id: { $in: questionIds }
+    });
+    const questionMap = new Map(questions.map(q => [q.id, q]));
+
+    // Fetch existing answers to update
+    const existingAnswers = await this.em.find(AttemptAnswer, {
+      attempt: attempt._id,
+      question: { $in: questionIds }
+    });
+    const answerMap = new Map(existingAnswers.map(a => [(a.question as Question).id, a]));
+
+    const now = new Date();
+
+    // 3. Update or Create Answers in Memory
     for (const answerData of answers) {
-      await this.submitAnswer({
-        attemptId,
-        questionId: answerData.questionId,
-        answer: answerData.answer,
-      });
+      const question = questionMap.get(answerData.questionId);
+      if (!question) continue; // Skip invalid questions
+
+      const isCorrect = this.checkAnswer(question, answerData.answer);
+      let attemptAnswer = answerMap.get(answerData.questionId);
+
+      if (attemptAnswer) {
+        // Update
+        attemptAnswer.answer = answerData.answer;
+        attemptAnswer.isCorrect = isCorrect;
+        attemptAnswer.answeredAt = now;
+      } else {
+        // Create
+        attemptAnswer = new AttemptAnswer();
+        attemptAnswer.attempt = attempt;
+        attemptAnswer.question = question;
+        attemptAnswer.answer = answerData.answer;
+        attemptAnswer.isCorrect = isCorrect;
+        attemptAnswer.answeredAt = now;
+        this.em.persist(attemptAnswer);
+      }
     }
 
-    this.logger.info({ attemptId }, 'Multiple answers saved successfully.');
+    // 4. Single DB Flush
+    await this.em.flush();
+
+    this.logger.info({ attemptId }, 'Multiple answers saved successfully (batch).');
   }
 
   /**
