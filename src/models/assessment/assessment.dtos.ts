@@ -13,9 +13,11 @@ export interface AssessmentPublicSchema {
   isActive: boolean;
   availableFrom?: string;
   availableUntil?: string;
+  questionsCount: number;
   attemptsCount: number;
-  attemptsRemaining: number | null; // null if it's unlimited
+  attemptsRemaining: number | null;
   bestScore?: number;
   lastAttemptDate?: string;
   status: string;
+  hasActiveAttempt: boolean;
 }

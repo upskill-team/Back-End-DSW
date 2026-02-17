@@ -209,6 +209,38 @@ async function getAttemptsByStudent(req: Request, res: Response) {
 }
 
 /**
+ * Handles checking for an active attempt on an assessment.
+ * @param {Request} req - The Express request object, containing the assessment ID in params.
+ * @param {Response} res - The Express response object.
+ * @returns {Promise<Response>} The active attempt or null.
+ */
+async function getActiveAttempt(req: Request, res: Response) {
+  try {
+    const assessmentService = new AssessmentService(orm.em.fork(), req.log);
+    const { assessmentId } = req.params;
+    const requestingUserId = req.user!.id;
+
+    const studentId = await getStudentIdFromUserId(orm.em.fork(), requestingUserId);
+
+    const activeAttempt = await assessmentService.getActiveAttempt(
+      assessmentId,
+      studentId
+    );
+
+    return HttpResponse.Ok(res, activeAttempt);
+  } catch (error: any) {
+    req.log.error({ error }, 'Error fetching active attempt');
+    if (error.message === 'User is not a student') {
+      return HttpResponse.Unauthorized(res, 'No se encontró un perfil de estudiante para este usuario.');
+    }
+    if (error.name === 'NotFoundError') {
+      return HttpResponse.NotFound(res, 'Assessment not found.');
+    }
+    throw error;
+  }
+}
+
+/**
  * Handles retrieving a single attempt with all its answers.
  * @param {Request} req - The Express request object, containing the attempt ID in params.
  * @param {Response} res - The Express response object.
@@ -410,6 +442,7 @@ export {
   submitAttempt,
   getAttemptsByAssessment,
   getAttemptsByStudent,
+  getActiveAttempt,
   getAttemptWithAnswers,
   getPendingAssessments,
   getAssessmentsByCourse,
